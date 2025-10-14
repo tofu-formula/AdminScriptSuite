@@ -85,6 +85,31 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
+Function CheckAndInstall-WinGet {
+
+    if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
+
+        Write-Log "WinGet not found, beginning installation..."
+        # Install and run the winget installer script
+        # NOTE: This requires PowerShellGet module
+        Try{
+
+            Install-Script -Name winget-install -Force -Scope CurrentUser
+            winget-install
+            Write-Log "WinGet installed successfully."
+
+        } Catch {
+
+            Write-Log "Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Exit 1
+        }
+        
+    } else {
+        Write-Log "Winget is already installed"
+    }
+
+}
+
 function WinGet-Detect{
     Param(
     $ID
@@ -134,24 +159,8 @@ if ($result -match "No package found") {
 }
 
 Write-Log "Checking if WinGet is installed"
-if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
-    Write-Log "WinGet not found, beginning installation..."
-    # Install and run the winget installer script
-    # NOTE: This requires PowerShellGet module
-    Try{
+CheckAndInstall-WinGet
 
-        Install-Script -Name winget-install -Force -Scope CurrentUser
-        winget-install
-
-    } Catch {
-
-        Write-Host "Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
-        Exit 1
-    }
-    
-} else {
-    Write-Host "Winget is already installed"
-}
 
 Write-Log "----- Now attempting to install $appname -----"
 # Write-Log "----------------------------------------------"
