@@ -8,7 +8,9 @@ TODO
 #>
 
 # Example use:
-# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepolURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
+# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
+# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "MainRepo" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -ScriptParams '-AppName "7-zip" -UninstallType "All"'
+
 
 # This template can be ran as-is, or set up to be ran independently by removing the parameters.
 param(
@@ -32,7 +34,7 @@ param(
 ## Vars ##
 ##########
 
-$LocalRepoPath = "$WorkingDirectory\$RepoNickName"
+$LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName"
 $LogRoot = "$WorkingDirectory\Git_Logs"
 $LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
@@ -177,6 +179,7 @@ $FullScriptPath = Join-Path $LocalRepoPath $ScriptPath
 # Check if script exists
 if (-not (Test-Path $FullScriptPath)) {
     Write-Log "Script not found: $FullScriptPath" "ERROR"
+    Exit 1
 }
 
 # Run the script with parameters
@@ -185,7 +188,8 @@ Write-Log "With parameters: $ScriptParams"
 
 try {
     if ($ScriptParams) {
-        & $FullScriptPath @ScriptParams
+        $command = "& `"$FullScriptPath`" $ScriptParams"
+        Invoke-Expression $command
     }
     else {
         & $FullScriptPath
@@ -193,6 +197,7 @@ try {
 }
 catch {
     Write-Log "Failed to execute script: $_" "ERROR"
+    Exit 1
 }
 
 
