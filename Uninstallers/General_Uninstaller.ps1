@@ -377,12 +377,12 @@ Function App-Detector {
 
             } Catch {
 
-                Write-Host "Install of WinGet failed. Please investigate." "ERROR"
+                Write-Log "Install of WinGet failed. Please investigate." "ERROR"
                 return $false
             }
             
         } else {
-            Write-Host "Winget is already installed"
+            Write-Log "Winget is already installed"
         }
 
 
