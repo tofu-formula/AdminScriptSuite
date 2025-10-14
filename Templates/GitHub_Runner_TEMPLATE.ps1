@@ -134,11 +134,13 @@ function CheckAndInstall-Git {
 ##########
 
 Write-Log "+++++ Git Runner +++++"
+
 Write-Log "RepoNickName: $RepoNickName"
 Write-Log "RepoUrl: $RepoUrl"
 Write-Log "ScriptPath: $ScriptPath"
 Write-Log "WorkingDirectory: $WorkingDirectory"
 Write-Log "ScriptParams: $ScriptParams"
+Write-Log "++++++++++++++++++++++"
 
 # Check if git is installed
 Write-Log "Checking first if Git is installed..."
@@ -192,4 +194,6 @@ catch {
     Write-Log "Failed to execute script: $_" "ERROR"
 }
 
+
+Write-Log "++++++++++++++++++++++"
 Write-Log "SCRIPT: GitHub_Runner | End | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
