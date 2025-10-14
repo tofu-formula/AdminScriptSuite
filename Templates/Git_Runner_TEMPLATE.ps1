@@ -9,7 +9,7 @@ TODO
 
 # Example use:
 # .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
-# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "MainRepo" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -ScriptParams '-AppName "7-zip" -UninstallType "All"'
+# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "Tofu-Formula_ScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
 
 
 # This template can be ran as-is, or set up to be ran independently by removing the parameters.
