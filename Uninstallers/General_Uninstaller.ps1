@@ -1139,7 +1139,6 @@ If($uninstallSuccess -eq $True){
 
     }
     
-    Write-Log "SCRIPT: General_Uninstaller.ps1 | END | "
     exit 0
 
 } else {
