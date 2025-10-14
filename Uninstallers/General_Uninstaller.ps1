@@ -30,7 +30,7 @@ Param(
 
     [String]$AppName,
     [String]$UninstallType,
-    [String]$WorkingDirectory = "C:\temp",
+    [String]$WorkingDirectory = "C:\temp", # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
     [String]$VerboseLogs = $True,
     [String]$SupremeErrorCatching = $True, 
     [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
