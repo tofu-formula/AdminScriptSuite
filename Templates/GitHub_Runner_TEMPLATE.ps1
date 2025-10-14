@@ -1,5 +1,15 @@
-# This template can be ran as is or set up to be ran independently by removing the parameters.
 
+<#
+TODO
+
+- Maybe add a timeout feature for the script?
+
+
+#>
+
+
+
+# This template can be ran as-is, or set up to be ran independently by removing the parameters.
 param(
     [Parameter(Mandatory=$true)]
     [string]$RepoNickName, # Name to call the repo, for logging
@@ -11,7 +21,7 @@ param(
     [string]$ScriptPath,
     
     [Parameter(Mandatory=$false)]
-    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
+    [string]$WorkingDirectory = "C:\temp", # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
     
     [Parameter(ValueFromRemainingArguments=$true)]
     $ScriptParams
@@ -21,15 +31,16 @@ param(
 ## Vars ##
 ##########
 
-$LocalRepoPath = "$WorkingDirectory\GitHubRepoZZ"
-$LogRoot = "$WorkingDirectory\GitHub_Logs"
-$LogPath = "$LogRoot\$RepoNickName._GitHub_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LocalRepoPath = "$WorkingDirectory\$RepoNickName"
+$LogRoot = "$WorkingDirectory\Git_Logs"
+$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 
 # Uncomment this part if you don't want to use params
+# $RepoNickName = zz
 # $RepoUrl = zz
 # $ScriptPath = zz
-# $LocalRepoPath = zz
+# $WorkingDirectory = zz
 # $ScriptParams = zz
 
 ###############
@@ -61,15 +72,77 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
+Function CheckAndInstall-WinGet {
+
+    if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
+
+        Write-Log "WinGet not found, beginning installation..."
+        # Install and run the winget installer script
+        # NOTE: This requires PowerShellGet module
+        Try{
+
+            Install-Script -Name winget-install -Force -Scope CurrentUser
+            winget-install
+            Write-Log "WinGet installed successfully."
+
+        } Catch {
+
+            Write-Log "Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Exit 1
+        }
+        
+    } else {
+        Write-Log "Winget is already installed"
+    }
+
+}
+
+function CheckAndInstall-Git {
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Log "Git not found. Installing via winget..." "WARNING"
+        
+        try {
+
+            Write-Log "Checking if WinGet is installed"
+            CheckAndInstall-WinGet
+
+            winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements
+            
+            # Refresh environment variables
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            
+            Write-Log "Git installed successfully!" "SUCCESS"
+        }
+        catch {
+            Write-Log "ERROR: Failed to install Git: $_" "ERROR"
+            exit 1
+        }
+    }
+    else {
+        Write-Host "Git is already installed."
+    }
+}
+
+
+
+
+
+
+
 ##########
 ## Main ##
 ##########
 
+Write-Log "+++++ Git Runner +++++"
+Write-Log "RepoNickName: $RepoNickName"
+Write-Log "RepoUrl: $RepoUrl"
+Write-Log "ScriptPath: $ScriptPath"
+Write-Log "WorkingDirectory: $WorkingDirectory"
+Write-Log "ScriptParams: $ScriptParams"
+
 # Check if git is installed
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Write-Log "Git is not installed or not in PATH" "ERROR"
-    exit 1
-}
+Write-Log "Checking first if Git is installed..."
+CheckAndInstall-Git
 
 # Clone or update repository
 if (Test-Path $LocalRepoPath) {
