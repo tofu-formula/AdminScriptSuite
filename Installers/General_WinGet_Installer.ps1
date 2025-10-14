@@ -135,6 +135,13 @@ function WinGet-Detect{
 
 Write-Log "===== WinGet Installer Script Started ====="
 
+Write-Log "AppName: $AppName"
+Write-Log "AppID: $AppID"
+Write-Log "WorkingDirectory: $WorkingDirectory"
+Write-Log "TmeoutSeconds: $timeoutSeconds"
+
+Write-Log "==========================================="
+
 ##Checks
 
 Write-Log "Checking params"
