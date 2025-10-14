@@ -122,7 +122,7 @@ function CheckAndInstall-Git {
         }
     }
     else {
-        Write-Host "Git is already installed."
+        Write-Log "Git is already installed."
     }
 }
 
@@ -149,16 +149,23 @@ Write-Log "++++++++++++++++++++++"
 Write-Log "Checking first if Git is installed..."
 CheckAndInstall-Git
 
+Write-Log "Now checking if local repo exists..."
 # Clone or update repository
 if (Test-Path $LocalRepoPath) {
 
     Write-Log "Repository exists. Pulling latest changes..."
     Push-Location $LocalRepoPath
     try {
-        git pull
+        $gitOutput = git pull 2>&1
+        foreach ($line in $gitOutput) {
+            Write-Log "GIT: $line"
+        }
+        
         if ($LASTEXITCODE -ne 0) {
             Write-Log "Failed to pull latest changes" "ERROR"
             exit 1
+        } else {
+            Write-Log "Successfully pulled latest changes" "SUCCESS"
         }
     }
     finally {
@@ -166,12 +173,21 @@ if (Test-Path $LocalRepoPath) {
     }
 }
 else {
-    Write-Log "Cloning repository..."
-    git clone $RepoUrl $LocalRepoPath
+    Write-Log "No local repo yet. Cloning repository..."
+    $gitOutput = git clone $RepoUrl $LocalRepoPath 2>&1
+    foreach ($line in $gitOutput) {
+        Write-Log "GIT: $line"
+    }
+    
     if ($LASTEXITCODE -ne 0) {
         Write-Log "Failed to clone repository" "ERROR"
+        exit 1
+    } else {
+        Write-Log "Successfully cloned repository" "SUCCESS"
     }
 }
+
+
 
 # Build full script path
 $FullScriptPath = Join-Path $LocalRepoPath $ScriptPath
