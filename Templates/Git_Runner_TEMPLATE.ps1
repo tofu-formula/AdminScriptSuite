@@ -7,7 +7,8 @@ TODO
 
 #>
 
-
+# Example use:
+# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepolURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
 
 # This template can be ran as-is, or set up to be ran independently by removing the parameters.
 param(
