@@ -1023,7 +1023,7 @@ if ($VerboseLogs -eq $True){
 # Check for missing requirements
 if ([string]::IsNullOrEmpty($AppName) -or [string]::IsNullOrEmpty($UninstallType)){
 
-    Write-Log "Missing required input parameters. Now exiting script." "ERROR"
+    Write-Log "SCRIPT: General_Uninstaller.ps1 | END | Missing required input parameters. Now exiting script." "ERROR"
     Exit 1
 
 }
@@ -1131,21 +1131,20 @@ If($uninstallSuccess -eq $True){
 
     if ($neverInstalled -eq $True){
 
-    Write-Log "$AppName was never installed to begin with!" "WARNING"
-    Write-Log "Returning success code!"
+        Write-Log "SCRIPT: General_Uninstaller.ps1 | END | $AppName was never installed to begin with! Returning success code!" "WARNING"
 
     } Else {
 
-    Write-Log "Uninstallation of $AppName successful!" "SUCCESS"
+        Write-Log "SCRIPT: General_Uninstaller.ps1 | END | Uninstallation of $AppName successful!" "SUCCESS"
 
     }
     
-
+    Write-Log "SCRIPT: General_Uninstaller.ps1 | END | "
     exit 0
 
 } else {
 
-    Write-Log "Uninstallation of $AppName failed!" "ERROR"
+    Write-Log "SCRIPT: General_Uninstaller.ps1 | END | Uninstallation of $AppName failed!" "ERROR"
     exit 1
 
 }

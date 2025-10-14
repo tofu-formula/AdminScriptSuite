@@ -147,7 +147,7 @@ Write-Log "==========================================="
 Write-Log "Checking params"
 if ($AppName -eq $null -or $AppID -eq $null){
 
-    Write-Log "AppName and/or AppID params are empty. Cannot run script." "ERROR"
+    Write-Log "SCRIPT: General_WinGet_Installer.ps1 | END | AppName and/or AppID params are empty. Cannot run script." "ERROR"
     Exit 1
 
 } else {
@@ -159,7 +159,7 @@ if ($AppName -eq $null -or $AppID -eq $null){
 Write-Log "Checking if AppID $AppID is valid"
 $result = winget show --id $AppId --exact 2>&1 | Out-String
 if ($result -match "No package found") {
-    Write-Log "App ID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
+    Write-Log "SCRIPT: General_WinGet_Installer.ps1 | END | App ID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
     Exit 1
 } else {
     Write-Log "App ID $AppID is valid. Now proceeding with script."
@@ -305,12 +305,12 @@ Write-Log "Final Result:"
 
 if ($InstallSuccess -eq $True) {
 
-    Write-Log "Installation of $appname with ID $AppID success!" "SUCCESS"
+    Write-Log "SCRIPT: General_WinGet_Installer.ps1 | END | Installation of $appname with ID $AppID success!" "SUCCESS"
     Exit 0
 
 } else {
 
-    Write-Log "Critical Error: Could not install $appname with ID $AppID" "ERROR"
+    Write-Log "SCRIPT: General_WinGet_Installer.ps1 | END | Critical Error: Could not install $appname with ID $AppID" "ERROR"
     Exit 1
 }
 
