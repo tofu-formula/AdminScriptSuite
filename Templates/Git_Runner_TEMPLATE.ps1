@@ -261,3 +261,4 @@ catch {
 
 Write-Log "++++++++++++++++++++++"
 Write-Log "SCRIPT: GitHub_Runner | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
+Exit 0
