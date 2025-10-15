@@ -1,21 +1,67 @@
 
 <#
-TODO
 
-- Maybe add a timeout feature for the script?
+.SYNOPSIS
+    Pull the latest commit from your target repo, and run a powershell script within, even passing parameters to that powershell script.
 
+.DESCRIPTION
+    This template...
+        - can be used to pull the latest commit from your target repo, and run a powershell script within, even passing parameters to that powershell script.
+        - was intended to be used as the primary component in this project: https://github.com/tofu-formula/AdminScriptSuite and interacts with the scripts within
+        - can be ran as-is, or set up to be ran independently by removing the parameters.
+        - will not be updated much so safe to keep and run. If used as a part of the github repo above, it can update itself.
+
+.PARAMETER RepoNickName
+    Name to call the repo, for logging/local file path ($LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName")
+    EXAMPLE
+        Win-AdminScriptSuite
+
+.PARAMETER RepoUrl
+    Link to the target repo
+    EXAMPLE
+        https://github.com/tofu-formula/AdminScriptSuite.git
+
+.PARAMETER ScriptPath
+    Path within the repo to your target script
+    EXAMPLE
+        Uninstallers\General_Uninstaller.ps1
+
+.PARAMETER WorkingDirectory
+    Path to directory on the host machine that will be used to hold the repo and logs
+    NOTE: Recommended path "C:\ProgramData\YourCompanyName\Logs\"  - Useful because user does not have visibility to this unless they enable it
+    NOTE: The directory will be created if it does not already exist
+    NOTE: A seperate WorkingDirectory path will need to be provided in the params passed to the target script
+    EXAMPLE
+        C:\ProgramData\COMPANY_NAME
+
+.PARAMETER ScriptParams
+    Params to pass to the target script
+    NOTE: You will need to check the target script's description to see what params are needed
+    NOTE: Enclose in single brackets
+    EXAMPLE 
+        for General_Uninstaller.ps1: 
+            '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
+
+
+.EXAMPLE
+    .\Git_Runner_TEMPLATE.ps1 -RepoNickName "Win-AdminScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
+    
+    Template: .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
+
+
+.NOTES
+    TODO:
+        - Maybe add a timeout feature for the script?
+
+    SOURCE:
+        https://github.com/tofu-formula/AdminScriptSuite
 
 #>
 
-# Example use:
-# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
-# .\Git_Runner_TEMPLATE.ps1 -RepoNickName "Tofu-Formula_ScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
 
-
-# This template can be ran as-is, or set up to be ran independently by removing the parameters.
 param(
     [Parameter(Mandatory=$true)]
-    [string]$RepoNickName, # Name to call the repo, for logging
+    [string]$RepoNickName, # Name to call the repo, for logging/local file path
 
     [Parameter(Mandatory=$true)]
     [string]$RepoUrl,
@@ -23,11 +69,12 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$ScriptPath,
     
-    [Parameter(Mandatory=$false)]
-    [string]$WorkingDirectory = "C:\temp", # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
+    [Parameter(Mandatory=$true)]
+    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
     
     [Parameter(ValueFromRemainingArguments=$true)]
-    $ScriptParams
+    $ScriptParams # Params to pass to the target script. Example for General_Uninstaller.ps1: -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
+
 )
 
 ##########
@@ -125,11 +172,6 @@ function CheckAndInstall-Git {
         Write-Log "Git is already installed."
     }
 }
-
-
-
-
-
 
 
 ##########
