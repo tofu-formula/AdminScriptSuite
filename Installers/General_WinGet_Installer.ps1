@@ -100,7 +100,7 @@ Function CheckAndInstall-WinGet {
 
         } Catch {
 
-            Write-Log "Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: General_WinGet_Installer.ps1 | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
             Exit 1
         }
         
