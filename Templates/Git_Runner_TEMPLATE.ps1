@@ -238,7 +238,7 @@ Function CheckAndInstall-WinGet {
 
         } Catch {
 
-            Write-Log "SCRIPT: GitHub_Runner | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ScriptName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
             Exit 1
         }
         
@@ -265,7 +265,7 @@ function CheckAndInstall-Git {
             Write-Log "Git installed successfully!" "SUCCESS"
         }
         catch {
-            Write-Log "SCRIPT: GitHub_Runner | END | ERROR: Failed to install Git: $_" "ERROR"
+            Write-Log "SCRIPT: $ScriptName | END | ERROR: Failed to install Git: $_" "ERROR"
             exit 1
         }
     }
@@ -325,7 +325,7 @@ if (Test-Path $LocalRepoPath) {
         }
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "SCRIPT: GitHub_Runner | END | Failed to pull latest changes" "ERROR"
+            Write-Log "SCRIPT: $ScriptName | END | Failed to pull latest changes" "ERROR"
             exit 1
         } else {
             Write-Log "Successfully pulled latest changes" "SUCCESS"
@@ -343,7 +343,7 @@ else {
     }
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Log "SCRIPT: GitHub_Runner | END | Failed to clone repository" "ERROR"
+        Write-Log "SCRIPT: $ScriptName | END | Failed to clone repository" "ERROR"
         exit 1
     } else {
         Write-Log "Successfully cloned repository" "SUCCESS"
@@ -357,7 +357,7 @@ $FullScriptPath = Join-Path $LocalRepoPath $ScriptPath
 
 # Check if script exists
 if (-not (Test-Path $FullScriptPath)) {
-    Write-Log "SCRIPT: GitHub_Runner | END | Script not found: $FullScriptPath" "ERROR"
+    Write-Log "SCRIPT: $ScriptName | END | Script not found: $FullScriptPath" "ERROR"
     Exit 1
 }
 
@@ -375,11 +375,11 @@ try {
     }
 }
 catch {
-    Write-Log "SCRIPT: GitHub_Runner | END | Failed to execute script: $_" "ERROR"
+    Write-Log "SCRIPT: $ScriptName | END | Failed to execute script: $_" "ERROR"
     Exit 1
 }
 
 
 Write-Log "++++++++++++++++++++++"
-Write-Log "SCRIPT: GitHub_Runner | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
+Write-Log "SCRIPT: $ScriptName | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
 Exit 0
