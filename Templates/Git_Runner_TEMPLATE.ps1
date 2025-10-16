@@ -122,6 +122,107 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
+# NOTE: This function will not use write-log.
+function Test-PathParameters {
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Paths,
+        [switch]$ExitOnError
+    )
+    
+    # Windows illegal path characters (excluding : for drive letters and \ for path separators)
+    $illegalChars = '[<>"|?*]'
+    
+    # Reserved Windows filenames
+    $reservedNames = @(
+        'CON', 'PRN', 'AUX', 'NUL',
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+    )
+    
+    $allValid = $true
+    $issues = @()
+    
+    foreach ($paramName in $Paths.Keys) {
+        $path = $Paths[$paramName]
+        
+        # Skip if null or empty
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            $issues += "Parameter '$paramName' is null or empty"
+            $allValid = $false
+            continue
+        }
+        
+        # Check for trailing backslash before closing quote pattern (common BAT file issue)
+        if ($path -match '\\["\' + "']$") {
+            $issues += "Parameter '$paramName' has trailing backslash before quote: '$path' - This will cause escape character issues"
+            $allValid = $false
+        }
+        
+        # Check for illegal characters
+        if ($path -match $illegalChars) {
+            $matches = [regex]::Matches($path, $illegalChars)
+            $foundChars = ($matches | ForEach-Object { $_.Value }) -join ', '
+            $issues += "Parameter '$paramName' contains illegal characters ($foundChars): '$path'"
+            $allValid = $false
+        }
+        
+        # Check for invalid double backslashes (except at start for UNC paths)
+        if ($path -match '(?<!^)\\\\') {
+            $issues += "Parameter '$paramName' contains double backslashes (not a UNC path): '$path'"
+            $allValid = $false
+        }
+        
+        # Check for reserved Windows names in path components
+        $pathComponents = $path -split '[\\/]'
+        foreach ($component in $pathComponents) {
+            $nameWithoutExt = [System.IO.Path]::GetFileNameWithoutExtension($component)
+            if ($nameWithoutExt -in $reservedNames) {
+                $issues += "Parameter '$paramName' contains reserved Windows name '$nameWithoutExt': '$path'"
+                $allValid = $false
+            }
+        }
+        
+        # Check for paths that are too long (MAX_PATH = 260 characters in Windows)
+        if ($path.Length -gt 260) {
+            $issues += "Parameter '$paramName' exceeds maximum path length (260 characters): '$path' (Length: $($path.Length))"
+            $allValid = $false
+        }
+        
+        # Check for invalid drive letter format
+        if ($path -match '^[a-zA-Z]:' -and $path -notmatch '^[a-zA-Z]:\\') {
+            $issues += "Parameter '$paramName' has invalid drive format (missing backslash after colon): '$path'"
+            $allValid = $false
+        }
+        
+        # Check for spaces at beginning or end of path (common copy-paste issue)
+        if ($path -ne $path.Trim()) {
+            $issues += "Parameter '$paramName' has leading or trailing whitespace: '$path'"
+            $allValid = $false
+        }
+    }
+    
+    # Report results
+    if (-not $allValid) {
+        Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PATH VALIDATION FAILED - Issues detected:"
+        foreach ($issue in $issues) {
+            Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX - $issue"
+        }
+        
+        if ($ExitOnError) {
+            Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Exiting script due to path validation errors"
+            Exit 1
+        }
+    } else {
+        Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Path validation successful - all parameters valid"
+    }
+    
+    #return $allValid
+
+}
+
+
+
 Function CheckAndInstall-WinGet {
 
     if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -178,6 +279,26 @@ function CheckAndInstall-Git {
 ## Main ##
 ##########
 
+## Pre-Check
+$ScriptName = $MyInvocation.MyCommand.Name
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ScriptName"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied paths are valid"
+# Test the paths
+$pathsToValidate = @{
+    'WorkingDirectory' = $WorkingDirectory
+    'LogRoot' = $LogRoot
+    'LogPath' = $LogPath
+    'ScriptPath' = $ScriptPath
+    'LocalRepoPath' = $LocalRepoPath
+}
+Test-PathParameters -Paths $pathsToValidate -ExitOnError
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+
+## Begin main body
+
 Write-Log "+++++ Git Runner +++++"
 
 Write-Log "RepoNickName: $RepoNickName"
@@ -188,14 +309,14 @@ Write-Log "ScriptParams: $ScriptParams"
 Write-Log "++++++++++++++++++++++"
 
 # Check if git is installed
-Write-Log "Checking first if Git is installed..."
+Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
 
 Write-Log "Now checking if local repo exists..."
 # Clone or update repository
 if (Test-Path $LocalRepoPath) {
 
-    Write-Log "Repository exists. Pulling latest changes..."
+    Write-Log "Local repository exists. Pulling latest changes..."
     Push-Location $LocalRepoPath
     try {
         $gitOutput = git pull 2>&1
