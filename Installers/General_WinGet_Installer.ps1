@@ -41,9 +41,15 @@ FileOpen Client               FileOpenSystems.FileOpenClient 1.0.142.1016 Tag: a
 
 Param(
 
+    [Parameter(Mandatory=$true)]
     [String]$AppName = $null,
+
+    [Parameter(Mandatory=$true)]
     [String]$AppID = $null,
-    [String]$WorkingDirectory = "C:\temp", # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
+
+    [Parameter(Mandatory=$true)]
+    [String]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
+    
     #[String]$VerboseLogs = $True,
     [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
 
@@ -51,7 +57,7 @@ Param(
 
 
 ### Other Vars ###
-$LogRoot = "$WorkingDirectory\Installer_Logs"
+$LogRoot = "$WorkingDirectory\Logs\Installer_Logs"
 $SafeAppID = $AppName -replace '[^\w]', '_'
 $LogPath = "$LogRoot\$AppName.$SafeAppID._WinGet_Installer_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 

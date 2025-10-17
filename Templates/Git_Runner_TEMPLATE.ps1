@@ -44,7 +44,7 @@
     NOTE: Enclose in single brackets
     EXAMPLE 
         for General_Uninstaller.ps1: 
-            '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
+            '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"'
 
 
 .EXAMPLE
@@ -65,7 +65,7 @@
 
 param(
     [Parameter(Mandatory=$true)]
-    [string]$RepoNickName, # Name to call the repo, for logging/local file path
+    [string]$RepoNickName, # Name to call the local repo directory. Recommended name: REPO_(name of repo)
 
     [Parameter(Mandatory=$true)]
     [string]$RepoUrl,
@@ -75,7 +75,7 @@ param(
     [string]$ScriptPath, # Path from repo root to the target script
 
     [Parameter(Mandatory=$true)]
-    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
+    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
     
     [Parameter(ValueFromRemainingArguments=$true)]
     $ScriptParams # Params to pass to the target script. Example for General_Uninstaller.ps1: -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
@@ -86,10 +86,23 @@ param(
 ## Vars ##
 ##########
 
-$LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName"
-$LogRoot = "$WorkingDirectory\Git_Logs"
-$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-if(!($UpdateLocalRepoOnly -eq $true)) {$UpdateLocalRepoOnly = $False}
+#$LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName"
+$LocalRepoPath = "$WorkingDirectory\$RepoNickName"
+$LogRoot = "$WorkingDirectory\Logs\Git_Logs"
+#$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
+if(!($UpdateLocalRepoOnly -eq $true)) {
+    
+    $UpdateLocalRepoOnly = $False
+    $LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
+
+} else {
+
+    $LogPath = "$LogRoot\Update_Local_Repo_Only._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
+
+}
 
 # Uncomment this part if you don't want to use params
 # $RepoNickName = zz
@@ -331,6 +344,8 @@ Write-Log "++++++++++++++++++++++"
 # Check if git is installed
 Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
+
+Pause
 
 Write-Log "Now checking if local repo exists..."
 # Clone or update repository

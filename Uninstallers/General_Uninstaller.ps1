@@ -28,11 +28,19 @@ Chrome, Remove-App-EXE-S
 
 Param(
 
+    [Parameter(Mandatory=$true)]
     [String]$AppName,
+
+    [Parameter(Mandatory=$true)]
     [String]$UninstallType,
-    [String]$WorkingDirectory = "C:\temp", # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
+
+    [Parameter(Mandatory=$true)]
+    [String]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
+
     [Boolean]$VerboseLogs = $True,
+
     [Boolean]$SupremeErrorCatching = $True, 
+    
     [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
 )
 
@@ -43,7 +51,7 @@ Param(
 ############
 
 # Log folder location. Recommend not to change.
-$LogRoot = "$WorkingDirectory\Uninstaller_Logs"
+$LogRoot = "$WorkingDirectory\Logs\Uninstaller_Logs"
 
 # Don't Change these
 $SafeAppID = $AppName -replace '[^\w]', '_'
