@@ -21,8 +21,12 @@
     EXAMPLE
         https://github.com/tofu-formula/AdminScriptSuite.git
 
+.PARAMETER UpdateLocalRepoOnly
+    If $true, forces script to exit early right after it finishes pulling the latest commit.
+    NOTE: There is no need to inlcude "ScriptPath" args if this is $true
+
 .PARAMETER ScriptPath
-    Path within the repo to your target script
+    Path from repo root to the target script
     EXAMPLE
         Uninstallers\General_Uninstaller.ps1
 
@@ -66,9 +70,10 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$RepoUrl,
     
-    [Parameter(Mandatory=$true)]
-    [string]$ScriptPath,
-    
+    [boolean]$UpdateLocalRepoOnly, # If true, script exits early after just updating
+
+    [string]$ScriptPath, # Path from repo root to the target script
+
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\YourCompanyName\Logs\"
     
@@ -84,7 +89,7 @@ param(
 $LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName"
 $LogRoot = "$WorkingDirectory\Git_Logs"
 $LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-
+if(!($UpdateLocalRepoOnly -eq $true)) {$UpdateLocalRepoOnly = $False}
 
 # Uncomment this part if you don't want to use params
 # $RepoNickName = zz
@@ -238,7 +243,7 @@ Function CheckAndInstall-WinGet {
 
         } Catch {
 
-            Write-Log "SCRIPT: $ScriptName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
             Exit 1
         }
         
@@ -265,7 +270,7 @@ function CheckAndInstall-Git {
             Write-Log "Git installed successfully!" "SUCCESS"
         }
         catch {
-            Write-Log "SCRIPT: $ScriptName | END | ERROR: Failed to install Git: $_" "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | ERROR: Failed to install Git: $_" "ERROR"
             exit 1
         }
     }
@@ -280,18 +285,32 @@ function CheckAndInstall-Git {
 ##########
 
 ## Pre-Check
-$ScriptName = $MyInvocation.MyCommand.Name
+$ThisFileName = $MyInvocation.MyCommand.Name
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ScriptName"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ThisFileName"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied paths are valid"
 # Test the paths
-$pathsToValidate = @{
-    'WorkingDirectory' = $WorkingDirectory
-    'LogRoot' = $LogRoot
-    'LogPath' = $LogPath
-    'ScriptPath' = $ScriptPath
-    'LocalRepoPath' = $LocalRepoPath
+
+if ($UpdateLocalRepoOnly -eq $True){
+
+    $pathsToValidate = @{
+        'WorkingDirectory' = $WorkingDirectory
+        'LogRoot' = $LogRoot
+        'LogPath' = $LogPath
+        'LocalRepoPath' = $LocalRepoPath
+    }
+
+} else {
+
+    $pathsToValidate = @{
+        'WorkingDirectory' = $WorkingDirectory
+        'LogRoot' = $LogRoot
+        'LogPath' = $LogPath
+        'ScriptPath' = $ScriptPath
+        'LocalRepoPath' = $LocalRepoPath
+    }
+
 }
 Test-PathParameters -Paths $pathsToValidate -ExitOnError
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
@@ -306,6 +325,7 @@ Write-Log "RepoUrl: $RepoUrl"
 Write-Log "ScriptPath: $ScriptPath"
 Write-Log "WorkingDirectory: $WorkingDirectory"
 Write-Log "ScriptParams: $ScriptParams"
+Write-Log "UpdateLocalRepoOnly: $UpdateLocalRepoOnly"
 Write-Log "++++++++++++++++++++++"
 
 # Check if git is installed
@@ -325,7 +345,7 @@ if (Test-Path $LocalRepoPath) {
         }
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "SCRIPT: $ScriptName | END | Failed to pull latest changes" "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | Failed to pull latest changes" "ERROR"
             exit 1
         } else {
             Write-Log "Successfully pulled latest changes" "SUCCESS"
@@ -343,13 +363,21 @@ else {
     }
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Log "SCRIPT: $ScriptName | END | Failed to clone repository" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | Failed to clone repository" "ERROR"
         exit 1
     } else {
         Write-Log "Successfully cloned repository" "SUCCESS"
     }
 }
 
+# Exit script if this was update only
+if($UpdateLocalRepoOnly -eq $true) {
+
+    Write-Log "++++++++++++++++++++++"
+    Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Update local repo only completed." "SUCCESS"
+    Exit 0
+
+}
 
 
 # Build full script path
@@ -357,7 +385,7 @@ $FullScriptPath = Join-Path $LocalRepoPath $ScriptPath
 
 # Check if script exists
 if (-not (Test-Path $FullScriptPath)) {
-    Write-Log "SCRIPT: $ScriptName | END | Script not found: $FullScriptPath" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Script not found: $FullScriptPath" "ERROR"
     Exit 1
 }
 
@@ -375,11 +403,11 @@ try {
     }
 }
 catch {
-    Write-Log "SCRIPT: $ScriptName | END | Failed to execute script: $_" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Failed to execute script: $_" "ERROR"
     Exit 1
 }
 
 
 Write-Log "++++++++++++++++++++++"
-Write-Log "SCRIPT: $ScriptName | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
+Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
 Exit 0
