@@ -33,13 +33,21 @@ for %%i in ("%WORKINGDIR%") do set "WORKINGDIR=%%~fi"
 REM Remove trailing backslash to prevent escape character issues
 if "%WORKINGDIR:~-1%"=="\" set "WORKINGDIR=%WORKINGDIR:~0,-1%"
 
+
+
+
+
 ECHO WARNING: These are the paths that are currently targeted:
 ECHO.
-echo WORKINGDIR set to: !WORKINGDIR!
-ECHO Info: Root working folder. Contains the local repo folder and the logs folder
+
+echo WORKINGDIR
+echo Set to: !WORKINGDIR!
+ECHO Info: Root working folder. Contains the local repo folder and the logs folder. Basically if the logs folder does not exist one layer up, it will be made.
+
 ECHO.
-echo LOCAL_REPO_FOLDER_NAME set to: !LOCAL_REPO_FOLDER_NAME!
-ECHO Info: Name of the local repo folder. Lives inside the folder above.
+echo LOCAL_REPO_FOLDER_NAME 
+Echo Set to: !LOCAL_REPO_FOLDER_NAME!
+ECHO Info: Name of the local repo folder. Lives inside the folder above. Basically should be folder this script lives in.
 ECHO.
 
 set /p CORRECT="Is this acceptable? If not, you can enter your own paths. (Y/N): "
@@ -61,24 +69,6 @@ if /I "%CORRECT%"=="N" (
         exit /b 1
     )
 )
-
-echo.
-echo Reviewing final values:
-echo WORKINGDIR: %WORKINGDIR%
-echo LOCAL_REPO_FOLDER_NAME: %LOCAL_REPO_FOLDER_NAME%
-PAUSE
-
-echo.
-echo.
-echo DEBUG: About to run PowerShell with these parameters:
-echo RepoNickName: "%LOCAL_REPO_FOLDER_NAME%"
-echo RepoUrl: "https://github.com/tofu-formula/AdminScriptSuite"
-echo UpdateLocalRepoOnly: $true
-echo WorkingDirectory: "%WORKINGDIR%"
-echo.
-echo Full command:
-echo Powershell.exe -executionpolicy remotesigned -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
-PAUSE
 
 Powershell.exe -executionpolicy remotesigned -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
