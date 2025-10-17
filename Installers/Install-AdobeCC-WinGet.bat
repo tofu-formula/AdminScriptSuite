@@ -1,2 +1,2 @@
 @echo off
-Powershell.exe -executionpolicy remotesigned -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_CC" -AppID "Adobe.CreativeCloud" -WorkingDirectory "C:\ProgramData\SCCOE\Logs"
+Powershell.exe -executionpolicy remotesigned -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_CC" -AppID "Adobe.CreativeCloud" -WorkingDirectory "C:\ProgramData\AdminScriptSuite\Logs"

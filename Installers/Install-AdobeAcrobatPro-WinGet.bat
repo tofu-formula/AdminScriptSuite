@@ -1,0 +1,2 @@
+@echo off
+Powershell.exe -executionpolicy remotesigned -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_Acrobat_Pro" -AppID "Adobe.Acrobat.Pro" -WorkingDirectory "C:\ProgramData\AdminScriptSuite\Logs"
