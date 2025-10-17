@@ -48,7 +48,7 @@
 
 
 .EXAMPLE
-    .\Git_Runner_TEMPLATE.ps1 -RepoNickName "Win-AdminScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
+    .\Git_Runner_TEMPLATE.ps1 -RepoNickName "Win-AdminScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"'
     
     Template: .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
 
@@ -86,11 +86,20 @@ param(
 ## Vars ##
 ##########
 
+# Uncomment this part if you don't want to use params
+# $RepoNickName = zz
+# $RepoUrl = zz
+# $UpdateLocalRepoOnly = zz
+# $ScriptPath = zz
+# $WorkingDirectory = zz
+# $ScriptParams = zz
+
 #$LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName"
 $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
 $LogRoot = "$WorkingDirectory\Logs\Git_Logs"
 #$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
+# Evaluate vars based on whether this run is just an update only
 if(!($UpdateLocalRepoOnly -eq $true)) {
     
     $UpdateLocalRepoOnly = $False
@@ -103,13 +112,6 @@ if(!($UpdateLocalRepoOnly -eq $true)) {
 
 
 }
-
-# Uncomment this part if you don't want to use params
-# $RepoNickName = zz
-# $RepoUrl = zz
-# $ScriptPath = zz
-# $WorkingDirectory = zz
-# $ScriptParams = zz
 
 ###############
 ## Functions ##
