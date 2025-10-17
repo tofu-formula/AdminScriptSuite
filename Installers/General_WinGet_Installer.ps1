@@ -201,7 +201,7 @@ Function CheckAndInstall-WinGet {
 
         } Catch {
 
-            Write-Log "SCRIPT: $ScriptName| END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName| END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
             Exit 1
         }
         
@@ -235,9 +235,9 @@ function WinGet-Detect{
 ############
 
 ## Pre-Check
-$ScriptName = $MyInvocation.MyCommand.Name
+$ThisFileName = $MyInvocation.MyCommand.Name
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ScriptName"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ThisFileName"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied paths are valid"
 # Test the paths
@@ -265,7 +265,7 @@ Write-Log "==========================================="
 Write-Log "Checking script params"
 if ($AppName -eq $null -or $AppID -eq $null){
 
-    Write-Log "SCRIPT: $ScriptName | END | AppName and/or AppID params are empty. Cannot run script." "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | AppName and/or AppID params are empty. Cannot run script." "ERROR"
     Exit 1
 
 } else {
@@ -279,7 +279,7 @@ if ($AppName -eq $null -or $AppID -eq $null){
 Write-Log "Checking if AppID $AppID is valid"
 $result = winget show --id $AppId --exact 2>&1 | Out-String
 if ($result -match "No package found") {
-    Write-Log "SCRIPT: $ScriptName | END | App ID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | App ID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
     Exit 1
 } else {
     Write-Log "App ID $AppID is valid. Now proceeding with script."
@@ -425,12 +425,12 @@ Write-Log "Final Result:"
 
 if ($InstallSuccess -eq $True) {
 
-    Write-Log "SCRIPT: $ScriptName | END | Installation of $appname with ID $AppID success!" "SUCCESS"
+    Write-Log "SCRIPT: $ThisFileName | END | Installation of $appname with ID $AppID success!" "SUCCESS"
     Exit 0
 
 } else {
 
-    Write-Log "SCRIPT: $ScriptName | END | Critical Error: Could not install $appname with ID $AppID" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Critical Error: Could not install $appname with ID $AppID" "ERROR"
     Exit 1
 }
 

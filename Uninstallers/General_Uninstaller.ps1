@@ -1091,9 +1091,9 @@ function Remove-App-CIM3{
 ############
 
 ## Pre-Check
-$ScriptName = $MyInvocation.MyCommand.Name
+$ThisFileName = $MyInvocation.MyCommand.Name
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ScriptName"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ThisFileName"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied paths are valid"
 # Test the paths
@@ -1138,7 +1138,7 @@ if ($VerboseLogs -eq $True){
 # Check for missing requirements
 if ([string]::IsNullOrEmpty($AppName) -or [string]::IsNullOrEmpty($UninstallType)){
 
-    Write-Log "SCRIPT: $ScriptName | END | Missing required input parameters. Now exiting script." "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Missing required input parameters. Now exiting script." "ERROR"
     Exit 1
 
 }
@@ -1246,11 +1246,11 @@ If($uninstallSuccess -eq $True){
 
     if ($neverInstalled -eq $True){
 
-        Write-Log "SCRIPT: $ScriptName | END | $AppName was never installed to begin with! Returning success code!" "WARNING"
+        Write-Log "SCRIPT: $ThisFileName | END | $AppName was never installed to begin with! Returning success code!" "WARNING"
 
     } Else {
 
-        Write-Log "SCRIPT: $ScriptName | END | Uninstallation of $AppName successful!" "SUCCESS"
+        Write-Log "SCRIPT: $ThisFileName | END | Uninstallation of $AppName successful!" "SUCCESS"
 
     }
     
@@ -1258,7 +1258,7 @@ If($uninstallSuccess -eq $True){
 
 } else {
 
-    Write-Log "SCRIPT: $ScriptName | END | Uninstallation of $AppName failed!" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Uninstallation of $AppName failed!" "ERROR"
     exit 1
 
 }
