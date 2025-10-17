@@ -345,8 +345,6 @@ Write-Log "++++++++++++++++++++++"
 Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
 
-Pause
-
 Write-Log "Now checking if local repo exists..."
 # Clone or update repository
 if (Test-Path $LocalRepoPath) {
