@@ -345,6 +345,24 @@ Write-Log "++++++++++++++++++++++"
 Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
 
+# Add safe directory configuration
+Write-Log "Configuring Git safe directory for: $LocalRepoPath"
+try {
+    # Check if the directory is already in safe.directory list
+    $safeDirectories = git config --global --get-all safe.directory 2>$null
+    $normalizedRepoPath = $LocalRepoPath -replace '\\', '/'
+    
+    if ($safeDirectories -notcontains $LocalRepoPath -and $safeDirectories -notcontains $normalizedRepoPath) {
+        Write-Log "Adding $LocalRepoPath to Git safe directories..."
+        git config --global --add safe.directory $normalizedRepoPath
+        Write-Log "Successfully added to safe directories" "SUCCESS"
+    } else {
+        Write-Log "Repository already in safe directories"
+    }
+} catch {
+    Write-Log "Note: Could not configure safe directory (non-critical): $_" "WARNING"
+}
+
 Write-Log "Now checking if local repo exists..."
 # Clone or update repository
 if (Test-Path $LocalRepoPath) {
