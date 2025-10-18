@@ -6,6 +6,7 @@ Meant to be ran straight, no params - CHANGE THE VARS TO MATCH YOUR NEEDS
 Useful for running using a tool that doesn't play nice with passing params
 Good first step in your endpoint deployment workflow
 It's a kinda dumb script that needs
+Good as a set-and-forget, leave-it-alone kinda thing
 
 
 What if you can't pass variables to Git_Runner???
