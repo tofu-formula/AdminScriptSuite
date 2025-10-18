@@ -11,6 +11,13 @@
         - can be ran as-is, or set up to be ran independently by removing the parameters.
         - will not be updated much so safe to keep and run. If used as a part of the github repo above, it can update itself.
 
+    Why is it just a "template?"
+        - Using with tools like InTune, Datto, Crowdstrike... etc that don't have direct GitHub integration may need to have a script uploaded
+            - These tools may not play nice or at all with the script natively, and you may need to modify this script to accept the needed variables in a specific way, such as by environment variables, config files, or directly written to the script
+
+    Can this script be ran as it?
+        - Yes absolutely! It may not work for every scenario as explained above, but it can be ran with params to do whatever you want!
+
 .PARAMETER RepoNickName
     Name to call the repo, for logging/local file path ($LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName")
     EXAMPLE
@@ -32,7 +39,7 @@
 
 .PARAMETER WorkingDirectory
     Path to directory on the host machine that will be used to hold the repo and logs
-    NOTE: Recommended path "C:\ProgramData\YourCompanyName\Logs\"  - Useful because user does not have visibility to this unless they enable it
+    NOTE: Recommended path "C:\ProgramData\YourCompanyName"  - Useful because user does not have visibility to this unless they enable it
     NOTE: The directory will be created if it does not already exist
     NOTE: A seperate WorkingDirectory path will need to be provided in the params passed to the target script
     EXAMPLE
@@ -98,6 +105,7 @@ param(
 $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
 $LogRoot = "$WorkingDirectory\Logs\Git_Logs"
 #$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$ThisFileName = $MyInvocation.MyCommand.Name
 
 # Evaluate vars based on whether this run is just an update only
 if(!($UpdateLocalRepoOnly -eq $true)) {
@@ -300,7 +308,7 @@ function CheckAndInstall-Git {
 ##########
 
 ## Pre-Check
-$ThisFileName = $MyInvocation.MyCommand.Name
+
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ThisFileName"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
