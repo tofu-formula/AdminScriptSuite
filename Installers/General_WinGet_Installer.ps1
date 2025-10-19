@@ -49,6 +49,10 @@ Param(
 
     [Parameter(Mandatory=$true)]
     [String]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
+
+
+    [Parameter(Mandatory=$false)]
+    [String]$Version = $null,
     
     #[String]$VerboseLogs = $True,
     [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
@@ -217,6 +221,60 @@ Function CheckAndInstall-WinGet {
 
 }
 
+function WinGet-Detect2{
+    Param(
+        [string]$ID
+    )
+
+    Write-Log "This is the target version: $Version"
+    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1 | Out-String
+
+    if ($result -match "$ID") {
+        Write-Log "Function: WinGet-Detect | Installation detected of $ID"
+        
+        # Try to extract the version
+        if ($null -ne $Version) {
+            if ($result -match "$ID\s+(\S+)") {
+                return $matches[1]
+            }
+        }
+        
+        # Check for specific version if provided
+        if ($Version -ne $null) {
+            if ($result -match $Version) {
+                Write-Log "Function: WinGet-Detect | Specific version $Version detected"
+                return $true
+            } else {
+                Write-Log "Function: WinGet-Detect | Requested version $Version NOT detected"
+                return $false
+            }
+        }
+        
+        return $true
+    } else {
+        Write-Log "Function: WinGet-Detect | Installation not detected of $ID"
+        return $false
+    }
+}
+
+function WinGet-Detect1{
+    Param(
+    $ID
+    )
+
+    # May want to remove the --exact if it causes issues
+    $result = winget list --id "$ID" --exact --accept-source-agreements| Out-String
+
+    if ($result -match "$ID") {
+        Write-Log "Function: WinGet-Detect | Installation detected of $ID"
+        return $true
+    } else {
+        Write-Log "Function: WinGet-Detect | Installation not detected of $ID"
+        return $false
+    }
+
+}
+
 function WinGet-Detect{
     Param(
     $ID
@@ -227,6 +285,24 @@ function WinGet-Detect{
 
     if ($result -match "$ID") {
         Write-Log "Function: WinGet-Detect | Installation detected of $ID"
+
+        if ($Version -ne $null){
+
+            Write-Log "Now checking if local install is version: $Version"
+
+            if ($result -match $Version) {
+                Write-Log "Function: WinGet-Detect | Specific version $Version detected"
+                return $true
+            } else {
+                Write-Log "Function: WinGet-Detect | Requested version $Version NOT detected"
+                Write-Log "NOTE: WinGet does not play nice with installing versions lower than your current install version. You must uninstall first if that is your intended purpose." "WARNING"
+                return $false
+            }
+
+        }
+
+
+
         return $true
     } else {
         Write-Log "Function: WinGet-Detect | Installation not detected of $ID"
@@ -262,6 +338,7 @@ Write-Log "===== WinGet Installer Script Started ====="
 Write-Log "AppName: $AppName"
 Write-Log "AppID: $AppID"
 Write-Log "WorkingDirectory: $WorkingDirectory"
+Write-Log "Version: $Version"
 Write-Log "TmeoutSeconds: $timeoutSeconds"
 
 Write-Log "==========================================="
@@ -280,19 +357,43 @@ if ($AppName -eq $null -or $AppID -eq $null){
 }
 
 
+Write-Log "Checking if WinGet is installed"
+CheckAndInstall-WinGet
 
 
 Write-Log "Checking if AppID $AppID is valid"
-$result = winget show --id $AppId --exact 2>&1 | Out-String
-if ($result -match "No package found") {
-    Write-Log "SCRIPT: $ThisFileName | END | App ID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
-    Exit 1
+
+if ($Version -eq $null){
+
+    $result = winget show --id $AppId --exact 2>&1 | Out-String
+
+
 } else {
-    Write-Log "App ID $AppID is valid. Now proceeding with script."
+
+    Write-Log "Version $Version requested, checking if that exists as well"
+    $result = winget show --id $AppId --version $Version --exact 2>&1 | Out-String
+
 }
 
-Write-Log "Checking if WinGet is installed"
-CheckAndInstall-WinGet
+if ($result -match "No package found") {
+
+    if ($Version -eq $null){
+        Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
+    } else {
+        Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version. Now exiting script." "ERROR"
+    }
+
+    Exit 1
+
+} else {
+    if ($Version -eq $null){
+        Write-Log "App ID $AppID is valid. Now proceeding with script."
+
+    } else {
+        Write-Log "App ID $AppID with version $Version is valid. Now proceeding with script."
+
+    }
+}
 
 
 Write-Log "----- Now attempting to install $appname -----"
@@ -300,27 +401,56 @@ Write-Log "----- Now attempting to install $appname -----"
 
 
 Write-Log "Target app ID to install: $AppID"
-
+if($Version){ Write-Log "Target version to install: $Version"}
 
 # Check if app ID is already installed
-Write-Log "Checking for pre-existing local installation of $AppID..."
+Write-Log "Checking for pre-existing local installation of $AppID $Version..."
 $detectPreviousInstallation = WinGet-Detect $AppID
 if($detectPreviousInstallation -eq $true){
     
-    Write-Log "Installation of $AppID already detected! If you need to uninstall this instance, please run the General Uninstall script with the WinGet method." "SUCCESS"
+    if ($null -ne $Version){
+
+        Write-Log "Installation of $AppID with version $version already detected! If you need to uninstall this instance, please run the General Uninstall script with the WinGet method." "SUCCESS"    
+    
+    } else {
+
+        Write-Log "Installation of $AppID already detected! If you need to uninstall this instance, please run the General Uninstall script with the WinGet method." "SUCCESS"
+
+    }
+
+    
+    
     $InstallSuccess = $true
 
 
 # if not...
 }else{
 
-    Write-Log "No pre-existing local installation of $AppID, proceeding with installation"
+    if ($null -ne $Version){
+
+        Write-Log "No pre-existing local installation of $AppID with version $Version, proceeding with installation"
+
+
+    } else {
+
+        Write-Log "No pre-existing local installation of $AppID, proceeding with installation"
+
+
+    }
 
     # Try installation of target ID
     try {
     
         $cmd = "winget"
-        $args = "install --id $AppID -e --silent --accept-package-agreements --accept-source-agreements"
+        if ($Version -eq $null){
+            
+            $args = "install --id $AppID -e --silent --accept-package-agreements --accept-source-agreements"
+
+        } else {
+            
+            $args = "install --id $AppID --version $Version -e --silent --accept-package-agreements --accept-source-agreements"
+
+        }
 
         # Santitize the name of the log path
         $SafeAppID = $AppID -replace '[^\w]', '_'
@@ -403,7 +533,7 @@ if($detectPreviousInstallation -eq $true){
     if ($InstallSuccess -eq $false){
 
 
-        Write-Log "Running a final check to see if $AppID installed anyways despite errors."
+        Write-Log "Running a final check to see if target app installed anyways despite errors: $AppID $Version "
 
         Start-Sleep -Seconds 5
 
@@ -411,12 +541,12 @@ if($detectPreviousInstallation -eq $true){
 
         if($detectInstallation2 -eq $true) {
 
-            Write-Log "Local installation detected. Installation successful of $AppID" "SUCCESS"
+            Write-Log "Local installation detected. Installation successful of $AppID $Version" "SUCCESS"
             $InstallSuccess = $true
 
         } else {
 
-            Write-Log "Final check failed. No local installation of $AppID detected." "Error"
+            Write-Log "Final check failed. No local installation of $AppID $Version detected." "ERROR"
 
         }
 
@@ -431,12 +561,12 @@ Write-Log "Final Result:"
 
 if ($InstallSuccess -eq $True) {
 
-    Write-Log "SCRIPT: $ThisFileName | END | Installation of $appname with ID $AppID success!" "SUCCESS"
+    Write-Log "SCRIPT: $ThisFileName | END | Installation of $appname $Version with ID $AppID success!" "SUCCESS"
     Exit 0
 
 } else {
 
-    Write-Log "SCRIPT: $ThisFileName | END | Critical Error: Could not install $appname with ID $AppID" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Critical Error: Could not install $appname $Version with ID $AppID" "ERROR"
     Exit 1
 }
 
