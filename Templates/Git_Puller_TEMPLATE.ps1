@@ -311,6 +311,6 @@ else {
 }
 
 Write-Log "++++++++++++++++++++++"
-    Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Update local repo only completed." "SUCCESS"
+    Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Update local repo completed." "SUCCESS"
     Exit 0
 
