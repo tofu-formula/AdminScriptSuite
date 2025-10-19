@@ -407,25 +407,25 @@ Function Command-Runner {
     # If detection returns an object (for UninstallerString method), verify the uninstaller exists 
     if ($detect -and $DetectMethod -eq 'UninstallerString') {
 
-    # Extract the uninstaller path (handle quoted and unquoted paths)
-        $uninstallerPath = if ($detect.UninstallString -match '"([^"]+)"') {
+        # Extract the uninstaller path (handle quoted and unquoted paths)
+            $uninstallerPath = if ($detect.UninstallString -match '"([^"]+)"') {
 
-            $matches[1]
+                $matches[1]
 
-    } else {
+        } else {
 
-        $detect.UninstallString.Split(' ')[0]
+            $detect.UninstallString.Split(' ')[0]
+
+        }
+        
+        if (-not (Test-Path $uninstallerPath)) {
+
+            Write-Log "Ghost registry entry detected - uninstaller doesn't exist" "WARNING"
+            $detect = $null  # Treat as not detected
+
+        }
 
     }
-    
-    if (-not (Test-Path $uninstallerPath)) {
-
-        Write-Log "Ghost registry entry detected - uninstaller doesn't exist" "WARNING"
-        $detect = $null  # Treat as not detected
-
-    }
-}
-
 
 
     if ($detect -eq $false -or $detect -eq $null){
@@ -614,10 +614,10 @@ Function Test-AllDetectionMethods {
     
 
     # Only include CIM if specifically requested
-    if ($IncludeCIM) {
+    #if ($IncludeCIM) {
         $detectionMethods += 'CIM'
         Write-Log "WARNING: Including CIM method - this may be slow and trigger repairs" "WARNING"
-    }
+    #}
     
     $results = @{}
     
