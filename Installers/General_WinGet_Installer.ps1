@@ -52,7 +52,7 @@ Param(
 
 
     [Parameter(Mandatory=$false)]
-    [String]$Version = $null,
+    $Version = $null,
     
     #[String]$VerboseLogs = $True,
     [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
@@ -64,7 +64,6 @@ Param(
 $LogRoot = "$WorkingDirectory\Logs\Installer_Logs"
 $SafeAppID = $AppName -replace '[^\w]', '_'
 $LogPath = "$LogRoot\$AppName.$SafeAppID._WinGet_Installer_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-
 
 #################
 ### Functions ###
@@ -363,7 +362,7 @@ CheckAndInstall-WinGet
 
 Write-Log "Checking if AppID $AppID is valid"
 
-if ($Version -eq $null){
+if ($null -eq $Version){
 
     $result = winget show --id $AppId --exact 2>&1 | Out-String
 
@@ -377,7 +376,7 @@ if ($Version -eq $null){
 
 if ($result -match "No package found") {
 
-    if ($Version -eq $null){
+    if ($null -eq $Version){
         Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
     } else {
         Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version. Now exiting script." "ERROR"
@@ -386,7 +385,7 @@ if ($result -match "No package found") {
     Exit 1
 
 } else {
-    if ($Version -eq $null){
+    if ($null -eq $Version){
         Write-Log "App ID $AppID is valid. Now proceeding with script."
 
     } else {
@@ -442,7 +441,7 @@ if($detectPreviousInstallation -eq $true){
     try {
     
         $cmd = "winget"
-        if ($Version -eq $null){
+        if ($null -eq $Version){
             
             $args = "install --id $AppID -e --silent --accept-package-agreements --accept-source-agreements"
 
