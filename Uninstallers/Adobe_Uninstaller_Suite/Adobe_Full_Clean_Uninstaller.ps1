@@ -3,6 +3,7 @@
 NOTES
 
 - Needs to replace these EXE's with curls directly from web.
+- Needs some basic updates like params for logs, param checks, proper exits
 
 
 
