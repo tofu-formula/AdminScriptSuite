@@ -1,7 +1,7 @@
 @echo off
 
 
-ECHO ===== Repo Updater =====
+ECHO ===== Local Repo Updater =====
 
 setlocal enabledelayedexpansion
 
