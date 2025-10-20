@@ -301,7 +301,7 @@ function CheckAndInstall-Git {
             Try {
 
                 # First, try to find the package to make sure it's available
-                $gitPackage = Find-WinGetPackage -Id Git.Git -Exact -Source winget -ErrorAction Stop
+                $gitPackage = Find-WinGetPackage -Id Git.Git -Source winget -MatchOption Equals
 
                 if ($gitPackage) {
                     Write-Log "Git package found, proceeding with installation..."
