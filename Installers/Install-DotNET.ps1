@@ -1,5 +1,7 @@
 # Install-DotNet.ps1
 
+# NOTE: This script was almost entirely written by Claude. Entire script has been combed over and small changes and fixes have been made, testing is good so far.
+
 <#
 .SYNOPSIS
     Installs .NET Framework or .NET Runtime/SDK versions using either WinGet or Windows Optional Features.
