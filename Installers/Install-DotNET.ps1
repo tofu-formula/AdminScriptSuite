@@ -107,7 +107,7 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
-function Test-PathParameters {
+function Test-PathSyntaxValidity {
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Paths,
@@ -258,7 +258,7 @@ $pathsToValidate = @{
     'LogRoot' = $LogRoot
     'LogPath' = $LogPath
 }
-Test-PathParameters -Paths $pathsToValidate -ExitOnError
+Test-PathSyntaxValidity -Paths $pathsToValidate -ExitOnError
 
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 

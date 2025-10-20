@@ -70,7 +70,7 @@ $LogPath = "$LogRoot\$AppName.$SafeAppID._WinGet_Installer_Log_$(Get-Date -Forma
 #################
 
 # NOTE: This function will not use write-log.
-function Test-PathParameters {
+function Test-PathSyntaxValidity {
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Paths,
@@ -327,7 +327,7 @@ $pathsToValidate = @{
     'LogRoot' = $LogRoot
     'LogPath' = $LogPath
 }
-Test-PathParameters -Paths $pathsToValidate -ExitOnError
+Test-PathSyntaxValidity -Paths $pathsToValidate -ExitOnError
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 ## Begin main body

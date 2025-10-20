@@ -85,7 +85,7 @@ function Write-Log {
 }
 
 # NOTE: This function will not use write-log.
-function Test-PathParameters {
+function Test-PathSyntaxValidity {
     param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Paths,
@@ -444,7 +444,7 @@ $pathsToValidate = @{
 }
 
 
-Test-PathParameters -Paths $pathsToValidate -ExitOnError
+Test-PathSyntaxValidity -Paths $pathsToValidate -ExitOnError
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 
