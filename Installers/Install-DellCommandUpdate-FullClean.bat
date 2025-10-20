@@ -19,7 +19,7 @@ set "SCRIPT_DIR_CLEAN=%SCRIPT_DIR:~0,-1%"
 
 
 REM Go up ONE level to get repo root
-set "REPOROOT=%%SCRIPT_DIR%..\"
+set "REPOROOT=%SCRIPT_DIR%..\"
 
 REM Normalize the repo directory path (resolves .. and .)
 for %%i in ("%REPOROOT%") do set "REPOROOT=%%~fi"
@@ -49,7 +49,7 @@ REM Add more AppNames if necessary
 ECHO.
 
 ECHO 2. Install required .NET version
-Powershell.exe -executionpolicy remotesigned -File "%~dp0Install-DotNet.ps1" -Version 8.0.17
+Powershell.exe -executionpolicy remotesigned -File "%~dp0Install-DotNet.ps1" -Version 8.0.17 -WorkingDirectory "%WORKINGDIR%"
 ECHO.
 
 ECHO 3. Install DCU using WinGet
