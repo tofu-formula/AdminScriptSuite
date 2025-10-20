@@ -21,7 +21,7 @@ Notes from ChatGPT
 Force InTune to use 64-bit powershell
 %SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\YourScript.ps1
 
-Make WinGet “present and healthy” everywhere
+Make WinGet "present and healthy" everywhere
 
 Ensure App Installer across your fleet
 Assign App Installer via Microsoft Store app (new) to all devices. This keeps WinGet current and avoids most bootstrap flakiness. 
@@ -211,76 +211,207 @@ Function CheckAndInstall-WinGetOld {
 }
 
 Function CheckAndInstallandRepair-WinGetPSmodule {
-
-    if (!(Get-Command Test-WinGetUserSetting -ErrorAction SilentlyContinue)) {
-
-        Write-Log "WinGetPSmodule not found, beginning installation..."
-        # Install and run the WinGetPSmodule installer script
-        # NOTE: This requires PowerShellGet module
     
-
-        Write-Log "Installing NuGet..."
+    # Check if WinGet PowerShell module is installed
+    $moduleInstalled = Get-Module -ListAvailable -Name Microsoft.WinGet.Client -ErrorAction SilentlyContinue
+    
+    if (!$moduleInstalled) {
+        Write-Log "WinGetPSmodule not found, beginning installation..."
+        
+        # Install NuGet provider if needed
+        Write-Log "Installing NuGet provider..."
         Try {
-            Install-PackageProvider -Name NuGet -Force | Out-Null
+            $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction Stop
             Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+            Write-Log "NuGet provider installed successfully"
         } Catch {
             Write-Log "Failed to install NuGet: $_" "ERROR"
-            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | Install of NuGet failed. Now exiting script." "ERROR"
             Exit 1
         }
 
+        # Install WinGet PowerShell Module
         Write-Log "Installing WinGet PowerShell Module..."
         Try {
-            Install-Module -Name Microsoft.WinGet.Client -Scope AllUsers -Force
+            Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Force -AllowClobber -Scope AllUsers -ErrorAction Stop
+            Write-Log "WinGet PowerShell Module installed successfully"
         } Catch {
             Write-Log "Failed to install WinGet PowerShell Module: $_" "ERROR"
-            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet module failed. Now exiting script." "ERROR"
             Exit 1
         }
-
-        Write-Log "Importing WinGet PowerShell Module..."
-        Try {
-            Import-Module Microsoft.WinGet.Client -Force
-        } Catch {
-            Write-Log "Failed to import WinGet PowerShell Module: $_" "ERROR"
-            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
-            Exit 1
-        }
-
-        # Ensure App Installer/WinGet is in a good state for all users
-        Try {
-            Repair-WinGetPackageManager -AllUsers -Force
-        } Catch {
-            Write-Log "Failed to repair WinGetPackageManager: $_" "ERROR"
-            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
-            Exit 1
-        }
-
-
-        Write-Log "WinGetPSmodule installed successfully."
-        
     } else {
         Write-Log "WinGetPSmodule is already installed"
     }
-
+    
+    # Import the module
+    Write-Log "Importing WinGet PowerShell Module..."
+    Try {
+        Import-Module Microsoft.WinGet.Client -Force -ErrorAction Stop
+        Write-Log "WinGet PowerShell Module imported successfully"
+    } Catch {
+        Write-Log "Failed to import WinGet PowerShell Module: $_" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | Import of WinGet module failed. Now exiting script." "ERROR"
+        Exit 1
+    }
+    
+    # Try to repair WinGet, but don't fail if it doesn't work (common in SYSTEM context)
+    Try {
+        # Check if the Repair cmdlet exists and if we're not running as SYSTEM
+        if (Get-Command Repair-WinGetPackageManager -ErrorAction SilentlyContinue) {
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+            if ($currentUser.Name -ne 'NT AUTHORITY\SYSTEM') {
+                Write-Log "Attempting to repair WinGetPackageManager..."
+                Repair-WinGetPackageManager -AllUsers -Force -ErrorAction Stop
+                Write-Log "WinGetPackageManager repair completed"
+            } else {
+                Write-Log "Running as SYSTEM, skipping WinGet repair (not needed for PowerShell module)"
+            }
+        } else {
+            Write-Log "Repair-WinGetPackageManager not available, continuing without repair"
+        }
+    } Catch {
+        # Don't fail on repair errors - the module often works without it
+        Write-Log "Note: Could not repair WinGetPackageManager (non-critical): $_" "WARNING"
+        Write-Log "Continuing with installation - PowerShell module should still work"
+    }
+    
+    # Verify the module is working
+    Try {
+        $testCommand = Get-Command Install-WinGetPackage -ErrorAction Stop
+        Write-Log "WinGet PowerShell Module verified and ready to use"
+    } Catch {
+        Write-Log "Failed to verify WinGet PowerShell Module: $_" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | WinGet module verification failed. Now exiting script." "ERROR"
+        Exit 1
+    }
 }
 
 function CheckAndInstall-Git {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        Write-Log "Git not found. Installing via winget..." "WARNING"
+        Write-Log "Git not found. Installing via WinGet PowerShell module..." "WARNING"
         
         try {
-
-            Write-Log "Checking if WinGet is installed..."
-            #CheckAndInstall-WinGet
+            Write-Log "Checking if WinGet PowerShell module is installed..."
             CheckAndInstallandRepair-WinGetPSmodule
+            
+            Write-Log "Installing Git using WinGet PowerShell module..."
+            
+            # Try to install Git using the PowerShell module
+            Try {
 
-            Install-WinGetPackage -id Git.Git -Exact -source winget -Scope Machine -silent -accept-package-agreements -accept-source-agreements
+                # First, try to find the package to make sure it's available
+                $gitPackage = Find-WinGetPackage -Id Git.Git -Exact -Source winget -ErrorAction Stop
+
+                if ($gitPackage) {
+                    Write-Log "Git package found, proceeding with installation..."
+                    
+                    # Install Git
+                    $installResult = Install-WinGetPackage -Id Git.Git -Mode Silent -Source winget -Force -ErrorAction Stop
+                    
+                    if ($installResult) {
+                        Write-Log "Git installation completed"
+                    }
+                    
+                } else {
+                    Write-Log "Git package not found in WinGet repository" "ERROR"
+                    Exit 1
+                }
+
+
+            } Catch {
+                Write-Log "Failed to install Git via PowerShell module: $_" "ERROR"
+                
+                <#
+                # Fallback: try using winget.exe if available
+                if (Get-Command winget -ErrorAction SilentlyContinue) {
+                    Write-Log "Attempting fallback installation using winget.exe..."
+                    $wingetResult = winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements 2>&1
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Log "Git installed successfully via winget.exe fallback"
+                    } else {
+                        Write-Log "Fallback installation also failed" "ERROR"
+                        Exit 1
+                    }
+                } else {
+                    Write-Log "No fallback method available" "ERROR"
+                    Exit 1
+                }
+                #>
+
+            }
             
             # Refresh environment variables
+            Write-Log "Refreshing environment variables..."
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
             
-            Write-Log "Git installed successfully!" "SUCCESS"
+            # Verify Git installation
+            Start-Sleep -Seconds 5  # Give the system a moment to register the installation
+            
+
+            
+            # Final verification
+            if (Get-Command git -ErrorAction SilentlyContinue) {
+                Write-Log "Git installed and verified successfully!" "SUCCESS"
+            } else {
+                Write-Log "Git installation completed but git.exe not found in PATH. Attempting to search for Git and add to PATH manually." "WARNING"
+                
+                # Try common Git installation paths if not in PATH yet
+                Write-Log "Attempting to find Git and add to PATH"
+                $gitPaths = @(
+                    "C:\Program Files\Git\cmd",
+                    "C:\Program Files (x86)\Git\cmd",
+                    "${env:ProgramFiles}\Git\cmd",
+                    "${env:ProgramFiles(x86)}\Git\cmd"
+                )
+
+                $FoundGit = $False
+                foreach ($gitPath in $gitPaths) {
+
+                    if (Test-Path "$gitPath\git.exe") {
+                        Write-Log "Found Git at: $gitPath"
+                        $env:Path += ";$gitPath"
+
+                        # Refresh environment variables
+                        Write-Log "Refreshing environment variables..."
+                        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+                        
+                        # Verify Git installation
+                        Start-Sleep -Seconds 5  # Give the system a moment to register the installation
+        
+                        $FoundGit = $True
+                        break
+
+                    } 
+
+                }
+
+                if (Get-Command git -ErrorAction SilentlyContinue){
+                    Write-Log "Git installed and verified successfully!" "SUCCESS"
+                    $FoundGit = $True
+                }
+
+                if ($FoundGit -eq $False){
+
+                    Write-Log "Git installation returned success but git.exe not found in PATH or common locations. It may be available after a reboot." "ERROR"
+                    Exit 1
+                }
+
+                if ($FoundGit -eq $True) {
+                    # Try to add to system PATH permanently
+                    try {
+                        $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+                        if ($currentPath -notlike "*$gitPath*") {
+                            [Environment]::SetEnvironmentVariable("Path", "$currentPath;$gitPath", "Machine")
+                            Write-Log "Added Git to system PATH permanently"
+                        }
+                    } catch {
+                        Write-Log "Could not add Git to system PATH permanently (may need admin rights): $_" "WARNING"
+                    }
+                }
+
+            }
+            
         }
         catch {
             Write-Log "SCRIPT: $ThisFileName | END | ERROR: Failed to install Git: $_" "ERROR"
@@ -389,6 +520,5 @@ else {
 }
 
 Write-Log "++++++++++++++++++++++"
-    Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Update local repo completed." "SUCCESS"
-    Exit 0
-
+Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Update local repo completed." "SUCCESS"
+Exit 0
