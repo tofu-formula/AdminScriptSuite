@@ -1014,7 +1014,7 @@ Function Remove-App-MSI_EXE-Quiet([String]$appName)
         Write-Log "SKIPPING METHOD" "WARNING"
         Write-Log "========================================="
 
-        BREAK
+        Return "Skipped"
 
     } else {
 
@@ -1091,7 +1091,7 @@ Function Remove-App-MSI_EXE-S([String]$appName)
         Write-Log "SKIPPING METHOD" "WARNING"
         Write-Log "========================================="
 
-        BREAK
+        Return "Skipped"
 
     } else {
 
@@ -1240,7 +1240,7 @@ Function Remove-AppxPackage([String]$appName){
         Write-Log "SKIPPING METHOD" "WARNING"
         Write-Log "========================================="
 
-        BREAK
+        Return "Skipped"
 
     } else {
 
@@ -1362,7 +1362,7 @@ Function Remove-AppPackage([String]$appName){
         Write-Log "SKIPPING METHOD" "WARNING"
         Write-Log "========================================="
 
-        BREAK
+        Return "Skipped"
 
     } else {
 
@@ -1561,11 +1561,13 @@ Function Remove-App-MSI-I-QN([String]$appName)
         Write-Log "SKIPPING METHOD" "WARNING"
         Write-Log "========================================="
 
-        BREAK
+        Return "Skipped"
 
     } else {
 
         Write-Log "Method requested anyways, continuing" "WARNING"
+
+
     }
     ##
 
@@ -1835,7 +1837,16 @@ if (Get-Command $UninstallType -ErrorAction SilentlyContinue) {
                 $successfulMethods += $ChosenMethod
                 $uninstallSuccess = $True
 
-            } else {
+            } Elseif($Result -eq "NotFound"){
+
+                Write-Log "App $AppName not found during uninstall method ($ChosenMethod)" "WARNING"
+
+                
+            } Elseif($Result -eq "Skipped"){
+
+                Write-Log "Uninstall method $ChosenMethod was skipped" "WARNING"
+
+            }else {
                 Write-Log "Uninstallation attempt with $ChosenMethod failed" "ERROR"
                 
             }
