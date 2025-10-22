@@ -239,8 +239,8 @@ Write-Log "======================================"
 Write-Log "LOG PATH: $LogPath"
 Write-Log "Steps:"
 Write-Log " 1. Uninstall Target Apps:"
-Foreach ($app in $TargetApps){
-    Write-Log "  " + $app.key
+Foreach ($app in $TargetApps.keys){
+    Write-Log "  - $app"
 }
 Write-Log " 2. Uninstall .Net 8"
 Write-Log "======================================"
