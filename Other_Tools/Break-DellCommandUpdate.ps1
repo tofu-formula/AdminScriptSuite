@@ -1,5 +1,6 @@
 # Break Dell Command Update
 # This script is designed to break Dell Command Update, simulating a scenario seen in our environment. The goal is for the the Install Dell Command Update full clean script to fix what this breaks.
+# Tested and working so far!
 
 ### Other Vars ###
 #$RepoRoot = (Resolve-Path "$PSScriptRoot\..").Path
