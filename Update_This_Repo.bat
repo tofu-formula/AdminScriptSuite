@@ -70,6 +70,6 @@ if /I "%CORRECT%"=="N" (
     )
 )
 
-Powershell.exe -executionpolicy remotesigned -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
 PAUSE

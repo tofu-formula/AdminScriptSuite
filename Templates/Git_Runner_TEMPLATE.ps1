@@ -302,6 +302,26 @@ function CheckAndInstall-Git {
     }
 }
 
+Function Set-GitSafeDirectory {
+
+    Write-Log "Configuring Git safe directory for: $LocalRepoPath"
+    try {
+        # Check if the directory is already in safe.directory list
+        $safeDirectories = git config --global --get-all safe.directory 2>$null
+        $normalizedRepoPath = $LocalRepoPath -replace '\\', '/'
+        
+        if ($safeDirectories -notcontains $LocalRepoPath -and $safeDirectories -notcontains $normalizedRepoPath) {
+            Write-Log "Adding $LocalRepoPath to Git safe directories..."
+            git config --global --add safe.directory $normalizedRepoPath
+            Write-Log "Successfully added to safe directories" "SUCCESS"
+        } else {
+            Write-Log "Repository already in safe directories"
+        }
+    } catch {
+        Write-Log "Note: Could not configure safe directory (non-critical): $_" "WARNING"
+    }
+
+}
 
 ##########
 ## Main ##
@@ -356,29 +376,55 @@ Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
 
 # Add safe directory configuration
-Write-Log "Configuring Git safe directory for: $LocalRepoPath"
-try {
-    # Check if the directory is already in safe.directory list
-    $safeDirectories = git config --global --get-all safe.directory 2>$null
-    $normalizedRepoPath = $LocalRepoPath -replace '\\', '/'
-    
-    if ($safeDirectories -notcontains $LocalRepoPath -and $safeDirectories -notcontains $normalizedRepoPath) {
-        Write-Log "Adding $LocalRepoPath to Git safe directories..."
-        git config --global --add safe.directory $normalizedRepoPath
-        Write-Log "Successfully added to safe directories" "SUCCESS"
-    } else {
-        Write-Log "Repository already in safe directories"
-    }
-} catch {
-    Write-Log "Note: Could not configure safe directory (non-critical): $_" "WARNING"
-}
+Set-GitSafeDirectory 
 
+$DoClone = $False
 Write-Log "Now checking if local repo exists..."
 # Clone or update repository
-if (Test-Path $LocalRepoPath) {
+if(Test-Path $LocalRepoPath){
 
-    Write-Log "Local repository exists. Pulling latest changes..."
+    Write-Log "Local repository exists."
     Push-Location $LocalRepoPath
+
+    if (!(Test-Path "$LocalRepoPath\.git"))
+    {
+
+        Write-Log "No .git folder. Attempting to add." "WARNING"
+
+
+        # foreach ($line in $gitOutput) {
+        #     Write-Log "GIT: $line"
+        # }
+
+        $gitOutput = git init -b main 2>&1
+        ForEach ($line in $gitOutput) { Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+        
+        $gitOutput = git remote add origin $RepoURL 2>&1
+        ForEach ($line in $gitOutput) { Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+        
+        $gitOutput = git fetch origin 2>&1
+        ForEach ($line in $gitOutput) { Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+        
+        $gitOutput = git reset --hard origin/main 2>&1
+        ForEach ($line in $gitOutput){ Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+        
+        $gitOutput = git branch --set-upstream-to=origin/main main 2>&1
+        ForEach ($line in $gitOutput) { Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+    
+       
+        if (Test-Path "$LocalRepoPath\.git"){
+
+            Write-Log ".git folder added" "SUCCESS"
+
+        } else {
+            Write-Log "++++++++++++++++++++++"
+            Write-Log "SCRIPT: $ThisFileName | END | Could not add .git folder" "ERROR"
+            Exit 1
+        }
+
+    }
+   
+    Write-Log "Pulling latest changes..."
     try {
         $gitOutput = git pull 2>&1
         foreach ($line in $gitOutput) {
@@ -386,8 +432,9 @@ if (Test-Path $LocalRepoPath) {
         }
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "SCRIPT: $ThisFileName | END | Failed to pull latest changes" "ERROR"
-            exit 1
+            Write-Log "++++++++++++++++++++++"
+            Write-Log "SCRIPT: $ThisFileName | END | Failed at: git pull." "ERROR"
+            Exit 1            
         } else {
             Write-Log "Successfully pulled latest changes" "SUCCESS"
         }
@@ -395,8 +442,12 @@ if (Test-Path $LocalRepoPath) {
     finally {
         Pop-Location
     }
+} else {
+    $DoClone = $True
 }
-else {
+
+if ($DoClone -eq $true){
+
     Write-Log "No local repo yet. Cloning repository..."
     $gitOutput = git clone $RepoUrl $LocalRepoPath 2>&1
     foreach ($line in $gitOutput) {
@@ -409,6 +460,8 @@ else {
     } else {
         Write-Log "Successfully cloned repository" "SUCCESS"
     }
+    
+    Exit 1
 }
 
 # Exit script if this was update only
