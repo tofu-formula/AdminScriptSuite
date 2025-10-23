@@ -204,8 +204,10 @@ Function CheckAndInstall-WinGet {
         # NOTE: This requires PowerShellGet module
         Try{
 
-            Install-Script -Name winget-install -Force -Scope CurrentUser
-            winget-install
+            Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
+            $result = winget-install
+            ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
             Write-Log "WinGet installed successfully."
 
         } Catch {
@@ -226,7 +228,8 @@ function WinGet-Detect2{
     )
 
     Write-Log "This is the target version: $Version"
-    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1 | Out-String
+    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1 #| Out-String
+    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
     if ($result -match "$ID") {
         Write-Log "Function: WinGet-Detect | Installation detected of $ID"
@@ -262,7 +265,8 @@ function WinGet-Detect1{
     )
 
     # May want to remove the --exact if it causes issues
-    $result = winget list --id "$ID" --exact --accept-source-agreements| Out-String
+    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1 #| Out-String
+    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
     if ($result -match "$ID") {
         Write-Log "Function: WinGet-Detect | Installation detected of $ID"
@@ -280,7 +284,8 @@ function WinGet-Detect{
     )
 
     # May want to remove the --exact if it causes issues
-    $result = winget list --id "$ID" --exact --accept-source-agreements| Out-String
+    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1#| Out-String
+    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
     if ($result -match "$ID") {
         Write-Log "Function: WinGet-Detect | Installation detected of $ID"
@@ -365,12 +370,14 @@ Write-Log "Checking if AppID $AppID is valid"
 if ($null -eq $Version){
 
     $result = winget show --id $AppId --exact 2>&1 | Out-String
+    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
 
 } else {
 
     Write-Log "Version $Version requested, checking if that exists as well"
     $result = winget show --id $AppId --version $Version --exact 2>&1 | Out-String
+    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
 }
 

@@ -261,8 +261,12 @@ Function CheckAndInstall-WinGet {
         Try{
 
             Install-Script -Name winget-install -Force -Scope CurrentUser
-            winget-install
+            $InstallOutput = winget-install 
+            ForEach ($line in $WinGetOutput) { Write-Log "INSTALL-WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+
             Write-Log "WinGet installed successfully."
+
+            # TODO: "FAILED WHEN OPENING SOURCES TRY THE 'source reset' Command"
 
         } Catch {
 
@@ -285,8 +289,12 @@ function CheckAndInstall-Git {
             Write-Log "Checking if WinGet is installed"
             CheckAndInstall-WinGet
 
-            winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements
+            #winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements
             
+            $WinGetOutput = winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements 2>&1
+            ForEach ($line in $WinGetOutput) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+        
+
             # Refresh environment variables
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
             
@@ -307,13 +315,22 @@ Function Set-GitSafeDirectory {
     Write-Log "Configuring Git safe directory for: $LocalRepoPath"
     try {
         # Check if the directory is already in safe.directory list
-        $safeDirectories = git config --global --get-all safe.directory 2>$null
+        $safeDirectories = git config --global --get-all safe.directory 2>&1
+        ForEach ($line in $safeDirectories) { Write-Log "GIT: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
         $normalizedRepoPath = $LocalRepoPath -replace '\\', '/'
+
         
         if ($safeDirectories -notcontains $LocalRepoPath -and $safeDirectories -notcontains $normalizedRepoPath) {
             Write-Log "Adding $LocalRepoPath to Git safe directories..."
-            git config --global --add safe.directory $normalizedRepoPath
+
+            #git config --global --add safe.directory $normalizedRepoPath
+
+            $GitOutput = git config --global --add safe.directory $normalizedRepoPath 2>&1
+            ForEach ($line in $GitOutput) { Write-Log "GIT: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+
             Write-Log "Successfully added to safe directories" "SUCCESS"
+
+
         } else {
             Write-Log "Repository already in safe directories"
         }
