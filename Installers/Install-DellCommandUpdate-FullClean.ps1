@@ -18,7 +18,6 @@ $WorkingDirectory = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 
 
 $LogRoot = "$WorkingDirectory\Logs\Installer_Logs"
-$SafeAppID = $AppName -replace '[^\w]', '_'
 
 # path of WinGet installer
 $WinGetInstallerScript = "$RepoRoot\Installers\General_WinGet_Installer.ps1"
