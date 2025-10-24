@@ -501,6 +501,8 @@ Function App-Detector {
     If ($DetectMethod -eq 'Win_Get'){
 
         Write-Log "Checking if WinGet is installed" # May want to move this to the remove-app* function
+        Write-Log "For WinGet functions to work, the supplied AppName must be a valid, exact AppID" "WARNING"
+
         if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
             Write-Log "WinGet not found, beginning installation..."
             # Install and run the winget installer script
