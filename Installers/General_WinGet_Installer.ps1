@@ -283,6 +283,8 @@ function WinGet-Detect{
     $ID
     )
 
+    Write-Log "Checking if app $ID is installed"
+
     # May want to remove the --exact if it causes issues
     $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1#| Out-String
     ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
@@ -315,6 +317,45 @@ function WinGet-Detect{
 
 }
 
+Function Validate-WinGet-Search{
+
+    Write-Log "Checking if AppID $AppID is valid"
+
+    if ($null -eq $Version){
+
+        $result = winget show --id $AppId --exact 2>&1 | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+
+    } else {
+
+        Write-Log "Version $Version requested, checking if that exists as well"
+        $result = winget show --id $AppId --version $Version --exact 2>&1 | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+    }
+
+    if ($result -match "No package found") {
+
+        if ($null -eq $Version){
+            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
+        } else {
+            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version. Now exiting script." "ERROR"
+        }
+
+        Exit 1
+
+    } else {
+        if ($null -eq $Version){
+            Write-Log "App ID $AppID is valid. Now proceeding with script."
+
+        } else {
+            Write-Log "App ID $AppID with version $Version is valid. Now proceeding with script."
+
+        }
+    }
+
+}
 
 ############
 ### Main ###
@@ -361,46 +402,10 @@ if ($AppName -eq $null -or $AppID -eq $null){
 }
 
 
-Write-Log "Checking if WinGet is installed"
 CheckAndInstall-WinGet
 
 
-Write-Log "Checking if AppID $AppID is valid"
-
-if ($null -eq $Version){
-
-    $result = winget show --id $AppId --exact 2>&1 | Out-String
-    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-
-} else {
-
-    Write-Log "Version $Version requested, checking if that exists as well"
-    $result = winget show --id $AppId --version $Version --exact 2>&1 | Out-String
-    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-}
-
-if ($result -match "No package found") {
-
-    if ($null -eq $Version){
-        Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
-    } else {
-        Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version. Now exiting script." "ERROR"
-    }
-
-    Exit 1
-
-} else {
-    if ($null -eq $Version){
-        Write-Log "App ID $AppID is valid. Now proceeding with script."
-
-    } else {
-        Write-Log "App ID $AppID with version $Version is valid. Now proceeding with script."
-
-    }
-}
-
+Validate-WinGet-Search
 
 Write-Log "----- Now attempting to install $appname -----"
 # Write-Log "----------------------------------------------"
