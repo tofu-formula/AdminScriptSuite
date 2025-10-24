@@ -1168,7 +1168,7 @@ Function Remove-App-EXE-S-QUOTES([String]$appName)
 
         Write-Log "SKIPPING METHOD" "WARNING"
         Write-Log "========================================="
-        BREAK
+        Return "Skipped"
 
     } else {
 
