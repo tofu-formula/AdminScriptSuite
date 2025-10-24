@@ -37,4 +37,4 @@ ECHO Working Directory (puts logs folder here): %WORKINGDIR%
 ECHO If that is acceptable...
 Pause
 
-Powershell.exe -executionpolicy remotesigned -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_Acrobat_Pro" -AppID "Adobe.Acrobat.Pro" -WorkingDirectory "%WORKINGDIR%"
+Powershell.exe -executionpolicy bypass -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_Acrobat_Pro" -AppID "Adobe.Acrobat.Pro" -WorkingDirectory "%WORKINGDIR%"

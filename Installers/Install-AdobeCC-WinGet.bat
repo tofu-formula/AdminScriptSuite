@@ -38,4 +38,4 @@ ECHO If that is acceptable...
 Pause
 
 
-Powershell.exe -executionpolicy remotesigned -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_CC" -AppID "Adobe.CreativeCloud" -WorkingDirectory "%WORKINGDIR%"
+Powershell.exe -executionpolicy bypass -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_CC" -AppID "Adobe.CreativeCloud" -WorkingDirectory "%WORKINGDIR%"
