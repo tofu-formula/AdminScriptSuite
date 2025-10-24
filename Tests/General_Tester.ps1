@@ -189,9 +189,39 @@ Function TESTER-UninstallAll-7Zip {
 
     }
 
-
 }
 
+Function TESTER-UninstallWinGet-7Zip {
+
+
+    # Write-Log "========================================"
+    # Write-Log "SCRIPT: $ThisFileName | 1. Attempt clean uninstall of pre-existing installations of DCU"
+    # Write-Log "========================================"
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    $AppName = "7zip.7zip"
+    $UninstallType = "Remove-App-WinGet"
+
+    Try{ 
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to uninstall $AppName"
+
+        #Powershell.exe -executionpolicy remotesigned -File $UninstallerScript -AppName "Dell.CommandUpdate" -UninstallType "All" -WorkingDirectory $WorkingDirectory
+        
+        & $UninstallerScript -AppName "$AppName" -UninstallType "$UninstallType" -WorkingDirectory $WorkingDirectory
+        if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $AppName Uninstall failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
 
 Function TESTER-InstallWinGet-7Zip {
 
@@ -221,37 +251,200 @@ Function TESTER-InstallWinGet-7Zip {
 
 }
 
-# Still testing this one
-# Function TESTER-GitRunner-InstallWinGet-7Zip{
+Function TESTER-GitRunner-InstallWinGet-7Zip{
 
-#     Write-Log "========================================="
+    Write-Log "========================================="
 
-#     Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
 
-#     $AppName = "7-Zip"
-#     $AppID = "7zip.7zip"    
+    #$AppName = "7-Zip"
+    #$AppID = "7zip.7zip"    
 
-#     Try {
+    #$ScriptParams = '-AppName $AppName -AppID $AppID -WorkingDirectory $WorkingDirectory'
 
-#         Write-Log "SCRIPT: $ThisFileName | "
+    Try {
 
-#         #Powershell.exe -executionpolicy remotesigned -File $WinGetInstallerScript -AppName "DellCommandUpdate" -AppID "Dell.CommandUpdate" -WorkingDirectory $WorkingDirectory
-#         #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
+        #Write-Log "SCRIPT: $ThisFileName | Running "
+
+        #Powershell.exe -executionpolicy remotesigned -File $WinGetInstallerScript -AppName "DellCommandUpdate" -AppID "Dell.CommandUpdate" -WorkingDirectory $WorkingDirectory
+        #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
 
 
-#         #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
-#         & $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams "-AppName $AppName -AppID $AppID -WorkingDirectory $WorkingDirectory"
-#         if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        
+        #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
 
-#     } Catch {
 
-#         Write-Log "SCRIPT: $ThisFileName | END | Failed to finish $($MyInvocation.MyCommand.Name) | Code: $_" "ERROR"
-#         Exit 1
+        #$ScriptParams = "-AppName `"$AppName`" -AppID `"$AppID`" -WorkingDirectory `"$WorkingDirectory`""
 
-#     }
+        #$ScriptParams = "-AppName `"$AppName`" -AppID `"$AppID`" -WorkingDirectory `"$WorkingDirectory`""
+        #$ScriptParams = '-AppName "' + $AppName + '" -AppID "' + $AppID + '" -WorkingDirectory "' + $WorkingDirectory + '"'
 
-# }
+        #$ScriptParams = '-AppName "{0}" -AppID "{1}" -WorkingDirectory "{2}"' -f $AppName, $AppID, $WorkingDirectory
+
+        #$ScriptParams = "-AppName ""$AppName"" -AppID ""$AppID"" -WorkingDirectory ""$WorkingDirectory"""
+
+
+        # & $GitRunnerScript -RepoNickName 'TEST' `
+        #     -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+        #     -UpdateLocalRepoOnly $False `
+        #     -WorkingDirectory $WorkingDirectory `
+        #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
+        #     -ScriptParams $ScriptParams
+        
+        & $GitRunnerScript `
+            -RepoNickName 'TEST' `
+            -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+            -UpdateLocalRepoOnly $False `
+            -WorkingDirectory $WorkingDirectory `
+            -ScriptPath "Installers\General_WinGet_Installer.ps1" `
+            -ScriptParams '`
+                -AppName "7-zip" `
+                -AppID "7zip.7zip" `
+                -WorkingDirectory "C:\temp\tests"'
+
+        if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | Failed to finish $($MyInvocation.MyCommand.Name) | Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
+Function TESTER-GitRunner-UninstallWinGet-7Zip{
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    #$AppName = "7-Zip"
+    #$AppID = "7zip.7zip"    
+
+    #$ScriptParams = '-AppName $AppName -AppID $AppID -WorkingDirectory $WorkingDirectory'
+
+    Try {
+
+        #Write-Log "SCRIPT: $ThisFileName | Running "
+
+        #Powershell.exe -executionpolicy remotesigned -File $WinGetInstallerScript -AppName "DellCommandUpdate" -AppID "Dell.CommandUpdate" -WorkingDirectory $WorkingDirectory
+        #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
+
+
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        
+        #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
+
+
+        #$ScriptParams = "-AppName `"$AppName`" -AppID `"$AppID`" -WorkingDirectory `"$WorkingDirectory`""
+
+        #$ScriptParams = "-AppName `"$AppName`" -AppID `"$AppID`" -WorkingDirectory `"$WorkingDirectory`""
+        #$ScriptParams = '-AppName "' + $AppName + '" -AppID "' + $AppID + '" -WorkingDirectory "' + $WorkingDirectory + '"'
+
+        #$ScriptParams = '-AppName "{0}" -AppID "{1}" -WorkingDirectory "{2}"' -f $AppName, $AppID, $WorkingDirectory
+
+        #$ScriptParams = "-AppName ""$AppName"" -AppID ""$AppID"" -WorkingDirectory ""$WorkingDirectory"""
+
+
+        # & $GitRunnerScript -RepoNickName 'TEST' `
+        #     -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+        #     -UpdateLocalRepoOnly $False `
+        #     -WorkingDirectory $WorkingDirectory `
+        #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
+        #     -ScriptParams $ScriptParams
+        
+        & $GitRunnerScript `
+            -RepoNickName 'TEST' `
+            -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+            -UpdateLocalRepoOnly $False `
+            -WorkingDirectory $WorkingDirectory `
+            -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
+            -ScriptParams '`
+                -AppName "7zip.7zip" `
+                -UninstallType "Remove-App-WinGet"`
+                -WorkingDirectory "C:\temp\tests"'
+
+        if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | Failed to finish $($MyInvocation.MyCommand.Name) | Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
+Function TESTER-GitRunner-UninstallAll-7Zip{
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    #$AppName = "7-Zip"
+    #$AppID = "7zip.7zip"    
+
+    #$ScriptParams = '-AppName $AppName -AppID $AppID -WorkingDirectory $WorkingDirectory'
+
+    Try {
+
+        #Write-Log "SCRIPT: $ThisFileName | Running "
+
+        #Powershell.exe -executionpolicy remotesigned -File $WinGetInstallerScript -AppName "DellCommandUpdate" -AppID "Dell.CommandUpdate" -WorkingDirectory $WorkingDirectory
+        #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
+
+
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        
+        #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
+
+
+        #$ScriptParams = "-AppName `"$AppName`" -AppID `"$AppID`" -WorkingDirectory `"$WorkingDirectory`""
+
+        #$ScriptParams = "-AppName `"$AppName`" -AppID `"$AppID`" -WorkingDirectory `"$WorkingDirectory`""
+        #$ScriptParams = '-AppName "' + $AppName + '" -AppID "' + $AppID + '" -WorkingDirectory "' + $WorkingDirectory + '"'
+
+        #$ScriptParams = '-AppName "{0}" -AppID "{1}" -WorkingDirectory "{2}"' -f $AppName, $AppID, $WorkingDirectory
+
+        #$ScriptParams = "-AppName ""$AppName"" -AppID ""$AppID"" -WorkingDirectory ""$WorkingDirectory"""
+
+
+        # & $GitRunnerScript -RepoNickName 'TEST' `
+        #     -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+        #     -UpdateLocalRepoOnly $False `
+        #     -WorkingDirectory $WorkingDirectory `
+        #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
+        #     -ScriptParams $ScriptParams
+        
+        & $GitRunnerScript `
+            -RepoNickName 'TEST' `
+            -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+            -UpdateLocalRepoOnly $False `
+            -WorkingDirectory $WorkingDirectory `
+            -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
+            -ScriptParams '`
+                -AppName "7-zip" `
+                -UninstallType "All"`
+                -WorkingDirectory "C:\temp\tests"'
+
+        if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | Failed to finish $($MyInvocation.MyCommand.Name) | Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
 
 
 ##########
@@ -304,7 +497,6 @@ Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 Write-Log "===== General Tester ====="
 
 $methods = Get-Command -CommandType Function -Name "TESTER-*" | Select-Object -ExpandProperty Name
-
 
 $AvailableTests = @{}
 
