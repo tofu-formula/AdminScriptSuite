@@ -249,8 +249,6 @@ function Test-PathSyntaxValidity {
 
 }
 
-
-
 Function CheckAndInstall-WinGet {
 
     if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -423,7 +421,7 @@ if(Test-Path $LocalRepoPath){
         ForEach ($line in $gitOutput) { Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
         
         $gitOutput = git reset --hard origin/main 2>&1
-        ForEach ($line in $gitOutput){ Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+        ForEach ($line in $gitOutput) { Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
         
         $gitOutput = git branch --set-upstream-to=origin/main main 2>&1
         ForEach ($line in $gitOutput) { Write-Log "GIT: $line" } ; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
@@ -512,6 +510,9 @@ try {
     else {
         & $FullScriptPath
     }
+
+    if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
 }
 catch {
     Write-Log "SCRIPT: $ThisFileName | END | Failed to execute script: $_" "ERROR"
