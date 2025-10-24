@@ -483,6 +483,52 @@ Function Command-Runner {
 
 }
 
+Function Validate-WinGet-Search{
+
+    Param(
+
+        $AppID
+
+    )
+
+    Write-Log "Checking if AppID $AppID is valid"
+
+    if ($null -eq $Version){
+
+        $result = winget show --id $AppId --exact 2>&1 | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+
+    } else {
+
+        Write-Log "Version $Version requested, checking if that exists as well"
+        $result = winget show --id $AppId --version $Version --exact 2>&1 | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+    }
+
+    if ($result -match "No package found") {
+
+        if ($null -eq $Version){
+            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
+        } else {
+            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version. Now exiting script." "ERROR"
+        }
+
+        Exit 1
+
+    } else {
+        if ($null -eq $Version){
+            Write-Log "AppID $AppID is valid. Now proceeding with script."
+
+        } else {
+            Write-Log "AppID $AppID with version $Version is valid. Now proceeding with script."
+
+        }
+    }
+
+}
+
 # Detection Checkers to add in the future?
 Function App-Detector {
     Param (
@@ -501,7 +547,6 @@ Function App-Detector {
     If ($DetectMethod -eq 'Win_Get'){
 
         Write-Log "Checking if WinGet is installed" # May want to move this to the remove-app* function
-        Write-Log "For WinGet functions to work, the supplied AppName must be a valid, exact AppID" "WARNING"
 
         if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
             Write-Log "WinGet not found, beginning installation..."
@@ -522,14 +567,21 @@ Function App-Detector {
             Write-Log "Winget is already installed"
         }
 
+        Write-Log "For WinGet functions to work, the supplied AppName must be a valid, exact AppID" "WARNING"
 
+        Write-Log "Checking if AppName is a valid AppID"
+        Validate-WinGet-Search -AppID $AppName
+        if ($LASTEXITCODE -ne 0) { return "AppIDinvalid" }
+
+
+        Write-Log "Checking if AppID is present locally"
         $Detection = winget list --id "$AppName" --exact --accept-source-agreements| Out-String
 
         if ($Detection -match "$AppName") {
-            #Write-Log "Installation detected of $ID"
+            Write-Log "Installation detected of $AppName"
             return $true
         } else {
-            #Write-Log "Installation not detected of $ID"
+            Write-Log "Installation not detected of $AppName"
             return $null
         }
 
@@ -694,7 +746,7 @@ Function Test-AllDetectionMethods {
             $detected = App-Detector -AppName $AppName -DetectMethod $method
             $results[$method] = $detected
             
-            if ($detected) {
+            if ($detected -eq $true) {
                 Write-Log "Function: Test-AllDetectionMethods | $method : Application FOUND" "WARNING"
             } else {
                 Write-Log "Function: Test-AllDetectionMethods | $method : Application NOT found" "SUCCESS"
@@ -868,7 +920,6 @@ Function Remove-App-EXE-SILENT([String]$appName)
     }
 
 }
-
 
 Function Remove-App-CIM([string]$appName)
 {
@@ -1474,7 +1525,7 @@ Function Remove-App-WinGet([String]$appName){
     $appCheck = App-Detector -AppName $AppName -DetectMethod 'Win_Get'
 
     # If App was found...
-    if($appCheck -ne $null){
+    if($appCheck -eq $True){
 
         Write-Log "Function: $($MyInvocation.MyCommand.Name) | Application Detected. Now running uninstaller for: $AppName" "WARNING"
 
@@ -1523,6 +1574,11 @@ Function Remove-App-WinGet([String]$appName){
             $uninstallSuccess = $False
         }
 
+
+    } elseif($appCheck -eq "AppIDinvalid") {
+
+        Write-Log "Function: $($MyInvocation.MyCommand.Name) | $appName could not be found because the AppID is not valid" "ERROR"
+        $uninstallSuccess = "AppIDinvalid"
 
     } else {
         Write-Log "Function: $($MyInvocation.MyCommand.Name) | $appName is not installed on this computer!" "WARNING"
@@ -1790,6 +1846,7 @@ if ($VerboseLogs -eq $True){
 
 }
 
+# TODO: I might be able to remove this snippet now
 # Check for missing requirements
 if ([string]::IsNullOrEmpty($AppName) -or [string]::IsNullOrEmpty($UninstallType)){
 
@@ -1798,10 +1855,13 @@ if ([string]::IsNullOrEmpty($AppName) -or [string]::IsNullOrEmpty($UninstallType
 
 }
 
+
+
+
 Write-Log "Now beginning work."
 
 # Check if the function is legit first
-if (Get-Command $UninstallType -ErrorAction SilentlyContinue) {
+if ($Methods -contains $UninstallType) {
 
     Write-Log "Requested uninstall method found: $UninstallType"
     Write-Log "Attempting to call this method."
@@ -1815,9 +1875,8 @@ if (Get-Command $UninstallType -ErrorAction SilentlyContinue) {
 
         Write-Log "App $AppName not found during uninstall method ($UninstallType)" "WARNING"
 
-
     } else {
-        Write-Log "Uninstallation failed using the called method ($UninstallType) failed" "ERROR"
+        Write-Log "Uninstallation failed using the called method ($UninstallType) failed. Return message: $Result" "ERROR"
         $uninstallSuccess = $False
     }
 
@@ -1859,8 +1918,8 @@ if (Get-Command $UninstallType -ErrorAction SilentlyContinue) {
     }
 
     if ($successfulMethods.Count -gt 0) {
-    Write-Log "Succeeded with methods: $($successfulMethods -join ', ')" "SUCCESS"
-}
+        Write-Log "Succeeded with methods: $($successfulMethods -join ', ')" "SUCCESS"
+    }
 
     Write-Log "End of available methods."
     Write-Log "========================================="
@@ -1878,6 +1937,10 @@ if (Get-Command $UninstallType -ErrorAction SilentlyContinue) {
     $methods | ForEach-Object { Write-Log "  - $_" "INFO" }
 
     Write-Log "========================================="
+
+    Write-Log "SCRIPT: $ThisFileName | END | Uninstallation of $AppName failed!" "ERROR"
+    exit 1
+
 
 }
 
