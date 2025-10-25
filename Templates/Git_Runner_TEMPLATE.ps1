@@ -81,6 +81,8 @@ param(
 
     [string]$ScriptPath, # Path from repo root to the target script
 
+    [boolean]$Use_WinGet_PSmodule=$true,
+
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
     
@@ -249,6 +251,83 @@ function Test-PathSyntaxValidity {
 
 }
 
+Function CheckAndInstallandRepair-WinGetPSmodule {
+    
+    # Check if WinGet PowerShell module is installed
+    $moduleInstalled = Get-Module -ListAvailable -Name Microsoft.WinGet.Client -ErrorAction SilentlyContinue
+    
+    if (!$moduleInstalled) {
+        Write-Log "WinGetPSmodule not found, beginning installation..."
+        
+        # Install NuGet provider if needed
+        Write-Log "Installing NuGet provider..."
+        Try {
+            $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction Stop
+            Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+            Write-Log "NuGet provider installed successfully"
+        } Catch {
+            Write-Log "Failed to install NuGet: $_" "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | Install of NuGet failed. Now exiting script." "ERROR"
+            Exit 1
+        }
+
+        # Install WinGet PowerShell Module
+        Write-Log "Installing WinGet PowerShell Module..."
+        Try {
+            Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Force -AllowClobber -Scope AllUsers -ErrorAction Stop
+            Write-Log "WinGet PowerShell Module installed successfully"
+        } Catch {
+            Write-Log "Failed to install WinGet PowerShell Module: $_" "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet module failed. Now exiting script." "ERROR"
+            Exit 1
+        }
+    } else {
+        Write-Log "WinGetPSmodule is already installed"
+    }
+    
+    # Import the module
+    Write-Log "Importing WinGet PowerShell Module..."
+    Try {
+        Import-Module Microsoft.WinGet.Client -Force -ErrorAction Stop
+        Write-Log "WinGet PowerShell Module imported successfully"
+    } Catch {
+        Write-Log "Failed to import WinGet PowerShell Module: $_" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | Import of WinGet module failed. Now exiting script." "ERROR"
+        Exit 1
+    }
+    
+    # Try to repair WinGet, but don't fail if it doesn't work (common in SYSTEM context)
+    Try {
+        # Check if the Repair cmdlet exists and if we're not running as SYSTEM
+        if (Get-Command Repair-WinGetPackageManager -ErrorAction SilentlyContinue) {
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+            if ($currentUser.Name -ne 'NT AUTHORITY\SYSTEM') {
+                Write-Log "Attempting to repair WinGetPackageManager..."
+                Repair-WinGetPackageManager -AllUsers -Force -ErrorAction Stop
+                Write-Log "WinGetPackageManager repair completed"
+            } else {
+                Write-Log "Running as SYSTEM, skipping WinGet repair (not needed for PowerShell module)"
+            }
+        } else {
+            Write-Log "Repair-WinGetPackageManager not available, continuing without repair"
+        }
+    } Catch {
+        # Don't fail on repair errors - the module often works without it
+        Write-Log "Note: Could not repair WinGetPackageManager (non-critical): $_" "WARNING"
+        Write-Log "Continuing with installation - PowerShell module should still work"
+    }
+    
+    # Verify the module is working
+    Try {
+        $testCommand = Get-Command Install-WinGetPackage -ErrorAction Stop
+        Write-Log "WinGet PowerShell Module verified and ready to use"
+    } Catch {
+        Write-Log "Failed to verify WinGet PowerShell Module: $_" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | WinGet module verification failed. Now exiting script." "ERROR"
+        Exit 1
+    }
+}
+
 Function CheckAndInstall-WinGet {
 
     if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -284,8 +363,18 @@ function CheckAndInstall-Git {
         
         try {
 
-            Write-Log "Checking if WinGet is installed"
-            CheckAndInstall-WinGet
+            # if($Use_WinGet_PSmodule -eq $True){
+            #     Write-Log "Checking if WinGet PowerShell Module is installed"
+            #     CheckAndInstallandRepair-WinGetPSmodule
+
+            #     Pause
+
+            # } else {
+            #     Write-Log "Checking if WinGet is installed"
+            #     CheckAndInstall-WinGet
+
+            # }
+
 
             #winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements
             
@@ -384,7 +473,19 @@ Write-Log "ScriptPath: $ScriptPath"
 Write-Log "WorkingDirectory: $WorkingDirectory"
 Write-Log "ScriptParams: $ScriptParams"
 Write-Log "UpdateLocalRepoOnly: $UpdateLocalRepoOnly"
+Write-Log "Use_WinGet_PSmodule: $Use_WinGet_PSmodule"
 Write-Log "++++++++++++++++++++++"
+
+# Check if WinGet is installed
+if($Use_WinGet_PSmodule -eq $True){
+    Write-Log "Checking if WinGet PowerShell Module is installed"
+    CheckAndInstallandRepair-WinGetPSmodule
+
+} else {
+    Write-Log "Checking if WinGet is installed"
+    CheckAndInstall-WinGet
+
+}
 
 # Check if git is installed
 Write-Log "Checking if Git is installed..."
