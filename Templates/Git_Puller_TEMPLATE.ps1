@@ -165,6 +165,124 @@ function Test-PathSyntaxValidity {
 
 Function CheckAndInstall-WinGet {
 
+    Try {
+
+        # 1) Ensure winget (App Installer) is provisioned for SYSTEM
+        function Get-WingetPath {
+            
+            #$base = "${Env:ProgramFiles}\WindowsApps"
+
+            # if (Test-Path $base) {
+            #     $candidates = Get-ChildItem $base -Filter "Microsoft.DesktopAppInstaller_*x64__8wekyb3d8bbwe" -ErrorAction SilentlyContinue | Sort-Object Name -Descending
+            #     foreach ($c in $candidates) {
+            #     $p = Join-Path $c.FullName 'winget.exe'
+            #     if (Test-Path $p) { return $p }
+            #     }
+            # }
+
+            ## Got this snippet from here, all rights to go original writer: https://github.com/SorenLundt/WinGet-Wrapper/blob/main/WinGet-Wrapper.ps1
+            $resolveWingetPath = Resolve-Path "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe"
+            
+            if ($resolveWingetPath) {
+                $wingetPath = $resolveWingetPath[-1].Path
+                $wingetPath = $wingetPath + "\winget.exe"
+                Write-Log "WinGet path: $wingetPath"
+                return $wingetPath
+
+            ## end of snippet 
+            } else {
+
+                return $null
+
+            }
+            
+
+        }
+
+        $winget = Get-WingetPath
+
+
+        # NEEDS TESTING
+        if (-not $winget) {
+
+            Write-Log "WinGet not found. Attempting to provision App Installer (offline)..."
+            $temp = Join-Path $env:TEMP "AppInstaller"
+            New-Item $temp @newItemSplat | Out-Null
+            $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+            
+            # Use official shortlink which redirects to the current App Installer bundle
+            $url = "https://aka.ms/getwinget"
+            Invoke-WebRequest -Uri $url -OutFile $bundle -UseBasicParsing
+
+            try {
+
+                Add-AppxProvisionedPackage -Online -PackagePath $bundle -SkipLicense | Out-Null
+                Write-Log "Provisioned App Installer."
+
+            } catch {
+
+                #throw "Provisioning failed: $($_.Exception.Message)"
+                Write-Log "Provisioning failed: $_" "ERROR"
+                throw "$_"
+
+
+            }
+
+            Start-Sleep -Seconds 5
+            $winget = Get-WingetPath
+
+        }
+
+        # In theory this shouldn't work. In practice it might.
+        if (-not $winget){
+
+            Write-Log "WinGet still not found. Attempting to use Install-Script."
+
+            Try{
+
+                Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
+                $result = winget-install
+                ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+                Write-Log "WinGet installed successfully."
+
+            } Catch {
+                
+                Write-Log "Provisioning failed: $_" "ERROR"
+                throw "$_"
+
+            }
+
+            Start-Sleep -Seconds 5
+            $winget = Get-WingetPath
+
+        }
+
+
+        if (-not $winget) { throw "winget.exe still not found after provisioning: $_" }
+        
+        Write-Log "Successfully resolved WinGet path. Using winget at: $winget"
+
+        # 2) Prep sources (first-run) and install packages
+        Write-Log "Prepping WinGet source"
+        $result = & $winget source reset --force | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+        $result = & $winget source update | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+        Return $WinGet
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName| END | Install of WinGet failed. Please investigate. Return message: $_" "ERROR"
+        Exit 1
+
+    }
+
+    
+
+    # Old version
+    <#
     if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
 
         Write-Log "WinGet not found, beginning installation..."
@@ -172,19 +290,22 @@ Function CheckAndInstall-WinGet {
         # NOTE: This requires PowerShellGet module
         Try{
 
-            Install-Script -Name winget-install -Force -Scope CurrentUser
-            winget-install
+            Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
+            $result = winget-install
+            ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
             Write-Log "WinGet installed successfully."
 
         } Catch {
 
-            Write-Log "SCRIPT: $ThisFileName | END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName| END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
             Exit 1
         }
         
     } else {
         Write-Log "Winget is already installed"
     }
+    #>
 
 }
 
@@ -194,11 +315,10 @@ function CheckAndInstall-Git {
         
         try {
 
-            Write-Log "Checking if WinGet is installed"
-            CheckAndInstall-WinGet
 
-            winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements
-            
+            $Result = & $winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity --source winget 2>&1 #| Out-String
+            ForEach ($line in $result) { Write-Log "WINGET: $line" } 
+
             # Refresh environment variables
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
             
@@ -249,6 +369,9 @@ Write-Log "RepoUrl: $RepoUrl"
 Write-Log "WorkingDirectory: $WorkingDirectory"
 
 Write-Log "++++++++++++++++++++++"
+
+Write-Log "Checking if WinGet is installed"
+$WinGet = CheckAndInstall-WinGet
 
 # Check if git is installed
 Write-Log "Checking if Git is installed..."

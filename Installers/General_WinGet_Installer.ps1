@@ -197,6 +197,124 @@ function Write-Log {
 
 Function CheckAndInstall-WinGet {
 
+    Try {
+
+        # 1) Ensure winget (App Installer) is provisioned for SYSTEM
+        function Get-WingetPath {
+            
+            #$base = "${Env:ProgramFiles}\WindowsApps"
+
+            # if (Test-Path $base) {
+            #     $candidates = Get-ChildItem $base -Filter "Microsoft.DesktopAppInstaller_*x64__8wekyb3d8bbwe" -ErrorAction SilentlyContinue | Sort-Object Name -Descending
+            #     foreach ($c in $candidates) {
+            #     $p = Join-Path $c.FullName 'winget.exe'
+            #     if (Test-Path $p) { return $p }
+            #     }
+            # }
+
+            ## Got this snippet from here, all rights to go original writer: https://github.com/SorenLundt/WinGet-Wrapper/blob/main/WinGet-Wrapper.ps1
+            $resolveWingetPath = Resolve-Path "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe"
+            
+            if ($resolveWingetPath) {
+                $wingetPath = $resolveWingetPath[-1].Path
+                $wingetPath = $wingetPath + "\winget.exe"
+                Write-Log "WinGet path: $wingetPath"
+                return $wingetPath
+
+            ## end of snippet 
+            } else {
+
+                return $null
+
+            }
+            
+
+        }
+
+        $winget = Get-WingetPath
+
+
+        # NEEDS TESTING
+        if (-not $winget) {
+
+            Write-Log "WinGet not found. Attempting to provision App Installer (offline)..."
+            $temp = Join-Path $env:TEMP "AppInstaller"
+            New-Item $temp @newItemSplat | Out-Null
+            $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+            
+            # Use official shortlink which redirects to the current App Installer bundle
+            $url = "https://aka.ms/getwinget"
+            Invoke-WebRequest -Uri $url -OutFile $bundle -UseBasicParsing
+
+            try {
+
+                Add-AppxProvisionedPackage -Online -PackagePath $bundle -SkipLicense | Out-Null
+                Write-Log "Provisioned App Installer."
+
+            } catch {
+
+                #throw "Provisioning failed: $($_.Exception.Message)"
+                Write-Log "Provisioning failed: $_" "ERROR"
+                throw "$_"
+
+
+            }
+
+            Start-Sleep -Seconds 5
+            $winget = Get-WingetPath
+
+        }
+
+        # In theory this shouldn't work. In practice it might.
+        if (-not $winget){
+
+            Write-Log "WinGet still not found. Attempting to use Install-Script."
+
+            Try{
+
+                Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
+                $result = winget-install
+                ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+                Write-Log "WinGet installed successfully."
+
+            } Catch {
+                
+                Write-Log "Provisioning failed: $_" "ERROR"
+                throw "$_"
+
+            }
+
+            Start-Sleep -Seconds 5
+            $winget = Get-WingetPath
+
+        }
+
+
+        if (-not $winget) { throw "winget.exe still not found after provisioning: $_" }
+        
+        Write-Log "Successfully resolved WinGet path. Using winget at: $winget"
+
+        # 2) Prep sources (first-run) and install packages
+        Write-Log "Prepping WinGet source"
+        $result = & $winget source reset --force | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+        $result = & $winget source update | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+        Return $WinGet
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName| END | Install of WinGet failed. Please investigate. Return message: $_" "ERROR"
+        Exit 1
+
+    }
+
+    
+
+    # Old version
+    <#
     if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
 
         Write-Log "WinGet not found, beginning installation..."
@@ -219,62 +337,7 @@ Function CheckAndInstall-WinGet {
     } else {
         Write-Log "Winget is already installed"
     }
-
-}
-
-function WinGet-Detect2{
-    Param(
-        [string]$ID
-    )
-
-    Write-Log "This is the target version: $Version"
-    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1 #| Out-String
-    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-    if ($result -match "$ID") {
-        Write-Log "Function: WinGet-Detect | Installation detected of $ID"
-        
-        # Try to extract the version
-        if ($null -ne $Version) {
-            if ($result -match "$ID\s+(\S+)") {
-                return $matches[1]
-            }
-        }
-        
-        # Check for specific version if provided
-        if ($Version -ne $null) {
-            if ($result -match $Version) {
-                Write-Log "Function: WinGet-Detect | Specific version $Version detected"
-                return $true
-            } else {
-                Write-Log "Function: WinGet-Detect | Requested version $Version NOT detected"
-                return $false
-            }
-        }
-        
-        return $true
-    } else {
-        Write-Log "Function: WinGet-Detect | Installation not detected of $ID"
-        return $false
-    }
-}
-
-function WinGet-Detect1{
-    Param(
-    $ID
-    )
-
-    # May want to remove the --exact if it causes issues
-    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1 #| Out-String
-    ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-    if ($result -match "$ID") {
-        Write-Log "Function: WinGet-Detect | Installation detected of $ID"
-        return $true
-    } else {
-        Write-Log "Function: WinGet-Detect | Installation not detected of $ID"
-        return $false
-    }
+    #>
 
 }
 
@@ -286,7 +349,7 @@ function WinGet-Detect{
     Write-Log "Checking if app $ID is installed"
 
     # May want to remove the --exact if it causes issues
-    $result = winget list --id "$ID" --exact --accept-source-agreements 2>&1#| Out-String
+    $result = & $winget list --id "$ID" --exact --disable-interactivity --accept-source-agreements --source winget 2>&1#| Out-String
     ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
     if ($result -match "$ID") {
@@ -323,14 +386,14 @@ Function Validate-WinGet-Search{
 
     if ($null -eq $Version){
 
-        $result = winget show --id $AppId --exact 2>&1 | Out-String
+        $result = & $winget show --id $AppId --exact --disable-interactivity --accept-source-agreements --source winget 2>&1 | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
 
     } else {
 
         Write-Log "Version $Version requested, checking if that exists as well"
-        $result = winget show --id $AppId --version $Version --exact 2>&1 | Out-String
+        $result = & $winget show --id $AppId --version $Version --exact --disable-interactivity --accept-source-agreements --source winget 2>&1 | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
     }
@@ -402,7 +465,7 @@ if ($AppName -eq $null -or $AppID -eq $null){
 }
 
 
-CheckAndInstall-WinGet
+$WinGet = CheckAndInstall-WinGet
 
 
 Validate-WinGet-Search
@@ -452,14 +515,14 @@ if($detectPreviousInstallation -eq $true){
     # Try installation of target ID
     try {
     
-        $cmd = "winget"
+        $cmd = "$winget"
         if ($null -eq $Version){
             
-            $args = "install --id $AppID -e --silent --accept-package-agreements --accept-source-agreements"
+            $args = "install --id $AppID -e --silent --accept-package-agreements --accept-source-agreements  --disable-interactivity --source winget"
 
         } else {
             
-            $args = "install --id $AppID --version $Version -e --silent --accept-package-agreements --accept-source-agreements"
+            $args = "install --id $AppID --version $Version -e --silent --accept-package-agreements --accept-source-agreements  --disable-interactivity --source winget"
 
         }
 
@@ -535,7 +598,7 @@ if($detectPreviousInstallation -eq $true){
 
             
 
-            Write-Log "Install failure of $AppID. Will attempt another app ID if there are any assigned remaining." "ERROR"
+            Write-Log "Install failure of $AppID." "ERROR"
             $InstallSuccess = $false
 
     }
@@ -580,4 +643,3 @@ if ($InstallSuccess -eq $True) {
     Write-Log "SCRIPT: $ThisFileName | END | Critical Error: Could not install $appname $Version with ID $AppID" "ERROR"
     Exit 1
 }
-
