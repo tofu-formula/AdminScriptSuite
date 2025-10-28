@@ -121,6 +121,7 @@ if(!($UpdateLocalRepoOnly -eq $true)) {
 
 }
 
+
 ###############
 ## Functions ##
 ###############
@@ -402,12 +403,15 @@ function CheckAndInstall-Git {
         try {
 
 
-            $Result = & $winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity --source winget 2>&1 #| Out-String
+            $Result = & $winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity 2>&1 #| Out-String
             ForEach ($line in $result) { Write-Log "WINGET: $line" } 
 
             # Refresh environment variables
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
             
+            
+            if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
             Write-Log "Git installed successfully!" "SUCCESS"
         }
         catch {
@@ -437,6 +441,7 @@ Function Set-GitSafeDirectory {
 
             $GitOutput = git config --global --add safe.directory $normalizedRepoPath 2>&1
             ForEach ($line in $GitOutput) { Write-Log "GIT: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "++++++++++++++++++++++"; Write-Log "SCRIPT: $ThisFileName | END | Failed" "ERROR"; Exit 1 }
+
 
             Write-Log "Successfully added to safe directories" "SUCCESS"
 
