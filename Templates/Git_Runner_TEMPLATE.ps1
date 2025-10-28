@@ -83,6 +83,8 @@ param(
 
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
+
+    [Boolean]$forcemachinecontext,
     
     [Parameter(ValueFromRemainingArguments=$true)]
     $ScriptParams # Params to pass to the target script. Example for General_Uninstaller.ps1: -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
@@ -106,6 +108,8 @@ $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
 $LogRoot = "$WorkingDirectory\Logs\Git_Logs"
 #$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $ThisFileName = $MyInvocation.MyCommand.Name
+
+#$forcemachinecontext = $true
 
 # Evaluate vars based on whether this run is just an update only
 if(!($UpdateLocalRepoOnly -eq $true)) {
@@ -254,6 +258,8 @@ Function CheckAndInstall-WinGet {
 
     Try {
 
+        
+
         # 1) Ensure winget (App Installer) is provisioned for SYSTEM
         function Get-WingetPath {
             
@@ -267,7 +273,7 @@ Function CheckAndInstall-WinGet {
             #     }
             # }
 
-            ## Got this snippet from here, all rights to go original writer: https://github.com/SorenLundt/WinGet-Wrapper/blob/main/WinGet-Wrapper.ps1
+            ## Got ideas for this snippet from here, all rights to go original writer: https://github.com/SorenLundt/WinGet-Wrapper/blob/main/WinGet-Wrapper.ps1
             $resolveWingetPath = Resolve-Path "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe"
             
             if ($resolveWingetPath) {
@@ -276,7 +282,7 @@ Function CheckAndInstall-WinGet {
                 Write-Log "WinGet path: $wingetPath"
                 return $wingetPath
 
-            ## end of snippet 
+            
             } else {
 
                 return $null
@@ -285,19 +291,44 @@ Function CheckAndInstall-WinGet {
             
 
         }
+        
+        #Determine if running in system or user context
+        if ($env:USERNAME -like "*$env:COMPUTERNAME*" -or $forcemachinecontext -eq $true) {
+            Write-Log "Running in System Context"
+            $Context = "Machine"
 
-        $winget = Get-WingetPath
+            $winget = Get-WingetPath
+
+
+        }else {
+            Write-Log "Running in User Context"
+            $Context = "User"
+
+            $winget = "winget.exe" 
+        }
+
+        ## end of snippet 
+
+
+        ##
+
+        #$winget = Get-WingetPath
 
 
         # NEEDS TESTING
         if (-not $winget) {
 
-            Write-Log "WinGet not found. Attempting to provision App Installer (offline)..."
-            $temp = Join-Path $env:TEMP "AppInstaller"
-            New-Item $temp @newItemSplat | Out-Null
+            Write-Log "Attempting to provision App Installer (offline)..."
+            $temp = join-path $WorkingDirectory "Temp\AppInstaller"
+            #y$temp = Join-Path $env:TEMP "AppInstaller"
+            $Temp
+            Write-Log 'Attempting to do this: New-Item $temp @newItemSplat'
+            New-Item -path $temp -ItemType "Directory" -Force
+            Write-Log 'Attempting to do this: $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"'
             $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
             
             # Use official shortlink which redirects to the current App Installer bundle
+            Write-Log 'Invoking web requesty'
             $url = "https://aka.ms/getwinget"
             Invoke-WebRequest -Uri $url -OutFile $bundle -UseBasicParsing
 
@@ -319,6 +350,7 @@ Function CheckAndInstall-WinGet {
             $winget = Get-WingetPath
 
         }
+
 
         # In theory this shouldn't work. In practice it might.
         if (-not $winget){
@@ -357,6 +389,7 @@ Function CheckAndInstall-WinGet {
         $result = & $winget source update | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
+        Write-Log "Final WinGet path: $WinGet"
         Return $WinGet
 
     } Catch {
