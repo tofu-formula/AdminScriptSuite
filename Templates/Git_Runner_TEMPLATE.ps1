@@ -538,16 +538,19 @@ Function CheckAndInstall-NuGet{
 Function Install-WinGet {
 
     # Method 1
-    Function Install-WinGet-1{
+    Function Install-WinGet-1-AsherotoScript{
 
         # NOTE: In theory this shouldn't work. In practice it might.
-        # METHOD: Official installer script
+        # METHOD: Asheroto installer script
+        Write-Log "Function: $($MyInvocation.MyCommand.Name) | Begin"
 
-        # Pre Reqs?
+        # Pre Reqs
+        Write-Log "Running pre-reqs"
         CheckAndInstall-NuGet
 
         Try{
 
+            Write-Log "Now installing WinGet via Asheroto script"
             Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
             # Refresh environment variables
             Start-Sleep 3
@@ -570,13 +573,14 @@ Function Install-WinGet {
         # $winget = Get-WingetPath
     }
 
-
     # Method 2
-    Function Install-WinGet-2{
+    Function Install-WinGet-2-Offline-installer--Add-AppxProvisionedPackage-Online{
         # TODO: NEEDS TESTING
-        # METHOD: Offline installer - Add-AppxProvisionedPackage -Online 
+        # METHOD: Offline-installer--Add-AppxProvisionedPackage-Online 
+        Write-Log "Function: $($MyInvocation.MyCommand.Name) | Begin"
 
         try {
+
             Write-Log "Attempting to provision App Installer (offline)..."
             $temp = join-path $WorkingDirectory "Temp\AppInstaller"
             #y$temp = Join-Path $env:TEMP "AppInstaller"
@@ -604,13 +608,13 @@ Function Install-WinGet {
 
     }
 
-
     # Method 3
-    Function Install-WinGet-3{
+    Function Install-WinGet-3-AppXpackage-latestWingetMsixBundle{
     
         # TODO: NEEDS TESTING
         # AppXpackage from latestWingetMsixBundle. SOURCE: https://stackoverflow.com/questions/74166150/install-winget-by-the-command-line-powershell
-        
+        Write-Log "Function: $($MyInvocation.MyCommand.Name) | Begin"
+
         Try {
             $progressPreference = 'silentlyContinue'
             $latestWingetMsixBundleUri = $(Invoke-RestMethod https://api.github.com/repos/microsoft/winget-cli/releases/latest).assets.browser_download_url | Where-Object {$_.EndsWith(".msixbundle")}
@@ -629,12 +633,15 @@ Function Install-WinGet {
     }
 
     # Method 4
-    Function Install-WinGet-4{
+    Function Install-WinGet-4-OfficialMethod{
 
         # TODO: NEEDS TESTING
         # Use official MS Sandbox snippet (modified): https://learn.microsoft.com/en-us/windows/package-manager/winget/#install-winget
-        CheckAndInstall-NuGet
+        Write-Log "Function: $($MyInvocation.MyCommand.Name) | Begin"
         
+        # Pre Reqs?
+        Write-Log "Running pre-reqs"
+        CheckAndInstall-NuGet
         
         Try {
             
@@ -661,22 +668,39 @@ Function Install-WinGet {
     $MethodsToUse = @()
     $methods = Get-Command -CommandType Function -Name "Install-WinGet-*" | Select-Object -ExpandProperty Name
     $methods | ForEach-Object {$MethodsToUse+=$_}
-
+    $max = $MethodsToUse.count
+    $counterMax = $max - 1 
+    # Run each method until success
     Do {
 
         $TargetMethod = $MethodsToUse[$Counter]
 
-        Write-Log "--- Now doing: $TargetMethod ---"
-        & $TargetMethod
 
-        Write-Log "Resolving path of WinGet"
-        $WinGet = Check-WinGet
+        Try {
 
-        Write-Log "Testing method: $TargetMethod"
-        Check-WinGet
+            Write-Log "--- Now doing: $TargetMethod ---"
+            & $TargetMethod
 
+            Write-Log "Resolving path of WinGet"
+            $WinGet = Check-WinGet
 
-    } while ($InstallSuccess -eq $False) finally {
+            Write-Log "Testing method: $TargetMethod"
+            $result = Check-WinGet
+            If ($result -eq $True) {
+                $InstallSuccess -eq $True
+            } else {
+                Throw $Result
+            }
+
+        } Catch {
+
+            Write-Log "Failed at install winget method: $TargetMethod with the following error: $_" "WARNING"
+
+        }
+
+        $Counter++
+
+    } while ($InstallSuccess -eq $False -or $counter -ne $counterMax) finally {
 
         Write-Log "--- Install of WinGet reported success by using method: $TargetMethod"
 
