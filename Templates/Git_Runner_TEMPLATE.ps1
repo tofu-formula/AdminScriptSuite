@@ -303,6 +303,7 @@ Function Check-WinGet{
     # Program Files location
     Write-Log "--- Checking if WinGet exists in Program Files location ---"
     $WinGetSystemFilesLocation = $Null
+    $ProgramFilesLocationSuccess = $False
     Try {
 
             $resolveWingetPath = Resolve-Path "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe"
@@ -318,6 +319,7 @@ Function Check-WinGet{
 
                     Write-Log "WinGet is present and working in Program Files at: $winget"
                     $WinGetSystemFilesLocation = $Winget
+                    $ProgramFilesLocationSuccess = $True
 
                 }
 
@@ -336,6 +338,7 @@ Function Check-WinGet{
 
     # AppData location
     Write-Log "--- Checking if WinGet exists in an AppData location ---"
+    $AppDataLocationSuccess = $False
     $SuccessfulPaths = @()
     Try {
 
@@ -366,6 +369,7 @@ Function Check-WinGet{
 
                         Write-Log "Confirmed this path for WinGet is callable: $WinGetPath"
                         $SuccessfulPaths += $WinGetPath
+                        $AppDataLocationSuccess = $True
 
                     }
 
@@ -386,7 +390,7 @@ Function Check-WinGet{
 
         }
 
-        if ($SuccessfulPaths -eq ""){
+        if ($SuccessfulPaths[0] -eq ""){
 
             Throw "No successful paths"
 
@@ -401,7 +405,16 @@ Function Check-WinGet{
 
     }
 
+    # Return failure if nothing works so far
+    if ($AppDataLocationSuccess -eq $False -and $ProgramFilesLocationSuccess -eq $False){
+
+        Write-Log "No Successful intances of WinGet found." "WARNING"
+        Return "Failure"
+
+    }
+
     #Determine if running in system or user context
+    Write-Log "--- Checking if what context the script is being ran in ---"
     Try {
     
         if ($env:USERNAME -like "*$env:COMPUTERNAME*" -or $forcemachinecontext -eq $true) {
@@ -424,10 +437,12 @@ Function Check-WinGet{
 
         }
 
-
+        Write-Log "Final WinGet path: $WinGet"
+        Write-Log "Running final check if winget works"
         # Final check?
         $Test = TestWinGet
         if ($Test -ne $True){ 
+
 
             return "Failure"
 
@@ -534,8 +549,13 @@ Function Install-WinGet {
         Try{
 
             Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
-            $result = winget-install
-            ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+            # Refresh environment variables
+            Start-Sleep 3
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            Start-Sleep 3
+            #$result = 
+            winget-install -force # More options to try: https://github.com/asheroto/winget-install
+            #ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
             Write-Log "WinGet installed successfully."
 
