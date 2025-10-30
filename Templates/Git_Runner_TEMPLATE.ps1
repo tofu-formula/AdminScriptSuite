@@ -390,7 +390,7 @@ Function Check-WinGet{
 
         }
 
-        if ($SuccessfulPaths[0] -eq ""){
+        if ($AppDataLocationSuccess -eq $False){
 
             Throw "No successful paths"
 
@@ -405,8 +405,48 @@ Function Check-WinGet{
 
     }
 
+    # TESTING
+    # This snippet will attempt to have WinGet run as System. Currently can't fully test because a bunch of Microsoft services are offline (10/29/25)
+    $RunAsSystemSuccess = $False
+    Try {
+
+        Write-Log "Installing module: Invoke-CommandAs"
+        Write-Log "Installing pre-reqs first."
+
+        Write-Log "Installing NuGet"
+        # 1) Install NuGet package provider silently if missing
+        if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
+        } else { Write-Log "NuGet already present"}
+
+        Write-Log "Trusting PowerShell Gallery"
+        # 2) Trust the PowerShell Gallery to avoid the "Untrusted repository" prompt
+        if ((Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue).InstallationPolicy -ne 'Trusted') {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+        } else {Write-Log "PowerShell Gallery already trusted"}
+
+        Write-Log "Installing module: Invoke-CommandAs"
+        # 3) Install the module without prompts
+        # Use -Scope CurrentUser if you don't have admin rights; otherwise AllUsers is fine.
+        Install-Module -Name Invoke-CommandAs -Repository PSGallery -AcceptLicense -Force -Confirm:$false -Scope AllUsers
+
+
+        Write-Log "Attempting to test if WinGet runs" # NEEDS TESTING
+        Invoke-CommandAs -ScriptBlock { TestWinGet } -AsSystem
+
+
+        if ($LASTEXITCODE -ne 0) { Throw $LASTEXITCODE}
+
+    } Catch {
+
+        Write-Log "Failed to use Invoke-CommandAs. Error: $_"
+
+    }
+
+    # TODO: Write another snippet that runs as logged in user instead of script runner
+
     # Return failure if nothing works so far
-    if ($AppDataLocationSuccess -eq $False -and $ProgramFilesLocationSuccess -eq $False){
+    if ($AppDataLocationSuccess -eq $False -and $ProgramFilesLocationSuccess -eq $False -and $RunAsSystemSuccess -eq $False){
 
         Write-Log "No Successful intances of WinGet found." "WARNING"
         Return "Failure"
@@ -470,50 +510,9 @@ Function Check-WinGet{
     # $Result = $False
     ###
 
-    # This snippet will attempt to have WinGet run as System. Currently can't fully test because a bunch of Microsoft services are offline (10/29/25)
-    <#
-    If ($result -ne $True){
-
-        Try {
-
-            Write-Log "Installing module: Invoke-CommandAs"
-            Write-Log "Installing pre-reqs first."
-
-            Write-Log "Installing NuGet"
-            # 1) Install NuGet package provider silently if missing
-            if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
-                Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
-            } else { Write-Log "NuGet already present"}
-
-            Write-Log "Trusting PowerShell Gallery"
-            # 2) Trust the PowerShell Gallery to avoid the "Untrusted repository" prompt
-            if ((Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue).InstallationPolicy -ne 'Trusted') {
-                Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-            } else {Write-Log "PowerShell Gallery already trusted"}
-
-            Write-Log "Installing module: Invoke-CommandAs"
-            # 3) Install the module without prompts
-            # Use -Scope CurrentUser if you don't have admin rights; otherwise AllUsers is fine.
-            Install-Module -Name Invoke-CommandAs -Repository PSGallery -AcceptLicense -Force -Confirm:$false -Scope AllUsers
 
 
-            Write-Log "Attempting to test if WinGet runs"
-            Invoke-CommandAs -ScriptBlock { TestWinGet } -AsSystem
-
-            if ($LASTEXITCODE -ne 0) { Throw $LASTEXITCODE}
-
-        } Catch {
-
-            Write-Log "Failed to use Invoke-CommandAs. Error: $_"
-
-
-        }
-
-
-        Pause
-
-    }
-    #>
+    
 
     
 
@@ -669,7 +668,7 @@ Function Install-WinGet {
     $methods = Get-Command -CommandType Function -Name "Install-WinGet-*" | Select-Object -ExpandProperty Name
     $methods | ForEach-Object {$MethodsToUse+=$_}
     $max = $MethodsToUse.count
-    $counterMax = $max - 1 
+    $counterMax = $max
     # Run each method until success
     Do {
 
@@ -711,11 +710,7 @@ Function Install-WinGet {
         $Counter++
         Write-Log "Counter: $counter / $counterMax"
 
-    } while ($InstallSuccess -eq $False -and $counter -ne $counterMax) finally {
-
-        Write-Log "--- Install of WinGet reported success by using method: $TargetMethod"
-
-    }
+    } while ($InstallSuccess -eq $False -and $counter -ne $counterMax) 
 
 
     If($InstallSuccess -eq $False){
@@ -723,7 +718,11 @@ Function Install-WinGet {
         Write-Log "Could not install WinGet" "ERROR"
         Exit 1
 
-    } 
+    } else {
+
+        Write-Log "--- Install of WinGet reported success by using method: $TargetMethod ---"
+
+    }
 
 
     # Post-Install
@@ -1177,7 +1176,7 @@ $WinGet = Check-WinGet
 if ($WinGet -eq "Failure"){
     
     # ...Attempt to install WinGet...
-    Write-Log "Failed to confirm WinGet in installed and working. Now proceeding to attempt installing WinGet." "WARNING"
+    Write-Log "Failed to confirm WinGet is installed and working. Now proceeding to attempt installing WinGet." "WARNING"
     Install-WinGet
     $WinGet = Check-WinGet
     if ($WinGet -eq "Failure"){
