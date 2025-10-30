@@ -678,7 +678,17 @@ Function Install-WinGet {
 
         Try {
 
+
             Write-Log "--- Now doing: $TargetMethod ---"
+
+            Write-Log "Kill WinGet processes..." # This may not be necessary
+            Get-Process winget, AppInstallerCLI -ErrorAction SilentlyContinue | Stop-Process -Force
+            Get-Process msiexec -ErrorAction SilentlyContinue | Stop-Process -Force
+
+            taskkill /IM winget.exe /T /F
+            taskkill /IM AppInstallerCLI.exe /T /F
+
+            Write-Log "Now running method $TargetMethod"
             & $TargetMethod
 
             Write-Log "Resolving path of WinGet"
@@ -699,8 +709,9 @@ Function Install-WinGet {
         }
 
         $Counter++
+        Write-Log "Counter: $counter / $counterMax"
 
-    } while ($InstallSuccess -eq $False -or $counter -ne $counterMax) finally {
+    } while ($InstallSuccess -eq $False -and $counter -ne $counterMax) finally {
 
         Write-Log "--- Install of WinGet reported success by using method: $TargetMethod"
 
