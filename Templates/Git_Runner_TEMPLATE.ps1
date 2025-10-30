@@ -254,7 +254,439 @@ function Test-PathSyntaxValidity {
 
 }
 
-Function CheckAndInstall-WinGet {
+Function TestWinGet {
+
+    Try {
+
+        Write-Log "Current WinGet command: $WinGet"
+        $whoami = [Environment]::UserName
+        Write-Log "Current user: $whoami"
+        Write-Log "Running test..."
+        & $WinGet --info | out-null
+
+        Write-Log "WinGet working at target destination."
+        Return $True
+
+    } catch {
+
+        Write-Log "WinGet not working. Error: $_" "WARNING"
+        Return "WinGet not working. Error: $_"
+
+    }
+
+
+}
+
+Function Check-WinGet{
+
+    #$NeedToInstallWinGet = $False
+
+
+    # Determine if/where WinGet is 
+    
+    # Default path
+    Write-Log "--- Checking if WinGet exists in PATH ---"
+    Try {
+
+        $winget = "winget.exe"
+        $Test = TestWinGet
+        if ($Test -ne $True){Throw $Test}
+
+
+    } Catch {
+
+        Write-Log "WinGet not accessible via path. Error: $_"
+        # Write-Log "Assumed that it is not installed. Proceeding to install."
+        # $NeedToInstallWinGet = $True
+    }
+
+    # Program Files location
+    Write-Log "--- Checking if WinGet exists in Program Files location ---"
+    $WinGetSystemFilesLocation = $Null
+    Try {
+
+            $resolveWingetPath = Resolve-Path "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe"
+            
+            if ($resolveWingetPath) {
+                $wingetPath = $resolveWingetPath[-1].Path
+                $wingetPath = $wingetPath + "\winget.exe"
+                Write-Log "Found WinGet path: $wingetPath"
+                $winget = $wingetPath
+
+                $Test = TestWinGet
+                if ($Test -ne $True){Throw $Test} else {
+
+                    Write-Log "WinGet is present and working in Program Files at: $winget"
+                    $WinGetSystemFilesLocation = $Winget
+
+                }
+
+            
+            } else {
+
+                Throw "Could not resolve WinGet path."
+
+            }
+
+    } Catch {
+
+        Write-Log "WinGet at Program Files location could not be used. This could be because access to the path was denied. Return message: $_" "WARNING"
+
+    }
+
+    # AppData location
+    Write-Log "--- Checking if WinGet exists in an AppData location ---"
+    $SuccessfulPaths = @()
+    Try {
+
+        # Paths to test
+        $WinGetPaths = @(
+            "$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe",
+            "$env:LOCALAPPDATA\Microsoft\WindowsApps\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\winget.exe"
+        )
+
+        ForEach ($WinGetPath in $WinGetPaths) {
+
+            Write-Log "Testing WinGet path at: $WinGetPath"
+            
+            Try {
+
+                if (Test-Path ($WinGetPath)) {
+
+                    Write-Log "Confirmed WinGet exists at: $WinGetPath"
+                    Write-Log "Now checking if this path is callable"
+
+                    $WinGet = $WinGetPath
+                    $Test = TestWinGet
+                    if ($Test -ne $True){
+                        
+                        Throw "WinGet found at $WinGetPath but not working: $Test"
+                    
+                    } else {
+
+                        Write-Log "Confirmed this path for WinGet is callable: $WinGetPath"
+                        $SuccessfulPaths += $WinGetPath
+
+                    }
+
+
+                } else {
+
+                    Throw "Could not find WinGet at $WinGetPath"
+                }
+
+            } Catch {
+
+                Write-Log "Could not use path: $WinGetPath"
+                Write-Log "Error received: $_"
+
+            }
+
+
+
+        }
+
+        if ($SuccessfulPaths -eq ""){
+
+            Throw "No successful paths"
+
+        } else {
+
+            Write-Log "Here are our successful AppData paths for WinGet: $SuccessfulPaths"
+
+        }
+    } Catch {
+
+        Write-Log "Could not resolve any AppData paths for WinGet. Error message: $_" "WARNING"
+
+    }
+
+    #Determine if running in system or user context
+    Try {
+    
+        if ($env:USERNAME -like "*$env:COMPUTERNAME*" -or $forcemachinecontext -eq $true) {
+            Write-Log "Running in System Context"
+            $Context = "Machine"
+
+            # Use Program Files location
+            $WinGet = $WinGetSystemFilesLocation
+
+
+        } else {
+
+            Write-Log "Running in User Context"
+            $Context = "User"
+
+
+
+            # Use AppData location
+            $winget = $SuccessfulPaths[0] 
+
+        }
+
+
+        # Final check?
+        $Test = TestWinGet
+        if ($Test -ne $True){ 
+
+            return "Failure"
+
+        } else {
+
+            return $WinGet
+        }
+
+    } Catch {
+
+        Write-Log "Could not get WinGet running in config for $context context. Error: $_" "WARNING"
+        return "Failure"
+
+    }
+
+    
+
+    # default
+    #$winget = "winget.exe"
+
+
+
+    ###
+    # Write-Log "We are going to pretend that WinGet is not working for testing purposes." "WARNING"
+    # $Result = $False
+    ###
+
+    # This snippet will attempt to have WinGet run as System. Currently can't fully test because a bunch of Microsoft services are offline (10/29/25)
+    <#
+    If ($result -ne $True){
+
+        Try {
+
+            Write-Log "Installing module: Invoke-CommandAs"
+            Write-Log "Installing pre-reqs first."
+
+            Write-Log "Installing NuGet"
+            # 1) Install NuGet package provider silently if missing
+            if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
+                Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
+            } else { Write-Log "NuGet already present"}
+
+            Write-Log "Trusting PowerShell Gallery"
+            # 2) Trust the PowerShell Gallery to avoid the "Untrusted repository" prompt
+            if ((Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue).InstallationPolicy -ne 'Trusted') {
+                Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+            } else {Write-Log "PowerShell Gallery already trusted"}
+
+            Write-Log "Installing module: Invoke-CommandAs"
+            # 3) Install the module without prompts
+            # Use -Scope CurrentUser if you don't have admin rights; otherwise AllUsers is fine.
+            Install-Module -Name Invoke-CommandAs -Repository PSGallery -AcceptLicense -Force -Confirm:$false -Scope AllUsers
+
+
+            Write-Log "Attempting to test if WinGet runs"
+            Invoke-CommandAs -ScriptBlock { TestWinGet } -AsSystem
+
+            if ($LASTEXITCODE -ne 0) { Throw $LASTEXITCODE}
+
+        } Catch {
+
+            Write-Log "Failed to use Invoke-CommandAs. Error: $_"
+
+
+        }
+
+
+        Pause
+
+    }
+    #>
+
+    
+
+}
+
+Function CheckAndInstall-NuGet{
+
+    Write-Log "Installing NuGet"
+    # 1) Install NuGet package provider silently if missing
+    if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
+        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
+    } else { Write-Log "NuGet already present"}
+
+    Write-Log "Trusting PowerShell Gallery"
+    # 2) Trust the PowerShell Gallery to avoid the "Untrusted repository" prompt
+    if ((Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue).InstallationPolicy -ne 'Trusted') {
+        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+    } else {Write-Log "PowerShell Gallery already trusted"}
+
+}
+
+Function Install-WinGet {
+
+    # Method 1
+    Function Install-WinGet-1{
+
+        # NOTE: In theory this shouldn't work. In practice it might.
+        # METHOD: Official installer script
+
+        # Pre Reqs?
+        CheckAndInstall-NuGet
+
+        Try{
+
+            Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
+            $result = winget-install
+            ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+            Write-Log "WinGet installed successfully."
+
+        } Catch {
+            
+            Write-Log "Provisioning failed: $_" "ERROR"
+            throw "$_"
+
+        }
+
+        # Start-Sleep -Seconds 5
+        # $winget = Get-WingetPath
+    }
+
+
+    # Method 2
+    Function Install-WinGet-2{
+        # TODO: NEEDS TESTING
+        # METHOD: Offline installer - Add-AppxProvisionedPackage -Online 
+
+        try {
+            Write-Log "Attempting to provision App Installer (offline)..."
+            $temp = join-path $WorkingDirectory "Temp\AppInstaller"
+            #y$temp = Join-Path $env:TEMP "AppInstaller"
+            $Temp
+            Write-Log 'Attempting to do this: New-Item $temp @newItemSplat'
+            New-Item -path $temp -ItemType "Directory" -Force
+            Write-Log 'Attempting to do this: $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"'
+            $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+            
+            # Use official shortlink which redirects to the current App Installer bundle
+            Write-Log 'Invoking web requesty'
+            $url = "https://aka.ms/getwinget"
+            Invoke-WebRequest -Uri $url -OutFile $bundle -UseBasicParsing
+
+            Add-AppxProvisionedPackage -Online -PackagePath $bundle -SkipLicense | Out-Null
+            Write-Log "Provisioned App Installer."
+
+        } catch {
+
+            #throw "Provisioning failed: $($_.Exception.Message)"
+            Write-Log "Provisioning failed: $_" "ERROR"
+            throw "$_"
+
+        }
+
+    }
+
+
+    # Method 3
+    Function Install-WinGet-3{
+    
+        # TODO: NEEDS TESTING
+        # AppXpackage from latestWingetMsixBundle. SOURCE: https://stackoverflow.com/questions/74166150/install-winget-by-the-command-line-powershell
+        
+        Try {
+            $progressPreference = 'silentlyContinue'
+            $latestWingetMsixBundleUri = $(Invoke-RestMethod https://api.github.com/repos/microsoft/winget-cli/releases/latest).assets.browser_download_url | Where-Object {$_.EndsWith(".msixbundle")}
+            $latestWingetMsixBundle = $latestWingetMsixBundleUri.Split("/")[-1]
+            Write-Information "Downloading winget to artifacts directory..."
+            Invoke-WebRequest -Uri $latestWingetMsixBundleUri -OutFile "./$latestWingetMsixBundle"
+            Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
+            Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
+            Add-AppxPackage $latestWingetMsixBundle
+        } Catch {
+
+            Write-Log "Provisioning failed: $_" "ERROR"
+            throw "$_"
+
+        }
+    }
+
+    # Method 4
+    Function Install-WinGet-4{
+
+        # TODO: NEEDS TESTING
+        # Use official MS Sandbox snippet (modified): https://learn.microsoft.com/en-us/windows/package-manager/winget/#install-winget
+        CheckAndInstall-NuGet
+        
+        
+        Try {
+            
+            $progressPreference = 'silentlyContinue'
+            Write-Log "Installing WinGet PowerShell module from PSGallery..."
+            # Install-PackageProvider -Name NuGet -Force | Out-Null
+            Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null
+            # Write-Host "Using Repair-WinGetPackageManager cmdlet to bootstrap WinGet..."
+            # Repair-WinGetPackageManager -AllUsers
+            # Write-Host "Done."
+            
+        } Catch {
+
+            Write-Log "Provisioning failed: $_" "ERROR"
+            throw "$_"
+
+        }
+
+    }
+
+    ## Main Mini ##
+    $InstallSuccess = $False
+    $Counter = 0
+    $MethodsToUse = @()
+    $methods = Get-Command -CommandType Function -Name "Install-WinGet-*" | Select-Object -ExpandProperty Name
+    $methods | ForEach-Object {$MethodsToUse+=$_}
+
+    Do {
+
+        $TargetMethod = $MethodsToUse[$Counter]
+
+        Write-Log "--- Now doing: $TargetMethod ---"
+        & $TargetMethod
+
+        Write-Log "Resolving path of WinGet"
+        $WinGet = Check-WinGet
+
+        Write-Log "Testing method: $TargetMethod"
+        Check-WinGet
+
+
+    } while ($InstallSuccess -eq $False) finally {
+
+        Write-Log "--- Install of WinGet reported success by using method: $TargetMethod"
+
+    }
+
+
+    If($InstallSuccess -eq $False){
+
+        Write-Log "Could not install WinGet" "ERROR"
+        Exit 1
+
+    } 
+
+
+    # Post-Install
+
+        # Prep sources (first-run) and install packages
+        Write-Log "Prepping WinGet source"
+        $result = & $winget source reset --force | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+        $result = & $winget source update | Out-String
+        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
+
+    Write-Log "Install success"
+    Return $WinGet
+
+}
+
+# Not in use
+Function CheckAndInstall-WinGet-Portable {
 
     $wingetPath = "$WorkingDirectory\WinGet"
     $WinGet = "$wingetPath\winget.exe"
@@ -302,62 +734,6 @@ Function CheckAndInstall-WinGet {
 
         Try {
 
-            <#
-            if (!(Test-Path $wingetPath)) {
-                New-Item -ItemType Directory -Path $wingetPath -Force
-            }
-
-            # Download portable WinGet directly
-            #$wingetUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_*.msixbundle"
-            $wingetUrl = "http://aka.ms/getwinget"
-            $wingetMSIPath = "$wingetPath\winget.msixbundle"
-            Write-Log "Attempting to invoke webrequest from here: $wingetUrl"
-            Invoke-WebRequest -Uri $wingetUrl -OutFile $wingetMSIPath
-
-            # Extract and run directly from temp
-            Expand-Archive $wingetMSIPath -DestinationPath "$wingetPath" -Force
-            #& "$WinGet" install <package>
-
-
-
-
-            # Download portable winget
-            # https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-
-            #$result = 
-            #Invoke-WebRequest -Uri "https://aka.ms/winget-cli/latest/portable" -OutFile "$wingetPath\winget.exe" #2>&1
-            #ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-            # Download dependencies if needed
-            #$result = 
-            #Invoke-WebRequest -Uri "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" -OutFile "$wingetPath\VCLibs.appx" #2>&1
-            #ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-            #>
-
-            # Snippet taken from here: https://davidjust.com/post/intune-install-software-with-winget/
-
-            	$script = @'
-$releases_url = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$releases = Invoke-RestMethod -uri "$($releases_url)"
-$latestRelease = $releases.assets | Where { $_.browser_download_url.EndsWith("msixbundle") } | Select -First 1
-Add-AppxPackage -Path 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
-Add-AppxPackage -Path $latestRelease.browser_download_url
-'@
-            if (!(test-path "$env:systemdrive\automation")) { mkdir "$env:systemdrive\automation" }
-            $script | out-file "$env:systemdrive\automation\script.ps1"
-            $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-executionpolicy bypass -WindowStyle minimized -file %HOMEDRIVE%\automation\script.ps1"
-            $trigger = New-ScheduledTaskTrigger -AtLogOn
-            $principal = New-ScheduledTaskPrincipal -UserId (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -expand UserName)
-            $task = New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal
-            Register-ScheduledTask RunScript -InputObject $task
-            Start-ScheduledTask -TaskName RunScript
-            Start-Sleep -Seconds 120
-            Unregister-ScheduledTask -TaskName RunScript -Confirm:$false
-            Remove-Item C:\automation\script.ps1
-            $Global:Winget = gci "$env:programfiles\WindowsApps" -Recurse -File | where { $_.name -like "AppInstallerCLI.exe" -or $_.name -like "Winget.exe" } | select -ExpandProperty fullname
-
-
 
 
             if ($LASTEXITCODE -ne 0) { Throw $LASTEXITCODE}
@@ -389,6 +765,8 @@ Add-AppxPackage -Path $latestRelease.browser_download_url
     Return $WinGet
 
 }
+
+# Not in use
 Function CheckAndInstall-WinGet-OLD {
 
     Try {
@@ -397,6 +775,7 @@ Function CheckAndInstall-WinGet-OLD {
         
 
         # 1) Ensure winget (App Installer) is provisioned for SYSTEM
+        <#
         function Get-WingetPath {
             
             #$base = "${Env:ProgramFiles}\WindowsApps"
@@ -427,8 +806,9 @@ Function CheckAndInstall-WinGet-OLD {
             
 
         }
+        #>
 
-        Function TestWinGet{
+        Function TestWinGetOld{
 
             #Write-Log "Looking for WinGet portable at location: $Winget"
 
@@ -631,7 +1011,6 @@ function CheckAndInstall-Git {
         
         try {
 
-
             $Result = & $winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity 2>&1 #| Out-String
             ForEach ($line in $result) { Write-Log "WINGET: $line" } 
 
@@ -737,7 +1116,24 @@ Write-Log "++++++++++++++++++++++"
 
 # Check if WinGet is installed
 Write-Log "Checking if WinGet is installed"
-$WinGet = CheckAndInstall-WinGet
+$WinGet = Check-WinGet
+
+# If check failed...
+if ($WinGet -eq "Failure"){
+    
+    # ...Attempt to install WinGet...
+    Write-Log "Failed to confirm WinGet in installed and working. Now proceeding to attempt installing WinGet." "WARNING"
+    Install-WinGet
+    $WinGet = Check-WinGet
+    if ($WinGet -eq "Failure"){
+
+        Write-Log "Failed to confirm WinGet is working after installation. Please investigate." "ERROR"
+        Exit 1
+
+    }
+
+}
+
 
 # Check if git is installed
 Write-Log "Checking if Git is installed..."
