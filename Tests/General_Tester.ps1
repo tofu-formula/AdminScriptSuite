@@ -159,6 +159,10 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
+###########
+## TESTS ##
+###########
+
 Function TESTER-UninstallAll-7Zip {
 
 
