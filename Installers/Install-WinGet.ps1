@@ -239,7 +239,7 @@ Function Check-WinGet{
     # AppData location
         Write-Log "--- Checking if WinGet exists in an AppData location ---"
         $AppDataLocationSuccess = $False
-        $SuccessfulPaths = @()
+        $AppDataSuccessfulPaths = @()
         Try {
 
             # Paths to test
@@ -268,7 +268,7 @@ Function Check-WinGet{
                         } else {
 
                             Write-Log "Confirmed this path for WinGet is callable: $WinGetPath"
-                            $SuccessfulPaths += $WinGetPath
+                            $AppDataSuccessfulPaths += $WinGetPath
                             $AppDataLocationSuccess = $True
 
                         }
@@ -296,7 +296,7 @@ Function Check-WinGet{
 
             } else {
 
-                Write-Log "Here are your successful AppData paths for WinGet: $SuccessfulPaths"
+                Write-Log "Here are your successful AppData paths for WinGet: $AppDataSuccessfulPaths"
 
             }
         } Catch {
@@ -307,15 +307,25 @@ Function Check-WinGet{
 
     # NEEDS TESTING
     # This snippet will attempt to have WinGet run as System. Currently can't fully test because a bunch of Microsoft services are offline (10/29/25)
+        <#
         Write-Log "--- Attempting to run as System ---"
 
+        # TODO: I need to add proper logging
         $RunAsSystemSuccess = $False
         Try {
 
             Write-Log "Installing module: Invoke-CommandAs"
             Write-Log "Installing pre-reqs first."
 
-            Write-Log "Installing NuGet"
+            # Check your current PowerShellGet version
+            $CurrentPSgetVer = Get-Module -Name PowerShellGet -ListAvailable | Select-Object "Version"
+            Write-Log "Current PowerShellGet version: $CurrentPSgetVer"
+
+            # Update PowerShellGet
+            Write-Log "Attempting to update PowerShellGet"
+            Install-Module -Name PowerShellGet -Force -AllowClobber
+
+            Write-Log "Installing NuGet" # TODO: I should see if I can swap this out with the dedicated function
             # 1) Install NuGet package provider silently if missing
             if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
                 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
@@ -330,12 +340,32 @@ Function Check-WinGet{
             Write-Log "Installing module: Invoke-CommandAs"
             # 3) Install the module without prompts
             # Use -Scope CurrentUser if you don't have admin rights; otherwise AllUsers is fine.
-            Install-Module -Name Invoke-CommandAs -Repository PSGallery -AcceptLicense -Force -Confirm:$false -Scope AllUsers
+            Install-Module -Name Invoke-CommandAs -Repository PSGallery -Force -Confirm:$false -Scope AllUsers
 
+            Write-Log "Attempting to test if WinGet runs" # NEEDS TESTING. Really just need to figure out how to pass vars in and out of this script block.
 
-            Write-Log "Attempting to test if WinGet runs" # NEEDS TESTING
-            Invoke-CommandAs -ScriptBlock { TestWinGet } -AsSystem
+            Invoke-CommandAs -ScriptBlock {
 
+                    Try {
+
+                        Write-Log "Current WinGet command: $WinGet"
+                        $whoami = [Environment]::UserName
+                        Write-Log "Current user: $whoami"
+                        Write-Log "Running test..."
+                        #& $WinGet --info --accept-source-agreements| out-null
+                        & $winget search "7zip.7zip" --accept-source-agreements | out-null # this function will force accept of source agreements
+                        Write-Log "WinGet working at target destination."
+                        Return $True
+
+                    } catch {
+
+                        Write-Log "WinGet not working. Error: $_" "WARNING"
+                        Return "WinGet not working. Error: $_"
+
+                    }
+            
+            
+            } -AsSystem
 
             if ($LASTEXITCODE -ne 0) { Throw $LASTEXITCODE}
 
@@ -344,6 +374,7 @@ Function Check-WinGet{
             Write-Log "Failed to use Invoke-CommandAs. Error: $_"
 
         }
+        #>
 
     # NEEDS TESTING
     # Another snippet that runs as logged in user instead of script runner.
@@ -405,8 +436,20 @@ Function Check-WinGet{
             Write-Log "Running in System Context"
             $Context = "Machine"
 
-            # Use Program Files location
-            $WinGet = $WinGetSystemFilesLocation
+            if($ProgramFilesLocationSuccess -eq $True){
+
+                # Use Program Files location
+                Write-Log "Using ProgramFiles location..."
+                $WinGet = $WinGetSystemFilesLocation
+
+            } else {
+
+                Write-Log "ProgramFiles lopcation not availabl" "WARNING"
+                return "Failure"
+
+
+            }
+
 
 
         } else {
@@ -415,8 +458,25 @@ Function Check-WinGet{
             $Context = "User"
 
 
-            # Use AppData location or whatever path was successful
-            $winget = $SuccessfulPaths[0] 
+            if ($AppDataLocationSuccess -eq $True){
+            
+                # Use AppData location primarily...
+                Write-Log "Using AppData location..."
+                $winget = $AppDataSuccessfulPaths[0] 
+
+            } elseif ($ProgramFilesLocationSuccess -eq $True){
+
+                # Use ProgramFiles location secondarily...
+                Write-Log "Using ProgramFiles location..."
+                $winget = $WinGetSystemFilesLocation
+
+            } else {
+
+                # Return error if neither are available...
+                Write-Log "Neither AppData not ProgamFiles location are available." "WARNING"
+                return "Failure"
+
+            }
 
         }
 
