@@ -1,0 +1,1 @@
+Powershell.exe -executionpolicy remotesigned -File "%~dp0Uninstall-AllAdobeProducts-FullClean.ps1"
