@@ -227,6 +227,70 @@ Function TESTER-UninstallWinGet-7Zip {
 
 }
 
+Function TESTER-UninstallAll-Git {
+
+
+    # Write-Log "========================================"
+    # Write-Log "SCRIPT: $ThisFileName | 1. Attempt clean uninstall of pre-existing installations of DCU"
+    # Write-Log "========================================"
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    $AppName = "Git.Git"
+    $UninstallType = "All"
+
+    Try{ 
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to uninstall $AppName"
+
+        #Powershell.exe -executionpolicy remotesigned -File $UninstallerScript -AppName "Dell.CommandUpdate" -UninstallType "All" -WorkingDirectory $WorkingDirectory
+        
+        & $UninstallerScript -AppName "$AppName" -UninstallType "$UninstallType" -WorkingDirectory $WorkingDirectory
+        if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $AppName Uninstall failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
+Function TESTER-UninstallWinGet-Git {
+
+
+    # Write-Log "========================================"
+    # Write-Log "SCRIPT: $ThisFileName | 1. Attempt clean uninstall of pre-existing installations of DCU"
+    # Write-Log "========================================"
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    $AppName = "Git.Git"
+    $UninstallType = "Remove-App-WinGet"
+
+    Try{ 
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to uninstall $AppName"
+
+        #Powershell.exe -executionpolicy remotesigned -File $UninstallerScript -AppName "Dell.CommandUpdate" -UninstallType "All" -WorkingDirectory $WorkingDirectory
+        
+        & $UninstallerScript -AppName "$AppName" -UninstallType "$UninstallType" -WorkingDirectory $WorkingDirectory
+        if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $AppName Uninstall failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
 Function TESTER-InstallWinGet-7Zip {
 
     Write-Log "========================================="
