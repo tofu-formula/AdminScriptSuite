@@ -444,8 +444,8 @@ Function Check-WinGet{
 
             } else {
 
-                Write-Log "ProgramFiles lopcation not availabl" "WARNING"
-                return "Failure"
+                Write-Log "ProgramFiles location not available" "WARNING"
+                Throw "ProgramFiles location not available"
 
 
             }
@@ -474,7 +474,7 @@ Function Check-WinGet{
 
                 # Return error if neither are available...
                 Write-Log "Neither AppData not ProgamFiles location are available." "WARNING"
-                return "Failure"
+                Throw "Neither AppData not ProgamFiles location are available." 
 
             }
 
@@ -798,32 +798,37 @@ Write-Log "Windows User: $loggedInUser"
 Write-Log "++++++++++++++++++++++++++++"
 
 ##  Figure out use case situation ##
-
+Write-Log "----- Determining script context -----"
 # Am I running as the same account as the Windows session?
 if ($scriptUser -eq $loggedInUser) {
     Write-Log "Script is running as the logged-in user: $scriptUser"
-} else {
-    Write-Log "Script user ($scriptUser) differs from logged-in user ($loggedInUser)" "WARNING"
-}
 
-# Am I running as an admin account?
-if ($isAdmin) {
-    Write-Log "Running with Administrator privileges"
-} else {
-    Write-Log "NOT running with Administrator privileges" "WARNING"
-}
+    # Am I running as an admin account?
+    if ($isAdmin) {
+        Write-Log "Running with Administrator privileges. All should be good."
+    } else {
+        Write-Log "NOT running with Administrator privileges. Script will likely fail. You are advised to either script while logged in to a local admin account, ran as that local admin. Script will not exit at this point." "WARNING"
+    }
 
-# Am I running as system?
-if ($scriptUser -eq "NT AUTHORITY\SYSTEM") {
-    Write-Log "Running as SYSTEM account"
 } else {
-    Write-Log "NOT running as SYSTEM (Current user: $scriptUser)"
+
+    Write-Log "Script user ($scriptUser) differs from logged-in user ($loggedInUser). If Script User is System, this should be fine."
+
+    # Am I running as system?
+    if ($scriptUser -eq "NT AUTHORITY\SYSTEM") {
+        Write-Log "Running as SYSTEM account. All should be good."
+    } else {
+        Write-Log "NOT running as SYSTEM (Current Script User: $scriptUser). YOU MAY RUN IN TO ISSUES. If this user has their own profile on this machine already with WinGet installed in that profile, this script may return a success. Script will not exit at this point." "WARNING"
+    }
+
 }
+Write-Log "--------------------------------------"
+
 
 ## 
 
 # Check if WinGet is installed
-Write-Log "Checking if WinGet is installed"
+Write-Log "Checking if WinGet is installed..."
 
 $WinGet = Check-WinGet
 
@@ -832,7 +837,9 @@ if ($WinGet -eq "Failure"){
     
     # ...Attempt to install WinGet...
     Write-Log "Failed to confirm WinGet is installed and working. Now proceeding to attempt installing WinGet." "WARNING"
+    
     Install-WinGet
+    
     $WinGet = Check-WinGet
     if ($WinGet -eq "Failure"){
 
@@ -841,21 +848,19 @@ if ($WinGet -eq "Failure"){
 
     }
 
+}
+
+Write-Log "WinGet check/install success!! Final location: $WinGet" "SUCCESS"
+# Return the path of WinGet to be used
+if ($ReturnWinGetPath -eq $True){
+
+    Write-Log "++++++++++++++++++++++++++++"
+    Write-Log "SCRIPT: $ThisFileName | END | Returning WinGet location..." "SUCCESS"
+    Return $WinGet
+    
 } else {
 
-    Write-Log "WinGet check/install success!! Final location: $WinGet" "SUCCESS"
-    # Return the path of WinGet to be used
-    if ($ReturnWinGetPath -eq $True){
-
-        Write-Log "++++++++++++++++++++++++++++"
-        Write-Log "SCRIPT: $ThisFileName | END | Returning WinGet location..." "SUCCESS"
-        Return $WinGet
-        
-    } else {
-
-        Write-Log "++++++++++++++++++++++++++++"
-        Write-Log "SCRIPT: $ThisFileName | END" "SUCCESS"
-
-    }
+    Write-Log "++++++++++++++++++++++++++++"
+    Write-Log "SCRIPT: $ThisFileName | END" "SUCCESS"
 
 }
