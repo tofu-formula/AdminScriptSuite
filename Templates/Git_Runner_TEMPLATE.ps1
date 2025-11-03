@@ -282,6 +282,7 @@ function CheckAndInstall-Git {
                 Remove-Item $installerPath -Force
                 Write-Log "Removed git installer file at: $installerPath"
 
+            
             } else {
                 Write-Log "Could not find git installer file at: ($installerPath). The script will not attempt to delete anything." "WARNING"
             }
