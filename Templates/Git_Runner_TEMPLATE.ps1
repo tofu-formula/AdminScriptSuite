@@ -254,198 +254,62 @@ function Test-PathSyntaxValidity {
 
 }
 
-Function CheckAndInstall-WinGet {
-
-    Try {
-
-        
-
-        # 1) Ensure winget (App Installer) is provisioned for SYSTEM
-        function Get-WingetPath {
-            
-            #$base = "${Env:ProgramFiles}\WindowsApps"
-
-            # if (Test-Path $base) {
-            #     $candidates = Get-ChildItem $base -Filter "Microsoft.DesktopAppInstaller_*x64__8wekyb3d8bbwe" -ErrorAction SilentlyContinue | Sort-Object Name -Descending
-            #     foreach ($c in $candidates) {
-            #     $p = Join-Path $c.FullName 'winget.exe'
-            #     if (Test-Path $p) { return $p }
-            #     }
-            # }
-
-            ## Got ideas for this snippet from here, all rights to go original writer: https://github.com/SorenLundt/WinGet-Wrapper/blob/main/WinGet-Wrapper.ps1
-            $resolveWingetPath = Resolve-Path "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe"
-            
-            if ($resolveWingetPath) {
-                $wingetPath = $resolveWingetPath[-1].Path
-                $wingetPath = $wingetPath + "\winget.exe"
-                Write-Log "WinGet path: $wingetPath"
-                return $wingetPath
-
-            
-            } else {
-
-                return $null
-
-            }
-            
-
-        }
-        
-        #Determine if running in system or user context
-        if ($env:USERNAME -like "*$env:COMPUTERNAME*" -or $forcemachinecontext -eq $true) {
-            Write-Log "Running in System Context"
-            $Context = "Machine"
-
-            $winget = Get-WingetPath
-
-
-        }else {
-            Write-Log "Running in User Context"
-            $Context = "User"
-
-            $winget = "winget.exe" 
-        }
-
-        ## end of snippet 
-
-
-        ##
-
-        #$winget = Get-WingetPath
-
-
-        # NEEDS TESTING
-        if (-not $winget) {
-
-            Write-Log "Attempting to provision App Installer (offline)..."
-            $temp = join-path $WorkingDirectory "Temp\AppInstaller"
-            #y$temp = Join-Path $env:TEMP "AppInstaller"
-            $Temp
-            Write-Log 'Attempting to do this: New-Item $temp @newItemSplat'
-            New-Item -path $temp -ItemType "Directory" -Force
-            Write-Log 'Attempting to do this: $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"'
-            $bundle = Join-Path $temp "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-            
-            # Use official shortlink which redirects to the current App Installer bundle
-            Write-Log 'Invoking web requesty'
-            $url = "https://aka.ms/getwinget"
-            Invoke-WebRequest -Uri $url -OutFile $bundle -UseBasicParsing
-
-            try {
-
-                Add-AppxProvisionedPackage -Online -PackagePath $bundle -SkipLicense | Out-Null
-                Write-Log "Provisioned App Installer."
-
-            } catch {
-
-                #throw "Provisioning failed: $($_.Exception.Message)"
-                Write-Log "Provisioning failed: $_" "ERROR"
-                throw "$_"
-
-
-            }
-
-            Start-Sleep -Seconds 5
-            $winget = Get-WingetPath
-
-        }
-
-
-        # In theory this shouldn't work. In practice it might.
-        if (-not $winget){
-
-            Write-Log "WinGet still not found. Attempting to use Install-Script."
-
-            Try{
-
-                Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
-                $result = winget-install
-                ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-                Write-Log "WinGet installed successfully."
-
-            } Catch {
-                
-                Write-Log "Provisioning failed: $_" "ERROR"
-                throw "$_"
-
-            }
-
-            Start-Sleep -Seconds 5
-            $winget = Get-WingetPath
-
-        }
-
-
-        if (-not $winget) { throw "winget.exe still not found after provisioning: $_" }
-        
-        Write-Log "Successfully resolved WinGet path. Using winget at: $winget"
-
-        # 2) Prep sources (first-run) and install packages
-        Write-Log "Prepping WinGet source"
-        $result = & $winget source reset --force | Out-String
-        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-        $result = & $winget source update | Out-String
-        ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-        Write-Log "Final WinGet path: $WinGet"
-        Return $WinGet
-
-    } Catch {
-
-        Write-Log "SCRIPT: $ThisFileName| END | Install of WinGet failed. Please investigate. Return message: $_" "ERROR"
-        Exit 1
-
-    }
-
-    
-
-    # Old version
-    <#
-    if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
-
-        Write-Log "WinGet not found, beginning installation..."
-        # Install and run the winget installer script
-        # NOTE: This requires PowerShellGet module
-        Try{
-
-            Install-Script -Name winget-install -Force -Scope CurrentUser 2>&1
-            $result = winget-install
-            ForEach ($line in $result) { Write-Log "WINGET-INSTALL: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-            Write-Log "WinGet installed successfully."
-
-        } Catch {
-
-            Write-Log "SCRIPT: $ThisFileName| END | Install of WinGet failed. Please investigate. Now exiting script." "ERROR"
-            Exit 1
-        }
-        
-    } else {
-        Write-Log "Winget is already installed"
-    }
-    #>
-
-}
-
 function CheckAndInstall-Git {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        Write-Log "Git not found. Installing via winget..." "WARNING"
+        Write-Log "Git not found. Installing via Invoke-WebRequest..." "WARNING"
         
         try {
 
+            # Get latest release info from GitHub API
+            $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/git-for-windows/git/releases/latest"
+            $asset = $latestRelease.assets | Where-Object { $_.name -like "*64-bit.exe" } | Select-Object -First 1
+            $downloadUrl = $asset.browser_download_url
+            $installerPath = "$WorkingDirectory\TEMP\git-installer.exe"
 
-            $Result = & $winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity 2>&1 #| Out-String
-            ForEach ($line in $result) { Write-Log "WINGET: $line" } 
+            if (!(Test-path "$WorkingDirectory\TEMP")){
+                Write-Log "Creating directory: $WorkingDirectory\TEMP"
+                New-Item -Path "$WorkingDirectory\TEMP" -ItemType "Directory" -Force
+            }
+            
+            Write-Log "Downloading latest Git version: $($latestRelease.tag_name)" -ForegroundColor Green
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath -UseBasicParsing
+            
+            Write-Log "Installing Git..." -ForegroundColor Green
+            Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT", "/NORESTART" -Wait
+            
+            Write-Log "Attempting to do cleanup..."
+            if(test-path ($installerPath)){
+                Remove-Item $installerPath -Force
+                Write-Log "Removed git installer file at: $installerPath"
 
+            
+            } else {
+                Write-Log "Could not find git installer file at: ($installerPath). The script will not attempt to delete anything." "WARNING"
+            }
+            
             # Refresh environment variables
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
             
-            
-            if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+            # Final test
+            if ((Get-Command git -ErrorAction SilentlyContinue)){
 
-            Write-Log "Git installed successfully!" "SUCCESS"
+                Write-Log "Git installation complete!"
+
+            } else {
+
+                Write-Log "Git is not working. Please investigate." "ERROR"
+                Exit 1
+
+            }
+
+
+            #$Result = & $winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity 2>&1 #| Out-String
+            # ForEach ($line in $result) { Write-Log "WINGET: $line" } 
+
+            
+            # if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+            # Write-Log "Git installed successfully!" "SUCCESS"
         }
         catch {
             Write-Log "SCRIPT: $ThisFileName | END | ERROR: Failed to install Git: $_" "ERROR"
@@ -538,10 +402,6 @@ Write-Log "WorkingDirectory: $WorkingDirectory"
 Write-Log "ScriptParams: $ScriptParams"
 Write-Log "UpdateLocalRepoOnly: $UpdateLocalRepoOnly"
 Write-Log "++++++++++++++++++++++"
-
-# Check if WinGet is installed
-Write-Log "Checking if WinGet is installed"
-$WinGet = CheckAndInstall-WinGet
 
 # Check if git is installed
 Write-Log "Checking if Git is installed..."

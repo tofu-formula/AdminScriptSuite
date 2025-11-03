@@ -70,6 +70,8 @@ $SafeAppID = $AppName -replace '[^\w]', '_'
 $LogPath = "$LogRoot\$SafeAppID.$UninstallType._MainUninstallLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $uninstallSuccess = $False
 
+$RepoRoot = Split-Path -Path $PSScriptRoot -Parent
+$InstallWinGetScript = "$RepoRoot\Installers\Install-WinGet.ps1"
 
 
 #################
@@ -495,14 +497,14 @@ Function Validate-WinGet-Search{
 
     if ($null -eq $Version){
 
-        $result = winget show --id $AppId --exact 2>&1 | Out-String
+        $result = & $winget show --id $AppId --exact 2>&1 | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
 
     } else {
 
         Write-Log "Version $Version requested, checking if that exists as well"
-        $result = winget show --id $AppId --version $Version --exact 2>&1 | Out-String
+        $result = & $winget show --id $AppId --version $Version --exact 2>&1 | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
     }
@@ -546,27 +548,6 @@ Function App-Detector {
 
     If ($DetectMethod -eq 'Win_Get'){
 
-        Write-Log "Checking if WinGet is installed" # May want to move this to the remove-app* function
-
-        if (!(Get-Command winget -ErrorAction SilentlyContinue)) {
-            Write-Log "WinGet not found, beginning installation..."
-            # Install and run the winget installer script
-            # NOTE: This requires PowerShellGet module
-            Try{
-
-                Install-Script -Name winget-install -Force -Scope CurrentUser
-                winget-install
-
-            } Catch {
-
-                Write-Log "Install of WinGet failed. Please investigate." "ERROR"
-                return $null
-            }
-            
-        } else {
-            Write-Log "Winget is already installed"
-        }
-
         Write-Log "For WinGet functions to work, the supplied AppName must be a valid, exact AppID" "WARNING"
 
         Write-Log "Checking if AppName is a valid AppID"
@@ -575,7 +556,7 @@ Function App-Detector {
 
 
         Write-Log "Checking if AppID is present locally"
-        $Detection = winget list --id "$AppName" --exact --accept-source-agreements| Out-String
+        $Detection = & $winget list --id "$AppName" --exact --accept-source-agreements| Out-String
 
         if ($Detection -match "$AppName") {
             Write-Log "Installation detected of $AppName"
@@ -704,7 +685,8 @@ Function Test-AllDetectionMethods {
     Param (
         [Parameter(Mandatory=$true)]
         [String]$AppName,
-        [Switch]$IncludeCIM  # Optional flag since CIM is slow and problematic
+        [boolean]$IncludeCIM=$true,  # Optional flag since CIM is slow and problematic
+        [boolean]$IncludeWinGet=$true # Not going to use this boolean yet, but reminder that I may want to use it
     )
     
     #Write-Log "========================================="
@@ -714,7 +696,6 @@ Function Test-AllDetectionMethods {
     
     # Get all available detection methods from the switch statement
     $detectionMethods = @(
-        'Win_Get',
         'AppxPackage', 
         'AppPackage',
         'AppxProvisionedPackage',
@@ -728,14 +709,29 @@ Function Test-AllDetectionMethods {
 
         Write-Log "Available detection methods:"
         $detectionMethods | ForEach-Object { Write-Log "  - $_" "INFO" }
-    }
-    
+    }  
 
-    # Only include CIM if specifically requested
-    #if ($IncludeCIM) {
+
+    # Include CIM method?
+    if ($IncludeCIM) {     # Only include CIM if specifically requested
+
+        Write-Log "Also including CIM method"
         $detectionMethods += 'CIM'
         Write-Log "WARNING: Including CIM method - this may be slow and trigger repairs" "WARNING"
+    }
+
+    # Include WinGet method?
+    #if ($IncludeWinGet) {     # Only include Win_Get if specifically requested
+    if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get'){ # Only include if it is specifically requested
+        Write-Log "Also including Win_Get method"
+        $detectionMethods += 'Win_Get'
+    }
     #}
+
+
+
+
+
     
     $results = @{}
     
@@ -1550,7 +1546,7 @@ Function Remove-App-WinGet([String]$appName){
 
         }
 
-        $UninstallCommand_App = "winget"
+        $UninstallCommand_App = $WinGet
 
         #Write-Log "Executing command: $cmd $args"
 
@@ -1812,6 +1808,8 @@ $pathsToValidate = @{
     'WorkingDirectory' = $WorkingDirectory
     'LogRoot' = $LogRoot
     'LogPath' = $LogPath
+    'RepoRoot' = $RepoRoot
+    'InstallWinGetScript' = $InstallWinGetScript
 }
 Test-PathSyntaxValidity -Paths $pathsToValidate -ExitOnError
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
@@ -1855,7 +1853,14 @@ if ([string]::IsNullOrEmpty($AppName) -or [string]::IsNullOrEmpty($UninstallType
 
 }
 
+# Check if WinGet is required
+if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get'){
 
+    Write-Log "WinGet uninstall/detect method has been request. Now checking/installing WinGet."
+    $WinGet = & $InstallWinGetScript -ReturnWinGetPath:$True -WorkingDirectory $WorkingDirectory
+    if ($LASTEXITCODE -ne 0) { Write-Log "Could not verify or install WinGet. Check the Install WinGet log. Last exit code: $LASTEXITCODE" "ERROR"; Exit 1}
+
+}
 
 
 Write-Log "Now beginning work."
