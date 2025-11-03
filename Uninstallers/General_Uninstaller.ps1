@@ -1858,7 +1858,7 @@ if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get'){
 
     Write-Log "WinGet uninstall/detect method has been request. Now checking/installing WinGet."
     $WinGet = & $InstallWinGetScript -ReturnWinGetPath:$True -WorkingDirectory $WorkingDirectory
-    if ($LASTEXITCODE -ne 0) { Write-Log "Could not verify or install WinGet. Check the Install WinGet log. Last exit code: $LASTEXITCODE"}
+    if ($LASTEXITCODE -ne 0) { Write-Log "Could not verify or install WinGet. Check the Install WinGet log. Last exit code: $LASTEXITCODE" "ERROR"; Exit 1}
 
 }
 
