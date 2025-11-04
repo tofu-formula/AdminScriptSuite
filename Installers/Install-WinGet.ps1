@@ -15,7 +15,9 @@ Param(
 
 )
 
-## Vars
+##########
+## Vars ##
+##########
 
 $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
 $LogRoot = "$WorkingDirectory\Logs\Git_Logs"
