@@ -83,8 +83,6 @@ param(
 
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
-
-    [Boolean]$forcemachinecontext,
     
     [Parameter(ValueFromRemainingArguments=$true)]
     $ScriptParams # Params to pass to the target script. Example for General_Uninstaller.ps1: -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
@@ -108,8 +106,6 @@ $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
 $LogRoot = "$WorkingDirectory\Logs\Git_Logs"
 #$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $ThisFileName = $MyInvocation.MyCommand.Name
-
-#$forcemachinecontext = $true
 
 # Evaluate vars based on whether this run is just an update only
 if(!($UpdateLocalRepoOnly -eq $true)) {
