@@ -22,19 +22,19 @@ the script will download everything as a last resort instead of just individual 
 [CmdletBinding()]
 Param (
 
-    [Parameter(Mandatory = $True)]
+
     [String]$PortName,
 
-    [Parameter(Mandatory = $True)]
+
     [String]$PrinterIP,
 
     [Parameter(Mandatory = $True)]
     [String]$PrinterName,
 
-    [Parameter(Mandatory = $True)]
+
     [String]$DriverName,
 
-    [Parameter(Mandatory = $True)]
+
     [String]$INFFile,
 
     [Parameter(Mandatory=$true)]
@@ -69,6 +69,9 @@ $LogPath = "$LogRoot\$ThisFileName.$PrinterName._Log_$(Get-Date -Format 'yyyyMMd
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 
 $DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
+
+$PrinterData_JSON_BlobName = "PrinterData.json"
+$PrinterData_JSON_ContainerName = "printers"
 
 ###############
 ## Pre-Check ##
@@ -168,38 +171,89 @@ Write-Log "Driver Name: $DriverName"
 Write-Log "INF File: $INFFile"
 Write-Log "##################################"
 
-# Determine how to access the needed files. Currently only supports Azure Blob
+# Determine if params were sufficient for PRINTER info or if a JSON is needed
+$GetJSON = $False
 
-    # Determine if this is scenario A or B
+Write-Log "Determining if enough printer data was supplied or if reaching out for the JSON is needed..."
+if($PortName -ne "" -and $PortName -ne $null -and $PrinterIP -ne "" $PrinterIP -ne $null -and $DriverName -ne "" -and $DriverName -ne $null -and $INFFile -ne "" -and $INFFile -ne $null){
 
-    Write-Log "Determining if Scenario A or B was invoked based on supplied variables..."
-    $BlobName = $INFFile
-    If($BlobSASurl -ne "" -and $BlobSASurl -ne $null){
+    Write-Log "Printer info confirmed present"
+    
 
-        # Scenario A
-        Write-Log "Scenario A: Full URL supplied"
+} else {
 
-        $BlobUri = $BlobSASurl
+    Write-Log "Insufficient data, attempting to access JSON"
+    $GetJSON = $True
 
-
-
-    } elseif ($StorageAccountName -ne "" -and $StorageAccountName -ne $null -and $ContainerName -ne "" -and $ContainerName -ne $null -and $SasToken -ne "" -and $SasToken -ne $null){
-
-        # Scenario B
-        Write-Log "Scenario B: Individual pieces of URL supplied"
-
-        $BlobUri = "https://$StorageAccountName.blob.core.windows.net/$ContainerName/$BlobName"+"?"+"$SasToken"
+}
 
 
-    } else {
+# Determine the BlobURI to be used to download the printer files. Currently only supports Azure Blob.
 
-        # Failed
-        Write-Log "Not enough information supplied. Please make sure that you supplied enough/correct data." "ERROR"
-        exit 1
+# Determine if this is scenario A or B
+
+Write-Log "Determining the BlobURI. Ascertaining if Scenario A or B was invoked based on supplied variables..."
+$BlobName = $INFFile
+
+If($BlobSASurl -ne "" -and $BlobSASurl -ne $null){
+
+    # Scenario A
+    Write-Log "Scenario A: Full URL supplied"
+
+    $BlobUri = $BlobSASurl
+
+
+} elseif ($StorageAccountName -ne "" -and $StorageAccountName -ne $null -and $ContainerName -ne "" -and $ContainerName -ne $null -and $SasToken -ne "" -and $SasToken -ne $null){
+
+    # Scenario B
+    Write-Log "Scenario B: Individual pieces of URL supplied"
+
+    $BlobUri = "https://$StorageAccountName.blob.core.windows.net/$ContainerName/$BlobName"+"?"+"$SasToken"
+
+
+   
+
+} else {
+
+    # Failed
+    Write-Log "Not enough information supplied. Please make sure that you supplied enough/correct data." "ERROR"
+    exit 1
+    # Write-Log "Insufficient data, attempting to access JSON"
+    # $GetJSON = $True
+
+}
+
+
+Write-Log "Target URL: $BlobUri"
+
+###
+
+# Get the JSON
+
+ # Also create the URI for the JSON, or grab it from the registry
+
+if($GetJSON -eq $True) {
+
+    Try{
+
+        $data = Invoke-RestMethod "https://azurebloblocation/thisfile.json"
+        
+        # Store the result
+        $foundPrinter = $data.printers | Where-Object { $_.PrinterName -eq "Example-Printer-02" }
+
+        # Access properties
+        $foundPrinter.PrinterName  # Returns: "Example-Printer-02"
+        $foundPrinter.PortName     # Returns: "IP_192.168.1.101"
+
+
+    }catch{
+
+
 
     }
 
-    Write-Log "Target URL: $BlobUri"
+
+}
 
 
 # Download the INF file
