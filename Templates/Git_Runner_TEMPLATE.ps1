@@ -67,6 +67,23 @@
     SOURCE:
         https://github.com/tofu-formula/AdminScriptSuite
 
+    InTune:
+        Example of working items:
+
+            General deployment of the ScriptSuite to local machine:
+                IntuneWin contents:
+                    Git_Runner_TEMPLATE.ps1
+                Install command:
+                    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'Test7' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -UpdateLocalRepoOnly:1 -WorkingDirectory 'C:\ProgramData\Test7'"
+                Detect rule:
+                    Rule type: File
+                    Path: C:\ProgramData\Test7\Test7\Templates
+                    File: Git_Runner_TEMPLATE.ps1
+                    Detection method: File exists
+
+            Install 7-zip
+                
+
 #>
 
 
@@ -493,7 +510,7 @@ if ($DoClone -eq $true){
         Write-Log "Successfully cloned repository" "SUCCESS"
     }
     
-    Exit 1
+    #Exit 1
 }
 
 # Exit script if this was update only
