@@ -37,6 +37,8 @@ Param (
 
     [String]$INFFile,
 
+    [string]$DriverZip, # Should contain the full path, equal to what's in the JSON
+
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
 
@@ -46,14 +48,16 @@ Param (
     # Optional params to pass to DownloadFrom-AzureBlob-SAS.ps1
 
     #[Parameter(Mandatory=$true)]
-    [string]$BlobName,
+    #[string]$BlobName,
+    [string]$PrinterData_JSON_BlobName = "PrinterData.json",
+    [string]$PrinterData_JSON_ContainerName = "printers",
 
     # Scenario A: Full URL supplied
     [string]$BlobSASurl,
 
     # Scenario B: Individual pieces of URL supplied
     [string]$StorageAccountName,
-    [string]$ContainerName, # Include path! Ex: "applications\7-zip" if file you are targetting is "applications\7-zip\7zip.exe"
+    #[string]$DriverZip_ContainerName, # Ex: "applications\7-zip" if file you are targetting is "applications\7-zip\7zip.exe"
     [string]$SasToken # Config tested: Signing method: Account key - Signing Key: key 1 - permissions: read - Allowed Protocols: HTTPS only
 
 
@@ -122,37 +126,24 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
-function Write-LogEntry {
-    param (
-        [parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Value,
-        [parameter(Mandatory = $false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$FileName = "$($PrinterName).log",
-        [switch]$Stamp
+function Set-VariablesFromObject {
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)] $InputObject,
+        #[string]$Prefix = 'Printer_',
+        [ValidateSet('Local','Script','Global')] [string]$Scope = 'Local'
     )
+    process {
+        foreach ($p in $InputObject.PSObject.Properties) {
+            # sanitize to a valid PowerShell variable name
+            $name = $p.Name -replace '[^A-Za-z0-9_]', '_'
+            if ($name -notmatch '^[A-Za-z_]') { $name = "_$name" }
 
-    #Build Log File appending System Date/Time to output
-    $LogFile = Join-Path -Path $env:SystemRoot -ChildPath $("Temp\$FileName")
-    $Time = -join @((Get-Date -Format "HH:mm:ss.fff"), " ", (Get-WmiObject -Class Win32_TimeZone | Select-Object -ExpandProperty Bias))
-    $Date = (Get-Date -Format "MM-dd-yyyy")
-
-    If ($Stamp) {
-        $LogText = "<$($Value)> <time=""$($Time)"" date=""$($Date)"">"
-    }
-    else {
-        $LogText = "$($Value)"   
-    }
-	
-    Try {
-        Out-File -InputObject $LogText -Append -NoClobber -Encoding Default -FilePath $LogFile -ErrorAction Stop
-    }
-    Catch [System.Exception] {
-        Write-Warning -Message "Unable to add log entry to $LogFile.log file. Error message at line $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.Message)"
+            #$varName = "$Prefix$name"
+            $VarName= $Name
+            Set-Variable -Name $varName -Value $p.Value -Scope $Scope -Force
+        }
     }
 }
-
 
 ##########
 ## Main ##
@@ -169,17 +160,21 @@ Write-Log "Printer IP: $PrinterIP"
 Write-Log "Printer Name: $PrinterName"
 Write-Log "Driver Name: $DriverName"
 Write-Log "INF File: $INFFile"
+Write-Log "DriverZip: $DriverZip"
+
 Write-Log "##################################"
 
-# Determine if params were sufficient for PRINTER info or if a JSON is needed
+# TODO: Determine if SAS key was provided an if not, obtain from the registry 
+
+
+# Determine if params were sufficient for PRINTER info or if Printer JSON is needed
 $GetJSON = $False
 
 Write-Log "Determining if enough printer data was supplied or if reaching out for the JSON is needed..."
-if($PortName -ne "" -and $PortName -ne $null -and $PrinterIP -ne "" $PrinterIP -ne $null -and $DriverName -ne "" -and $DriverName -ne $null -and $INFFile -ne "" -and $INFFile -ne $null){
+if($PortName -ne "" -and $PortName -ne $null -and $PrinterIP -ne "" -and $PrinterIP -ne $null -and $DriverName -ne "" -and $DriverName -ne $null -and $INFFile -ne "" -and $INFFile -ne $null -and $DriverZip -ne "" -and $DriverZip -ne $null){
 
     Write-Log "Printer info confirmed present"
     
-
 } else {
 
     Write-Log "Insufficient data, attempting to access JSON"
@@ -188,72 +183,228 @@ if($PortName -ne "" -and $PortName -ne $null -and $PrinterIP -ne "" $PrinterIP -
 }
 
 
-# Determine the BlobURI to be used to download the printer files. Currently only supports Azure Blob.
-
-# Determine if this is scenario A or B
-
-Write-Log "Determining the BlobURI. Ascertaining if Scenario A or B was invoked based on supplied variables..."
-$BlobName = $INFFile
-
-If($BlobSASurl -ne "" -and $BlobSASurl -ne $null){
-
-    # Scenario A
-    Write-Log "Scenario A: Full URL supplied"
-
-    $BlobUri = $BlobSASurl
-
-
-} elseif ($StorageAccountName -ne "" -and $StorageAccountName -ne $null -and $ContainerName -ne "" -and $ContainerName -ne $null -and $SasToken -ne "" -and $SasToken -ne $null){
-
-    # Scenario B
-    Write-Log "Scenario B: Individual pieces of URL supplied"
-
-    $BlobUri = "https://$StorageAccountName.blob.core.windows.net/$ContainerName/$BlobName"+"?"+"$SasToken"
-
-
-   
-
-} else {
-
-    # Failed
-    Write-Log "Not enough information supplied. Please make sure that you supplied enough/correct data." "ERROR"
-    exit 1
-    # Write-Log "Insufficient data, attempting to access JSON"
-    # $GetJSON = $True
-
-}
-
-
-Write-Log "Target URL: $BlobUri"
-
-###
-
-# Get the JSON
-
- # Also create the URI for the JSON, or grab it from the registry
-
 if($GetJSON -eq $True) {
 
-    Try{
-
-        $data = Invoke-RestMethod "https://azurebloblocation/thisfile.json"
-        
-        # Store the result
-        $foundPrinter = $data.printers | Where-Object { $_.PrinterName -eq "Example-Printer-02" }
-
-        # Access properties
-        $foundPrinter.PrinterName  # Returns: "Example-Printer-02"
-        $foundPrinter.PortName     # Returns: "IP_192.168.1.101"
+    # Scenario A: Get the JSON URI from the registry
 
 
-    }catch{
+    # Scenario B: Get JSON from Azure
+    Write-Log "Determining URI for the PrinterData.json based on supplied params"
+    if($StorageAccountName -ne "" -and $StorageAccountName -ne $null -and $SasToken -ne "" -and $SasToken -ne $null -and $PrinterData_JSON_ContainerName -ne "" -and $PrinterData_JSON_ContainerName -ne $null -and $PrinterData_JSON_BlobName -ne "" -and $PrinterData_JSON_BlobName -ne $null){
 
+        $printerJSONUri = "https://$StorageAccountName.blob.core.windows.net/$PrinterData_JSON_ContainerName/$PrinterData_JSON_BlobName"+"?"+"$SasToken"
 
+    } else {
+
+        Write-Log "Insufficient params. Each of these cannot be empty:" "ERROR"
+        Write-Log "StorageAccountName: $StorageAccountName"
+        Write-Log "SasToken: $SasToken"
+        Write-Log "PrinterData_JSON_ContainerName: $PrinterData_JSON_ContainerName"
+        Write-Log "PrinterData_JSON_BlobName: $PrinterData_JSON_BlobName"
+        Exit 1
 
     }
 
 
+    Write-Log "Attempting to access PrinterData.json with this URI: $printerJSONUri"
+
+    Try{
+
+        # TODO: Try and create a snippet that can directly parse JSOn from web
+        #$data = Invoke-RestMethod "$printerJSONUri"
+
+        #$Result =Invoke-WebRequest -Uri $printerJSONUri -OutFile "$WorkingDirectory\temp\PrinterData.json" -UseBasicParsing
+
+        Write-Log "Beginning download..."
+        & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $PrinterData_JSON_BlobName -StorageAccountName $StorageAccountName -ContainerName $PrinterData_JSON_ContainerName -SasToken $SasToken
+        if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+        Write-Log "Parsing JSON"
+        $LocalJSONpath = "$WorkingDirectory\TEMP\$PrinterData_JSON_BlobName"
+        if (Test-Path $LocalJSONpath) {Write-Log "Local JSON found"} else { Write-Log "Local JSON not found"}
+        #$jsonData = Get-Content -Raw $LocalJSONpath | ConvertFrom-Json
+        try {
+            $jsonText = Get-Content -LiteralPath $LocalJSONpath -Raw -Encoding UTF8
+            $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            throw "ConvertFrom-Json failed: $($_.Exception.Message)"
+        }
+
+        # "Printers count: {0}" -f ($jsonData.printers.Count)
+        # $jsonData.printers[0] | Format-List *
+
+        # Can comment out
+        Write-Log "Here are all the printers we found from the JSON:"
+        $jsonData.printers.PrinterName
+
+
+        Write-Log "This run as asking to install this printer: $PrinterName. Here is all the data on that printer:"
+        $printer = $jsonData.printers | Where-Object { $_.PrinterName -eq $PrinterName }
+
+        if ($printer) {
+            
+            # Write-Log "Formatted list:"
+            # $printer | Format-List *
+
+            # Write-Log "This is the IP address"
+            # $printer.PrinterIP
+
+
+            Write-Log "Attempting to digest data into PowerShell objects..."
+            Set-VariablesFromObject -InputObject $printer -Scope Script
+
+            Write-Log "These are the obtained values that are now PowerShell objects:"
+            Write-Log "Port Name: $PortName"
+            Write-Log "Printer IP: $PrinterIP"
+            Write-Log "Printer Name: $PrinterName"
+            Write-Log "Driver Name: $DriverName"
+            Write-Log "INF File: $INFFile"
+            Write-Log "DriverZip: $DriverZip"
+
+
+        } else {
+            Write-Log "Printer '$PrinterName' not found." "ERROR"
+            Exit 1
+        }
+        # Store the result
+        #$foundPrinter = $data.printers | Where-Object { $_.PrinterName -eq "Example-Printer-02" }
+
+
+    }catch{
+
+        Write-Log "Accessing JSON failed. Exit code returned: $_"
+        Exit 1
+        
+    }
+
+
 }
+
+
+
+# Verify the data from the JSON is good and get the vars needed to invoke the download
+
+#If ($DriverZip -ne "" -and $DriverZip -ne $null -and ($DriverZip_ContainerName -eq "" -or $DriverZip_ContainerName -eq $null)){
+If ($DriverZip -ne "" -and $DriverZip -ne $null){
+
+    Write-Log "Inferring the following:"
+
+
+    $DriverZip_BlobName = Split-Path -Path $DriverZip -Leaf
+
+    Write-Log "DriverZip_BlobName: $DriverZip_BlobName"
+
+    $DriverZip_ContainerName  = Split-Path -Path $DriverZip -Parent # For some reason this converts / into \ and breaks things
+    $DriverZip_ContainerName = ($DriverZip_ContainerName -replace '\\','/') -replace '(?<!:)/{2,}','/'
+
+    Write-Log "DriverZip_ContainerName: $DriverZip_ContainerName"
+
+    # if ($DriverZip_ContainerName -match "/" -or $DriverZip_ContainerName -match "\"){
+
+
+    # } else {
+
+
+    # }
+
+} else {
+    
+    Write-Log "Format issue for DriverZip variable. It should be formatted like (DriverZip_ContainerName/Zip.zip). Current value: $DriverZip" "ERROR"
+    Exit 1
+}
+
+# Download and extract the DriverZip
+
+Try {
+
+    Write-Log "Downloading the DriverZip"
+    & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $DriverZip_BlobName -StorageAccountName $StorageAccountName -ContainerName $DriverZip_ContainerName -SasToken $SasToken
+    if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+    $LocalDriverZipPath = "$WorkingDirectory\TEMP\$DriverZip_BlobName"
+    $EXTRACTED_LocalDriverZipPath = "$LocalDriverZipPath-EXTRACTED"
+
+    # Extract the zip
+
+    Write-Log "Extracting the zip"
+
+    Expand-Archive -Path "$LocalDriverZipPath" -DestinationPath "$EXTRACTED_LocalDriverZipPath" -ErrorAction Stop
+
+    Write-Log "Unzipping completee. Files live at $EXTRACTED_LocalDriverZipPath."
+    #Pause
+
+
+    # TODO: Identify the needed files from within the zip
+
+
+
+
+} catch {
+
+
+    Write-Log "Download/extract of DriverZip failed. Exit code returned: $_"
+
+}
+
+
+
+
+#Pause
+
+
+<#
+# Determine the BlobURI to be used to download the printer files. Currently only supports Azure Blob.
+
+# Determine if this is scenario A or B
+
+
+
+    $BlobName = $INFFile
+
+
+    If($BlobSASurl -ne "" -and $BlobSASurl -ne $null){
+
+        # Scenario A
+        Write-Log "Scenario A: Full URL supplied"
+
+        $BlobUri = $BlobSASurl
+
+
+    } elseif ($StorageAccountName -ne "" -and $StorageAccountName -ne $null -and $ContainerName -ne "" -and $ContainerName -ne $null -and $SasToken -ne "" -and $SasToken -ne $null){
+
+        # Scenario B
+        Write-Log "Scenario B: Individual pieces of URL supplied"
+
+        If ($ContainerPath -ne ""){
+
+            $BlobUri = "https://$StorageAccountName.blob.core.windows.net/$ContainerName/$ContainerPath/$BlobName"+"?"+"$SasToken"
+
+        } else {
+
+            $BlobUri = "https://$StorageAccountName.blob.core.windows.net/$ContainerName/$BlobName"+"?"+"$SasToken"
+
+        }
+
+
+
+    
+
+    } else {
+
+        # Failed
+        Write-Log "Not enough information supplied. Please make sure that you supplied enough/correct data." "ERROR"
+        exit 1
+        # Write-Log "Insufficient data, attempting to access JSON"
+        # $GetJSON = $True
+
+    }
+
+
+Write-Log "Target URL: $BlobUri"
+
+########################
+
+
 
 
 # Download the INF file
@@ -284,9 +435,12 @@ $INFFilePath = $LocalDestinationPath
 # Download/Read the JSON
 
 
+#>
+#############################
 
-###
+# Everything above here is working as intended in my limited test scenario
 
+#############################
 
 $INFARGS = @(
     "/add-driver"
@@ -300,8 +454,11 @@ If (-not $ThrowBad) {
         # Stage driver to driver store
         Write-Log "Staging Driver to Windows Driver Store using INF ""$($INFFile)"""
         #Write-Log "Running command: Start-Process pnputil.exe -ArgumentList $($INFARGS) -wait -passthru"
-        Push-Location $TargetDirectory
+        #Push-Location $TargetDirectory
+        Push-Location $EXTRACTED_LocalDriverZipPath
 
+        # Check for the INF File
+        If (Test-Path ".\$INFFile") {"INF File found here: $EXTRACTED_LocalDriverZipPath"} else {Write-Log "INF File not found here: $EXTRACTED_LocalDriverZipPath"}
 
         Start-Process pnputil.exe -ArgumentList $INFARGS -wait -passthru
 
