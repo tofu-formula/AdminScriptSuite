@@ -102,6 +102,9 @@ param(
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
 
     [Boolean]$forcemachinecontext,
+
+    [Parameter(Mandatory=$false)]
+    [string]$ScriptParamsBase64, # Base64 encoded params for better Intune compatibility,
     
     [Parameter(ValueFromRemainingArguments=$true)]
     $ScriptParams # Params to pass to the target script. Example for General_Uninstaller.ps1: -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
@@ -111,6 +114,32 @@ param(
 ##########
 ## Vars ##
 ##########
+
+# Handle base64 encoded parameters if provided (for Intune compatibility)
+if ($ScriptParamsBase64 -and -not $ScriptParams) {
+    try {
+        Write-Host "Decoding base64 parameters..."
+        $decodedJson = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($ScriptParamsBase64))
+        $paramsHash = $decodedJson | ConvertFrom-Json
+        
+        # Convert to parameter string
+        $paramArray = @()
+        foreach ($key in $paramsHash.PSObject.Properties.Name) {
+            $value = $paramsHash.$key
+            if ($value -is [string]) {
+                $paramArray += "-$key `"$value`""
+            } else {
+                $paramArray += "-$key $value"
+            }
+        }
+        $ScriptParams = $paramArray -join ' '
+        
+        Write-Host "Decoded parameters: $ScriptParams"
+    } catch {
+        Write-Host "ERROR: Failed to decode base64 parameters: $_" -ForegroundColor Red
+        Exit 1
+    }
+}
 
 # Uncomment this part if you don't want to use params
 # $RepoNickName = zz
@@ -141,6 +170,8 @@ if(!($UpdateLocalRepoOnly -eq $true)) {
 
 
 }
+
+
 
 
 ###############
