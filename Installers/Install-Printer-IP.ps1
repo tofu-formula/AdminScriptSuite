@@ -67,7 +67,7 @@ Param (
 ## Vars ##
 ##########
 
-$LogRoot = "$WorkingDirectory\Logs\Git_Logs"
+$LogRoot = "$WorkingDirectory\Logs\Install_Logs"
 $ThisFileName = $MyInvocation.MyCommand.Name
 $LogPath = "$LogRoot\$ThisFileName.$PrinterName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
@@ -327,8 +327,9 @@ Try {
     # Extract the zip
 
     Write-Log "Extracting the zip"
+    if(Test-path $EXTRACTED_LocalDriverZipPath) {Write-Log "File already exists at $EXTRACTED_LocalDriverZipPath. Will attempt to overwrite." "WARNING"}
 
-    Expand-Archive -Path "$LocalDriverZipPath" -DestinationPath "$EXTRACTED_LocalDriverZipPath" -ErrorAction Stop
+    Expand-Archive -Path "$LocalDriverZipPath" -DestinationPath "$EXTRACTED_LocalDriverZipPath" -Force -ErrorAction Stop
 
     Write-Log "Unzipping completee. Files live at $EXTRACTED_LocalDriverZipPath."
     #Pause
@@ -442,10 +443,15 @@ $INFFilePath = $LocalDestinationPath
 
 #############################
 
-$INFARGS = @(
-    "/add-driver"
-    "$INFFile"
-)
+
+# $INFARGS = @(
+#     "/add-driver"
+#     "$INFFile"
+# )
+
+
+# $INFFile = "hpcu345u.inf"
+# $DriverName = "HP Universal Printing PCL 6"
 
 If (-not $ThrowBad) {
 
@@ -455,12 +461,40 @@ If (-not $ThrowBad) {
         Write-Log "Staging Driver to Windows Driver Store using INF ""$($INFFile)"""
         #Write-Log "Running command: Start-Process pnputil.exe -ArgumentList $($INFARGS) -wait -passthru"
         #Push-Location $TargetDirectory
-        Push-Location $EXTRACTED_LocalDriverZipPath
+        #Push-Location $EXTRACTED_LocalDriverZipPath
+
+
+        $INFpath = "$EXTRACTED_LocalDriverZipPath\$INFFile"
 
         # Check for the INF File
-        If (Test-Path ".\$INFFile") {"INF File found here: $EXTRACTED_LocalDriverZipPath"} else {Write-Log "INF File not found here: $EXTRACTED_LocalDriverZipPath"}
+        If (Test-Path $INFpath){
+            Write-Log "INF File found here: $EXTRACTED_LocalDriverZipPath"
+        } else {
+            Throw "INF File NOT found here: $EXTRACTED_LocalDriverZipPath"
+        }
 
-        Start-Process pnputil.exe -ArgumentList $INFARGS -wait -passthru
+        #Start-Process pnputil.exe -ArgumentList $INFARGS -wait -passthru
+        #pnputil /add-driver "`"$INFPath`"" /install #| Out-Null
+
+        $result = pnputil /a $INFPath
+        Foreach ($line in $result){Write-Log "pnputil.exe : $Line"}
+
+        # Write-Log "Refining INF path..." # This may not be necessary but this is where I got it from: https://serverfault.com/questions/968120/unable-to-add-printer-driver-using-add-printerdriver-on-2012-r2-print-server
+
+        # Write-Log "Old INFpath: $INFPath"
+
+        # $INFPath = Get-WindowsDriver -All -Online | Where-Object {$_.OriginalFileName -like '*hpcu345u.inf'} | Select-Object -ExpandProperty OriginalFileName #-OutVariable infPath
+        # Write-Log "New INFpath: $INFPath"
+        
+        #$INFPath
+        # $yy = Get-Content -Path $infPath
+        # Foreach ($line in $yy){Write-Log "$INFPath : $Line"}
+
+        #Pause
+        # $driver = Get-PrinterDriver -Name $DriverName -ErrorAction SilentlyContinue
+        # if (-not $driver) {
+        #     throw "Driver '$DriverName' still not found after installing INF. Check the exact model name inside the INF."
+        # }
 
             # New method
                 # Start-Process pnputil.exe -ArgumentList @("/add-driver", "`"$INFFilePath`"", "/subdirs", "/install") -Wait -PassThru
@@ -468,29 +502,44 @@ If (-not $ThrowBad) {
                 # Write-Log "Checking if driver is staged"
                 # pnputil /enum-drivers | Select-String -Pattern "DriverName" -ErrorAction SilentlyContinue
 
-        Pop-Location
+        #Pop-Location
 
     }
     Catch {
         Write-Log "Error staging driver to Driver Store" "ERROR"
         Write-Log "$($_.Exception.Message)" "ERROR"
-        Write-Log "Error staging driver to Driver Store" "ERROR"
-        Write-Log "$($_.Exception)" "ERROR"
+        # Write-Log "Error staging driver to Driver Store" "ERROR"
+        # Write-Log "$($_.Exception)" "ERROR"
         $ThrowBad = $True
     }
 }
 
+
 If (-not $ThrowBad) {
     Try {
     
-        # Install driver
+
+        # Check if the required driver is already installed
+
+        Write-Log "Checking if driver ($DriverName) is already installed"
         $DriverExist = Get-PrinterDriver -Name $DriverName -ErrorAction SilentlyContinue
+
+
+        # Install driver
+
         if (-not $DriverExist) {
+            Write-Log "Driver is not already installed."
             Write-Log "Adding Printer Driver: $DriverName"
+
+            ###
+            ###
             # Try { 
 
 
-                Add-PrinterDriver -Name $DriverName -Confirm:$false -ErrorAction Stop
+                #Add-PrinterDriver -Name $DriverName -Confirm:$false -ErrorAction Stop
+                Write-Log "Running this command: Add-PrinterDriver -Name $DriverName -ErrorAction Stop"
+                $Result = Add-PrinterDriver -Name $DriverName -ErrorAction Stop
+                Foreach ($line in $result){Write-Log "Add-PrinterDriver : $Line"}
 
                     # New method
                         #Add-PrinterDriver -Name $DriverName -InfPath $INFFile -ErrorAction Stop
@@ -510,6 +559,7 @@ If (-not $ThrowBad) {
     Catch {
         Write-Log "Error installing Printer Driver" "ERROR"
         Write-Log "$($_.Exception.Message)" "ERROR"
+        Write-Log "Make sure the architecture of driver/machine matches!!!"
         # Write-Log "Error installing Printer Driver" "ERROR"
         # Write-Log "$($_.Exception)" "ERROR"
         $ThrowBad = $True
