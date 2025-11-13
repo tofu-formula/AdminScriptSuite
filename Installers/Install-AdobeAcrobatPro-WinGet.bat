@@ -38,3 +38,4 @@ ECHO If that is acceptable...
 Pause
 
 Powershell.exe -executionpolicy bypass -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_Acrobat_Pro" -AppID "Adobe.Acrobat.Pro" -WorkingDirectory "%WORKINGDIR%"
+Pause
