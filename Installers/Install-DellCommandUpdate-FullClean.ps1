@@ -240,7 +240,23 @@ Try{
 }
 
 Write-Log "========================================"
-Write-Log "SCRIPT: $ThisFileName | 2. Install required .NET version"
+Write-Log "SCRIPT: $ThisFileName | 3. Uninstall .NET version 8"
+Write-Log "========================================"
+
+Try {
+
+    Write-Log "SCRIPT: $ThisFileName | Attempting to uninstall .NET 8"
+    & $UninstallerScript -AppName "Microsoft.DotNet.DesktopRuntime.8" -UninstallType "All" -WorkingDirectory $WorkingDirectory
+    if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+} Catch {
+
+    Write-Log "SCRIPT: $ThisFileName | Could not uninstall .NET 8. Will continue on anyways." "WARNING"
+
+}
+
+Write-Log "========================================"
+Write-Log "SCRIPT: $ThisFileName | 4. Install required .NET version"
 Write-Log "========================================"
 
 Try {
@@ -255,13 +271,13 @@ Try {
 
 } Catch {
 
-    Write-Log "SCRIPT: $ThisFileName | END | .NET install failed. Code: $_" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | .NET install failed. There may be another version of .NET 8 Desktop Runtime already installed preventing rollback to 8.0.15. Code: $_" "ERROR"
     Exit 1
 
 }
 
 Write-Log "========================================"
-Write-Log "SCRIPT: $ThisFileName | 3. Install DCU using WinGet"
+Write-Log "SCRIPT: $ThisFileName | 5. Install DCU using WinGet"
 Write-Log "========================================"
 
 Try {
