@@ -15,7 +15,7 @@ function New-IntuneGitRunnerCommand {
         
         # Build the command
         $command = @"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%~dp0Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath' -ScriptParamsBase64 '$paramsBase64'"
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath' -ScriptParamsBase64 '$paramsBase64'"
 "@
     } else {
         # Update only command
@@ -39,23 +39,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%~dp0Git_Runner_T
 
 # Example 2: Install 7-zip
 $installCommand = New-IntuneGitRunnerCommand `
-    -RepoNickName "Test00" `
+    -RepoNickName "AdminScriptSuite-Repo" `
     -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-    -WorkingDirectory "C:\ProgramData\Test00" `
+    -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
     -ScriptPath "Installers\General_WinGet_Installer.ps1" `
     -ScriptParams @{
-        AppName = "7-zip"
-        AppID = "7zip.7zip"
-        WorkingDirectory = "C:\ProgramData\Test00"
+        AppName = "Adobe_CC"
+        AppID = "Adobe.CreativeCloud"
+        WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
     }
 
-Write-Host "Install 7-zip Command:" -ForegroundColor Green
+Write-Host "Install Command:" -ForegroundColor Green
 Write-Host $installCommand
 
 # Intune run example
-# powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%~dp0Git_Runner_TEMPLATE.ps1' -RepoNickName 'Test00' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\Test00' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'eyJBcHBJRCI6Ijd6aXAuN3ppcCIsIkFwcE5hbWUiOiI3LXppcCIsIldvcmtpbmdEaXJlY3RvcnkiOiJDOlxcUHJvZ3JhbURhdGFcXFRlc3QwMCJ9'"
 
-# Local powershell run example
-# powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'Test00' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\Test00' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'eyJBcHBJRCI6Ijd6aXAuN3ppcCIsIkFwcE5hbWUiOiI3LXppcCIsIldvcmtpbmdEaXJlY3RvcnkiOiJDOlxcUHJvZ3JhbURhdGFcXFRlc3QwMCJ9'"
-
-
+# %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'Test00' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\Test00' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'eyJBcHBJRCI6Ijd6aXAuN3ppcCIsIkFwcE5hbWUiOiI3LXppcCIsIldvcmtpbmdEaXJlY3RvcnkiOiJDOlxcUHJvZ3JhbURhdGFcXFRlc3QwMCJ9'"
