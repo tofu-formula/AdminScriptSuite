@@ -67,7 +67,7 @@ Param (
 ## Vars ##
 ##########
 
-$LogRoot = "$WorkingDirectory\Logs\Install_Logs"
+$LogRoot = "$WorkingDirectory\Logs\Installer_Logs"
 $ThisFileName = $MyInvocation.MyCommand.Name
 $LogPath = "$LogRoot\$ThisFileName.$PrinterName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
