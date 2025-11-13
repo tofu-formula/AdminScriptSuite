@@ -6,6 +6,8 @@
 # TODO
 <#
 
+- Seperate detection methods into their own individual scripts
+
 - add descriptions to each method
 - install winget
 - sometimes the command outputs are blank; remove if so?
