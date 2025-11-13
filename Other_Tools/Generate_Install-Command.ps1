@@ -1,4 +1,12 @@
 # Helper script to generate Intune commands
+
+# Vars
+
+$RepoRoot = Split-Path -Path $PSScriptRoot -Parent
+$WorkingDirectory = Split-Path -Path $RepoRoot -Parent
+
+$InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+
 function New-IntuneGitRunnerCommand {
     param(
         [string]$RepoNickName,
@@ -18,14 +26,16 @@ function New-IntuneGitRunnerCommand {
 %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath' -ScriptParamsBase64 '$paramsBase64'"
 "@
     } else {
-        # Update only command
+        # for a no param script
         $command = @"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%~dp0Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -UpdateLocalRepoOnly `$true -WorkingDirectory '$WorkingDirectory'"
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath'"
 "@
     }
     
     return $command
 }
+
+
 
 # Example 1: Update repo only
 # $updateCommand = New-IntuneGitRunnerCommand `
@@ -37,20 +47,45 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%~dp0Git_Runner_T
 # Write-Host $updateCommand
 # Write-Host ""
 
-# Example 2: Install 7-zip
+
+
+# Example 2: Install command for intune
+$installCommand = New-IntuneGitRunnerCommand `
+    -RepoNickName "AdminScriptSuite-Repo" `
+    -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+    -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+    -ScriptPath "Installers\Install-DellCommandUpdate-FullClean.ps1"
+
+<#
 $installCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "AdminScriptSuite-Repo" `
     -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
     -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
     -ScriptPath "Installers\General_WinGet_Installer.ps1" `
     -ScriptParams @{
-        AppName = "Adobe_CC"
-        AppID = "Adobe.CreativeCloud"
+        AppName = "Zoom.Zoom.EXE"
+        AppID = "Zoom.Zoom.EXE"
         WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
     }
+#>
 
-Write-Host "Install Command:" -ForegroundColor Green
-Write-Host $installCommand
+
+
+#Write-Host "Install Command:" -ForegroundColor Green
+#Write-Host $installCommand
+
+
+If (!(Test-Path $InstallCommandTXT)){New-item -path $InstallCommandTXT -ItemType File -Force | out-null}
+
+$installCommand | Set-Content -Encoding utf8 $InstallCommandTXT
+Write-Host "Install command saved here: $InstallCommandTXT"
+
+$installCommand | Set-Clipboard 
+Write-Host "Install command saved to your clip board!"
+
+
+
+
 
 # Intune run example
 
