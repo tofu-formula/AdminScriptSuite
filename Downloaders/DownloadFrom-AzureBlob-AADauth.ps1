@@ -38,8 +38,8 @@ param(
 ##########
 
 #$WorkingDirectory = 'C:\ProgramData\TEST'
-$LocalDestinationPath = "$WorkingDirectory\TEMP"
-
+$TargetDirectory = "$WorkingDirectory\TEMP"
+$LocalDestinationPath = "$TargetDirectory\$BlobName"
 
 $ThisFileName = $MyInvocation.MyCommand.Name
 $LogRoot = "$WorkingDirectory\Logs\Download_Logs"
@@ -341,14 +341,14 @@ try {
             -ErrorAction Stop
     
     # Ensure destination directory exists
-        if (!(Test-Path $LocalDestinationPath)) {
-            New-Item -ItemType Directory -Path $LocalDestinationPath -Force | Out-Null
+        if (!(Test-Path $TargetDirectory)) {
+            New-Item -ItemType Directory -Path $TargetDirectory -Force | Out-Null
             Write-Log "Created destination directory: $LocalDestinationPath"
         }
         
     # Download the blob
-        $destinationFile = Join-Path $LocalDestinationPath $BlobName
-        Write-Log "Downloading blob to: $destinationFile"
+        
+        Write-Log "Downloading blob to: $LocalDestinationPath"
     
         $Blobber = "$BlobDirectoryPath/$BlobName"
 
@@ -357,14 +357,14 @@ try {
         $blob = Get-AzStorageBlobContent `
             -Container $ContainerName `
             -Blob $Blobber `
-            -Destination $destinationFile `
+            -Destination $LocalDestinationPath `
             -Context $storageContext `
             -Force `
             -ErrorAction Stop
         
     # Verify download
-        if (Test-Path $destinationFile) {
-            $fileInfo = Get-Item $destinationFile
+        if (Test-Path $LocalDestinationPath) {
+            $fileInfo = Get-Item $LocalDestinationPath
             Write-Log "File downloaded successfully. Size: $($fileInfo.Length) bytes"
             
             # Set appropriate permissions on the file
@@ -387,7 +387,7 @@ try {
             # Set-Acl -Path $destinationFile -AclObject $acl
             
             # Write-Log "File permissions configured successfully"
-            Write-Log "File downloaded successfully to: $destinationFile" "SUCCESS"
+            Write-Log "File downloaded successfully to: $LocalDestinationPath" "SUCCESS"
             Disconnect-AzAccount -ErrorAction SilentlyContinue
 
             exit 0
