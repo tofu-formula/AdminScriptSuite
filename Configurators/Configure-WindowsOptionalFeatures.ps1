@@ -84,9 +84,9 @@ Param(
 ### Vars ###
 ############
 
-$LogRoot = "$WorkingDirectory\Logs\WindowsFeature_Logs"
+$LogRoot = "$WorkingDirectory\Logs\Config_Logs"
 $SafeFeatureName = $FeatureName -replace '[^\w]', '_'
-$LogPath = "$LogRoot\$SafeFeatureName.$Action._FeatureLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LogPath = "$LogRoot\$SafeFeatureName.WindowsFeature.$Action._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $ActionSuccess = $false
 $RestartRequired = $false
 

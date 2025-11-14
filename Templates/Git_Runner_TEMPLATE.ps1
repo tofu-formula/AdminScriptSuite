@@ -111,9 +111,9 @@ param(
 
 )
 
-##########
-## Vars ##
-##########
+####################
+## base64 Decoder ##
+####################
 
 # Handle base64 encoded parameters if provided (for Intune compatibility)
 if ($ScriptParamsBase64 -and -not $ScriptParams) {
@@ -140,6 +140,11 @@ if ($ScriptParamsBase64 -and -not $ScriptParams) {
         Exit 1
     }
 }
+
+
+##########
+## Vars ##
+##########
 
 # Uncomment this part if you don't want to use params
 # $RepoNickName = zz
@@ -588,3 +593,49 @@ catch {
 Write-Log "++++++++++++++++++++++"
 Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
 Exit 0
+
+
+
+
+######
+
+# If you are using this template to run custom instructions like more complex installers, comment out the Exit 0 above and architect your command below!
+
+######
+
+# EXAMPLE: Download and install an MSI stored in Azure Blob
+
+<#
+$DownloadAzureBlobSAS_ScriptPath = "$LocalRepoPath\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
+$MSIinstaller_ScriptPath = "$LocalRepoPath\Installers\General_MSI_Installer.ps1"
+
+$StorageAccountName = ""
+$MSI_Blob_Name = ""
+$MSI_Container_Name = ""
+$LocalMSIpath = ""
+$AppName = ""
+$DisplayName = ""
+
+Write-Log "++++++++++++++++++++++"
+Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Target app: $AppName"
+Try{
+
+    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Beginning download of MSI"
+    Powershell.exe -executionpolicy bypass -File $DownloadAzureBlobSAS_ScriptPath -BlobName $MSI_Blob_Name -StorageAccountName $StorageAccountName -ContainerName $MSI_Container_Name -SasToken $SasToken
+    if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Beginning install of MSI"
+    Powershell.exe -executionpolicy bypass -File $MSIinstaller_ScriptPath -WorkingDirectory $WorkingDirectory -MSIPath $LocalMSIpath -AppName $AppName -DisplayName $DisplayName
+    if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+} catch {
+    Write-Log "++++++++++++++++++++++"
+    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob |Install of $AppName has failed. Exit code: $_" "ERROR"
+    
+    Exit 1
+}
+
+Write-Log "++++++++++++++++++++++"
+Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob |Install of $AppName has succeeded!" "SUCCESS"
+Exit 0
+#>
