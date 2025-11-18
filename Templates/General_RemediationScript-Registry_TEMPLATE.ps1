@@ -248,34 +248,56 @@ Try{
 }
 
 # Format string into array for reg
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Formatting input string into an array. If this fails the RegistryChanges param was likely not formatted correctly."
 Try{ 
 
+    Write-host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Current value of RegistryChanges:"
+    Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX $RegistryChanges"
+
     # Split on commas that are NOT inside quotes
-    $TotalRegistryChangesArray = [regex]::Split(
-        $RegistryChanges,
-        ',(?=(?:[^"]*"[^"]*")*[^"]*$)'
-    ) | Where-Object { $_.Trim() }
+    #Write-Log "Split on commas that are NOT inside quotes"
+    # $TotalRegistryChangesArray = [regex]::Split(
+    #     $RegistryChanges,
+    #     ',(?=(?:[^"]*"[^"]*")*[^"]*$)'
+    # ) | Where-Object { $_.Trim() }
+
+    Write-host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Split on commas that are NOT inside brackets"
+    $TotalRegistryChangesArray = $RegistryChanges -split '(?<=\])\s*,\s*(?=\[)'
+
+    Write-host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Current value of TotalRegistryChangesArray:"
+    write-host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX $TotalRegistryChangesArray"
+
+
+    # Take out the brackets
+    Write-host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Taking out the brackets..."
+    # Foreach ($line in $TotalRegistryChangesArray){
+    #     $Line
+    #     $line = $line -replace "[\[\]]", ""
+    #     $line
+    # }
+
+    #$TotalRegistryChangesArray -replace "[\[\]]", ""
+
+    # for ($i = 0; $i -lt $TotalRegistryChangesArray.Length; $i++) {
+    # $TotalRegistryChangesArray[$i] = $TotalRegistryChangesArray[$i] -replace "[\[\]]", ""
+
+    # Create a new array without brackets
+    $cleaned = $TotalRegistryChangesArray | ForEach-Object {
+        $_ -replace "[\[\]]", ""
+    }
+
+    $TotalRegistryChangesArray = $cleaned
+
+    Write-host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Current value of TotalRegistryChangesArray:"
+    Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX $TotalRegistryChangesArray"
+
 
 } catch {
 
-    Write-Error "Could not format registry change string into array"
+    Write-Error "Could not format registry change string into array: $_"
     Exit 1
 }
 
-# Format string into array for files
-Try{ 
-
-    # Split on commas that are NOT inside quotes
-    $TotalFileChangesArray = [regex]::Split(
-        $FileChanges,
-        ',(?=(?:[^"]*"[^"]*")*[^"]*$)'
-    ) | Where-Object { $_.Trim() }
-
-} catch {
-
-    Write-Error "Could not format registry change string into array"
-    Exit 1
-}
 
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
