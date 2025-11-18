@@ -511,7 +511,7 @@ if(Test-Path $LocalRepoPath){
    
     Write-Log "Pulling latest changes..."
     try {
-        $gitOutput = git pull 2>&1
+        $gitOutput = git pull 2>&1 # TODO: Need to add timeout and backup plan! Sometimes it gets frozen here. Maybe add functionality to just do a manual download.
         foreach ($line in $gitOutput) {
             Write-Log "GIT: $line"
         }
