@@ -160,8 +160,6 @@ $LogRoot = "$WorkingDirectory\Logs\Git_Logs"
 #$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $ThisFileName = $MyInvocation.MyCommand.Name
 
-#$forcemachinecontext = $true
-
 # Evaluate vars based on whether this run is just an update only
 if(!($UpdateLocalRepoOnly -eq $true)) {
     
