@@ -1,5 +1,22 @@
 # Helper script to generate Intune commands
 
+
+
+
+<#
+
+Instructions:
+
+Build your command
+
+Open elevated cmd on the test machine
+
+navigate to the dir of git runner template (on mac you may need to do pushd)
+
+
+
+#>
+
 # Vars
 
 # These are for identifying the running environment of this script not for the end script
@@ -56,22 +73,43 @@ Write-Host ""
 
 
 ### Example: Run a Remediation script - DETECT
-# Set the registry changes. first
-    $RegistryChanges = "-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""
 
+# Set the registry changes. first
+ 
+    # Set which function you want to do
+    $Function = "Remediate"
+
+    # Declare as list to bypass the Git Runner's function of putting passed string params into double quotes. This breaks the pass to the remediation script.
+    $RegistryChanges = @()
+
+    # Registry Value 1
     $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
     $KeyName = "Test"
     $KeyType = "String"
     $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
 
-    $RegistryChanges = "'"+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"'"+","
+    $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"]"+","
 
+
+    # Registry Value 2
     $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
     $KeyName = "Test 2"
     $KeyType = "String"
     $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss') 2"
 
-    $RegistryChanges+="'"+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"'"
+    $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"]" # no comma at the end cuz this is the end of the list
+
+    # Make as many as you need
+
+    # Create a passable object
+    $RegistryChangesSTRING = ''''+$RegistryChangesSTRING+''''
+    $RegistryChanges+=$RegistryChangesSTRING
+
+  
+    # This works too!
+    # $RegistryChanges = @()
+    # $RegistryChanges += '''[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -KeyName "Test" -KeyType "String" -Value "zz"],[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -KeyName "Test 2" -KeyType "String" -Value "zz 2"]'''
+
 
 # Then compose the install command args
 $installCommand = New-IntuneGitRunnerCommand `
@@ -83,8 +121,16 @@ $installCommand = New-IntuneGitRunnerCommand `
         RegistryChanges = $RegistryChanges
         RepoNickName = "AdminScriptSuite-Repo"
         WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
-        Function = "Detect"
+        Function = $Function
     }
+
+<#
+
+Output for detect:
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'AdminScriptSuite-Repo' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\AdminScriptSuite' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
+
+Output for remediate
+#>
 
 ###
 
