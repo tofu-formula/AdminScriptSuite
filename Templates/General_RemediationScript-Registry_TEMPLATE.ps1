@@ -1,0 +1,359 @@
+# General Remediation Script Suite - Registry
+# This script can do both detection and remediation
+
+
+
+Param(
+
+    # $RegistryChanges = '`
+    # -KeyPath "" -KeyName "" -Value "" -KeyType "",`
+    # -KeyPath "" -KeyName "" -Value "" -KeyType "",`
+    # -KeyPath "" -KeyName "" -Value "" -KeyType ""',
+
+    $RegistryChanges,
+    $WorkingDirectory,
+    $RepoNickName,
+
+    [ValidateSet("Detect", "Remediate")]
+    [String]$function
+
+)
+
+# $WorkingDirectory = "C:\ProgramData\AdminScriptSuite",
+# $RepoNickName = "AdminScriptSuite-Repo"
+
+if ($WorkingDirectory -eq "" -or $WorkingDirectory -eq $null -or $RepoNickName -eq "" -or $RepoNickName -eq $null){
+
+    $LocalRepoPath = Split-Path -Path $PSScriptRoot -Parent
+    $WorkingDirectory = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+
+} else {
+
+    $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
+
+}
+
+
+
+
+$LogRoot = "$WorkingDirectory\Logs\Detection_Logs"
+$LogPath = "$LogRoot\DetectionScript-General_Remediation_._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$ThisFileName = $MyInvocation.MyCommand.Name
+
+$RegEditScriptPath = "$LocalRepoPath\Configurators\Configure-Registry.ps1"
+
+
+# if(    $RegistryChanges -eq '`
+#     -KeyPath "" -KeyName "" -Value "" -KeyType "",`
+#     -KeyPath "" -KeyName "" -Value "" -KeyType "",`
+#     -KeyPath "" -KeyName "" -Value "" -KeyType ""') {$RegistryChanges = ""}
+
+
+###############
+## Functions ##
+###############
+
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+    
+    switch ($Level) {
+        "ERROR"   { Write-Host $logEntry -ForegroundColor Red }
+        "WARNING" { Write-Host $logEntry -ForegroundColor Yellow }
+        "SUCCESS" { Write-Host $logEntry -ForegroundColor Green }
+        "DRYRUN"  { Write-Host $logEntry -ForegroundColor Cyan }
+        default   { Write-Host $logEntry }
+    }
+    
+    # Ensure log directory exists
+    $logDir = Split-Path $LogPath -Parent
+    if (!(Test-Path $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+    
+    Add-Content -Path $LogPath -Value $logEntry
+}
+
+# NOTE: This function will not use write-log.
+function Test-PathSyntaxValidity {
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Paths,
+        [switch]$ExitOnError
+    )
+    
+    # Windows illegal path characters (excluding : for drive letters and \ for path separators)
+    $illegalChars = '[<>"|?*]'
+    
+    # Reserved Windows filenames
+    $reservedNames = @(
+        'CON', 'PRN', 'AUX', 'NUL',
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+    )
+    
+    $allValid = $true
+    $issues = @()
+    
+    foreach ($paramName in $Paths.Keys) {
+        $path = $Paths[$paramName]
+        
+        # Skip if null or empty
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            $issues += "Parameter '$paramName' is null or empty"
+            $allValid = $false
+            continue
+        }
+        
+        # Check for trailing backslash before closing quote pattern (common BAT file issue)
+        if ($path -match '\\["\' + "']$") {
+            $issues += "Parameter '$paramName' has trailing backslash before quote: '$path' - This will cause escape character issues"
+            $allValid = $false
+        }
+        
+        # Check for illegal characters
+        if ($path -match $illegalChars) {
+            $matches = [regex]::Matches($path, $illegalChars)
+            $foundChars = ($matches | ForEach-Object { $_.Value }) -join ', '
+            $issues += "Parameter '$paramName' contains illegal characters ($foundChars): '$path'"
+            $allValid = $false
+        }
+        
+        # Check for invalid double backslashes (except at start for UNC paths)
+        if ($path -match '(?<!^)\\\\') {
+            $issues += "Parameter '$paramName' contains double backslashes (not a UNC path): '$path'"
+            $allValid = $false
+        }
+        
+        # Check for reserved Windows names in path components
+        $pathComponents = $path -split '[\\/]'
+        foreach ($component in $pathComponents) {
+            $nameWithoutExt = [System.IO.Path]::GetFileNameWithoutExtension($component)
+            if ($nameWithoutExt -in $reservedNames) {
+                $issues += "Parameter '$paramName' contains reserved Windows name '$nameWithoutExt': '$path'"
+                $allValid = $false
+            }
+        }
+        
+        # Check for paths that are too long (MAX_PATH = 260 characters in Windows)
+        if ($path.Length -gt 260) {
+            $issues += "Parameter '$paramName' exceeds maximum path length (260 characters): '$path' (Length: $($path.Length))"
+            $allValid = $false
+        }
+        
+        # Check for invalid drive letter format
+        if ($path -match '^[a-zA-Z]:' -and $path -notmatch '^[a-zA-Z]:\\') {
+            $issues += "Parameter '$paramName' has invalid drive format (missing backslash after colon): '$path'"
+            $allValid = $false
+        }
+        
+        # Check for spaces at beginning or end of path (common copy-paste issue)
+        if ($path -ne $path.Trim()) {
+            $issues += "Parameter '$paramName' has leading or trailing whitespace: '$path'"
+            $allValid = $false
+        }
+    }
+    
+    # Report results
+    if (-not $allValid) {
+        Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PATH VALIDATION FAILED - Issues detected:"
+        foreach ($issue in $issues) {
+            Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX - $issue"
+        }
+        
+        if ($ExitOnError) {
+            Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Exiting script due to path validation errors"
+            Exit 1
+        }
+    } else {
+        Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Path validation successful - all parameters valid"
+    }
+    
+    #return $allValid
+
+}
+
+Function CheckReg {
+
+    $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -KeyName $KeyName -KeyType $KeyType -WorkingDirectory $WorkingDirectory -Function "Read"
+
+    if($EndValue -eq $Value){
+
+
+        Write-Log "SCRIPT: $ThisFileName | Registry values match for: $line" "SUCCESS"
+        # Exit 0
+
+    } elseif($EndValue -eq "Could not read") {
+
+        Write-Log "SCRIPT: $ThisFileName | END | Could not read target registry value" "WARNING"
+        Exit 1
+
+    } else {
+
+        Write-Log "SCRIPT: $ThisFileName | END | Local Registry Values do not match to $Line!" "WARNING"
+        Exit 1
+
+    }
+
+
+}
+
+
+##########
+## Main ##
+##########
+
+## Pre-Check
+
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ThisFileName"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied paths are valid"
+# Test the paths
+
+if ($UpdateLocalRepoOnly -eq $True){
+
+    $pathsToValidate = @{
+        'WorkingDirectory' = $WorkingDirectory
+
+    }
+
+} else {
+
+    $pathsToValidate = @{
+        'WorkingDirectory' = $WorkingDirectory
+    }
+
+}
+Test-PathSyntaxValidity -Paths $pathsToValidate -ExitOnError
+
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking the user contexts..."
+Try{
+    $scriptUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Script User: $scriptUser"
+
+    $loggedInUser = (Get-WmiObject -Class Win32_ComputerSystem).UserName
+    Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Windows User: $loggedInUser"
+
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Is Script User admin? $isAdmin"
+
+} Catch {
+    Write-Error "Could not collect user context info. Error: $_"
+    Exit 1
+}
+
+# Format string into array for reg
+Try{ 
+
+    # Split on commas that are NOT inside quotes
+    $TotalRegistryChangesArray = [regex]::Split(
+        $RegistryChanges,
+        ',(?=(?:[^"]*"[^"]*")*[^"]*$)'
+    ) | Where-Object { $_.Trim() }
+
+} catch {
+
+    Write-Error "Could not format registry change string into array"
+    Exit 1
+}
+
+# Format string into array for files
+Try{ 
+
+    # Split on commas that are NOT inside quotes
+    $TotalFileChangesArray = [regex]::Split(
+        $FileChanges,
+        ',(?=(?:[^"]*"[^"]*")*[^"]*$)'
+    ) | Where-Object { $_.Trim() }
+
+} catch {
+
+    Write-Error "Could not format registry change string into array"
+    Exit 1
+}
+
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+Write-Log "===== General Remediation Script Suite - Registry - DETECTION ====="
+
+Write-Log "Function: $Function"
+Write-Log "Registry Changes:"
+Foreach($line in $TotalRegistryChangesArray) {Write-Log "   $Line"}
+
+
+Write-Log "==================================================================="
+
+
+
+# Registry changes
+
+if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
+
+    Write-Log "Registry changes requested. Beginning check work..."
+
+    Foreach($line in $TotalRegistryChangesArray){
+
+        # Build a key/value map from -Param "value" pairs (order doesn't matter)
+        $pairs = @{}
+        foreach ($m in [regex]::Matches($line, '-(?<k>KeyPath|KeyName|Value|KeyType)\s+"(?<v>(?:[^"]|"")*)"')) {
+            $name = $m.Groups['k'].Value
+            # Unescape doubled quotes inside values (e.g., "" -> ")
+            $val  = $m.Groups['v'].Value -replace '""','"'
+            $pairs[$name] = $val
+        }
+
+    
+        [string]$KeyPath = $pairs['KeyPath']
+        [string]$KeyName = $pairs['KeyName']
+        [string]$Value   = $pairs['Value']
+        [string]$KeyType = $pairs['KeyType']
+
+        Write-Log "Target values:"
+
+        
+        Write-Log "   KeyPath: $keypath"
+
+        Write-log "   KeyName: $KeyName"
+
+        Write-log "   Value: $Value"
+
+        Write-Log "   KeyType: $KeyType"
+
+
+        if ($Function -eq "Detect"){
+
+            Write-Log "Now attempt to check the registry for these values..."
+
+            CheckReg
+
+
+        } elseif($Function -eq "Remediate") {
+
+            Write-Log "Now attempt to apply these values to the registry..."
+
+            Try {
+                $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -KeyName $KeyName -KeyType $KeyType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify"
+            } catch {
+                Write-Log "SCRIPT: $ThisFileName | END | Failed to write these values to the registry: $line" "ERROR"
+                Exit 1
+            }
+
+            Write-Log "Now final checking..."
+
+            CheckReg
+
+            Write-Log "SCRIPT: $ThisFileName | Moving on the next line if there is one"
+
+        }
+
+    }
+
+    Write-Log "SCRIPT: $ThisFileName | END | All values confirmed exist!!!" "SUCCESS"
+    Exit 0
+
+}

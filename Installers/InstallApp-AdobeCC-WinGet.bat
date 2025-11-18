@@ -1,7 +1,7 @@
 @echo off
 
 ECHO ===== Preconfigured App Installer =====
-ECHO Install App: Adobe Acrobat Pro
+ECHO Install App: Adobe Creative Cloud
 ECHO Install Method: WinGet
 ECHO.
 
@@ -37,4 +37,6 @@ ECHO Working Directory (puts logs folder here): %WORKINGDIR%
 ECHO If that is acceptable...
 Pause
 
-Powershell.exe -executionpolicy bypass -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_Acrobat_Pro" -AppID "Adobe.Acrobat.Pro" -WorkingDirectory "%WORKINGDIR%"
+
+Powershell.exe -executionpolicy bypass -File "%~dp0General_WinGet_Installer.ps1" -AppName "Adobe_CC" -AppID "Adobe.CreativeCloud" -WorkingDirectory "%WORKINGDIR%"
+Pause

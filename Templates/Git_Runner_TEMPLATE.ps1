@@ -67,6 +67,23 @@
     SOURCE:
         https://github.com/tofu-formula/AdminScriptSuite
 
+    InTune:
+        Example of working items:
+
+            General deployment of the ScriptSuite to local machine:
+                IntuneWin contents:
+                    Git_Runner_TEMPLATE.ps1
+                Install command:
+                    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'Test7' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -UpdateLocalRepoOnly:1 -WorkingDirectory 'C:\ProgramData\Test7'"
+                Detect rule:
+                    Rule type: File
+                    Path: C:\ProgramData\Test7\Test7\Templates
+                    File: Git_Runner_TEMPLATE.ps1
+                    Detection method: File exists
+
+            Install 7-zip
+                
+
 #>
 
 
@@ -83,11 +100,47 @@ param(
 
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
+
+    [Boolean]$forcemachinecontext,
+
+    [Parameter(Mandatory=$false)]
+    [string]$ScriptParamsBase64, # Base64 encoded params for better Intune compatibility,
     
     [Parameter(ValueFromRemainingArguments=$true)]
     $ScriptParams # Params to pass to the target script. Example for General_Uninstaller.ps1: -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME\Logs"'
 
 )
+
+####################
+## base64 Decoder ##
+####################
+
+# Handle base64 encoded parameters if provided (for Intune compatibility)
+if ($ScriptParamsBase64 -and -not $ScriptParams) {
+    try {
+        Write-Host "Decoding base64 parameters..."
+        $decodedJson = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($ScriptParamsBase64))
+        $paramsHash = $decodedJson | ConvertFrom-Json
+        
+        # Convert to parameter string
+        $paramArray = @()
+        foreach ($key in $paramsHash.PSObject.Properties.Name) {
+            $value = $paramsHash.$key
+            if ($value -is [string]) {
+                $paramArray += "-$key `"$value`""
+            } else {
+                $paramArray += "-$key $value"
+            }
+        }
+        $ScriptParams = $paramArray -join ' '
+        
+        Write-Host "Decoded parameters: $ScriptParams"
+    } catch {
+        Write-Host "ERROR: Failed to decode base64 parameters: $_" -ForegroundColor Red
+        Exit 1
+    }
+}
+
 
 ##########
 ## Vars ##
@@ -120,6 +173,8 @@ if(!($UpdateLocalRepoOnly -eq $true)) {
 
 
 }
+
+
 
 
 ###############
@@ -489,7 +544,7 @@ if ($DoClone -eq $true){
         Write-Log "Successfully cloned repository" "SUCCESS"
     }
     
-    Exit 1
+    #Exit 1
 }
 
 # Exit script if this was update only
@@ -536,3 +591,49 @@ catch {
 Write-Log "++++++++++++++++++++++"
 Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
 Exit 0
+
+
+
+
+######
+
+# If you are using this template to run custom instructions like more complex installers, comment out the Exit 0 above and architect your command below!
+
+######
+
+# EXAMPLE: Download and install an MSI stored in Azure Blob
+
+<#
+$DownloadAzureBlobSAS_ScriptPath = "$LocalRepoPath\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
+$MSIinstaller_ScriptPath = "$LocalRepoPath\Installers\General_MSI_Installer.ps1"
+
+$StorageAccountName = ""
+$MSI_Blob_Name = ""
+$MSI_Container_Name = ""
+$LocalMSIpath = ""
+$AppName = ""
+$DisplayName = ""
+
+Write-Log "++++++++++++++++++++++"
+Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Target app: $AppName"
+Try{
+
+    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Beginning download of MSI"
+    Powershell.exe -executionpolicy bypass -File $DownloadAzureBlobSAS_ScriptPath -BlobName $MSI_Blob_Name -StorageAccountName $StorageAccountName -ContainerName $MSI_Container_Name -SasToken $SasToken
+    if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Beginning install of MSI"
+    Powershell.exe -executionpolicy bypass -File $MSIinstaller_ScriptPath -WorkingDirectory $WorkingDirectory -MSIPath $LocalMSIpath -AppName $AppName -DisplayName $DisplayName
+    if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+} catch {
+    Write-Log "++++++++++++++++++++++"
+    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob |Install of $AppName has failed. Exit code: $_" "ERROR"
+    
+    Exit 1
+}
+
+Write-Log "++++++++++++++++++++++"
+Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob |Install of $AppName has succeeded!" "SUCCESS"
+Exit 0
+#>

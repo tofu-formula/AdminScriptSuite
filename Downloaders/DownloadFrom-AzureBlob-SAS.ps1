@@ -1,5 +1,7 @@
 # Download file using Azure Blob Storage
 
+# TODO: Create workflow/infrastructure to access a locally accessible SAS key. Add as an optional function.
+
 Param(
 
     [Parameter(Mandatory=$true)]
@@ -11,19 +13,24 @@ Param(
 
     # Scenario A: Full URL supplied
     [string]$BlobSASurl,
-    [string]$BlobSAStoken,
+    #[string]$BlobSAStoken,
 
 
     # Scenario B: Individual pieces of URL supplied
     [string]$StorageAccountName,
-    [string]$ContainerName,
-    [string]$SasToken
+    [string]$ContainerName, # Include path! Ex: "applications\7-zip" if file you are targetting is "applications\7-zip\7zip.exe"
+    [string]$SasToken # Config tested: Signing method: Account key - Signing Key: key 1 - permissions: read - Allowed Protocols: HTTPS only
+
 
 )
 
 ############
 ### Vars ###
 ############
+
+
+
+
 
 ##
 
@@ -32,8 +39,9 @@ $LocalDestinationPath = "$TargetDirectory\$BlobName"
 
 ##
 
+$ThisFileName = $MyInvocation.MyCommand.Name
 $LogRoot = "$WorkingDirectory\Logs\Download_Logs"
-
+$LogPath = "$LogRoot\$ThisFileName._$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 #################
 ### Functions ###
@@ -170,7 +178,6 @@ function Write-Log {
 ############
 
 ## Pre-Check
-$ThisFileName = $MyInvocation.MyCommand.Name
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX PRE-CHECK for SCRIPT: $ThisFileName"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
@@ -221,8 +228,8 @@ Write-Log "===================================================="
 
 ## Determine if this is scenario A or B
 
-Write-Log "Determining if Scenario A or B was invoked based on supplised variables..."
-If($BlobSASurl -ne "" -and $BlobSASurl -ne $null -and $BlobSAStoken -ne "" -and $BlobSAStoken -ne $null){
+Write-Log "Determining if Scenario A or B was invoked based on supplied variables..."
+If($BlobSASurl -ne "" -and $BlobSASurl -ne $null){
 
     # Scenario A
     Write-Log "Scenario A: Full URL supplied"
@@ -273,6 +280,8 @@ Try {
     # Download the file
     Write-Log "Attempting to download the file ($BlobName) from URL ($BlobUri)"
     $Result =Invoke-WebRequest -Uri $BlobUri -OutFile $LocalDestinationPath -UseBasicParsing
+
+
     foreach ($Line in $Result) {Write-Log "Invoke-WebRequest: $Line"}
 
     # Ensure file exists
@@ -281,7 +290,10 @@ Try {
         
         # Ensure the file is not empty
         Write-Log "File detected. Making sure it isn't empty..."
-        $FileSize = Get-ChildItem -path $LocalDestinationPath -File | % {[int]($_.length / 1kb)}
+        $FileSize = Get-ChildItem -path $LocalDestinationPath -File | % {[int]($_.length)}
+
+        # Wait a sec
+        Start-Sleep 3
 
         if ($FileSize -eq 0 -or $FileSize -eq $null -or $FileSize -eq ""){
 
