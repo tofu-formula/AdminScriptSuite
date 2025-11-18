@@ -2,8 +2,12 @@
 
 # Vars
 
+# These are for identifying the running environment of this script not for the end script
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
+
+# $RepoRoot = "C:\ProgramData\AdminScriptSuite\AdminScriptSuite-Repo"
+# $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
 
 $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
 
@@ -37,25 +41,65 @@ function New-IntuneGitRunnerCommand {
 
 
 
-# Example 1: Update repo only
-# $updateCommand = New-IntuneGitRunnerCommand `
-#     -RepoNickName "Test00" `
-#     -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-#     -WorkingDirectory "C:\ProgramData\Test7"
+# Example: Update repo only
+<#
+$updateCommand = New-IntuneGitRunnerCommand `
+    -RepoNickName "Test00" `
+    -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+    -WorkingDirectory "C:\ProgramData\Test7"
 
-# Write-Host "Update Only Command:" -ForegroundColor Green
-# Write-Host $updateCommand
-# Write-Host ""
+Write-Host "Update Only Command:" -ForegroundColor Green
+Write-Host $updateCommand
+Write-Host ""
+#>
 
 
 
-# Example 2: Install command for intune
+### Example: Run a Remediation script - DETECT
+# Set the registry changes. first
+    $RegistryChanges = "-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
+    $KeyName = "Test"
+    $KeyType = "String"
+    $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+
+    $RegistryChanges = "'"+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"'"+","
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
+    $KeyName = "Test 2"
+    $KeyType = "String"
+    $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss') 2"
+
+    $RegistryChanges+="'"+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"'"
+
+# Then compose the install command args
+$installCommand = New-IntuneGitRunnerCommand `
+    -RepoNickName "AdminScriptSuite-Repo" `
+    -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+    -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+    -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
+    -ScriptParams @{
+        RegistryChanges = $RegistryChanges
+        RepoNickName = "AdminScriptSuite-Repo"
+        WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        Function = "Detect"
+    }
+
+###
+
+
+# Example: Install Dell Command Update (custom install script)
+<#
 $installCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "AdminScriptSuite-Repo" `
     -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
     -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
     -ScriptPath "Installers\Install-DellCommandUpdate-FullClean.ps1"
+#>
 
+
+# Example: Install Zoom Workplace (standard WinGet install)
 <#
 $installCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "AdminScriptSuite-Repo" `
@@ -68,12 +112,6 @@ $installCommand = New-IntuneGitRunnerCommand `
         WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
     }
 #>
-
-
-
-#Write-Host "Install Command:" -ForegroundColor Green
-#Write-Host $installCommand
-
 
 If (!(Test-Path $InstallCommandTXT)){New-item -path $InstallCommandTXT -ItemType File -Force | out-null}
 
