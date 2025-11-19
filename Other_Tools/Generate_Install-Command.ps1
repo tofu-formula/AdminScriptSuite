@@ -22,6 +22,8 @@ navigate to the dir of git runner template (on mac you may need to do pushd)
 # These are for identifying the running environment of this script not for the end script
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
+$GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+$CustomGitRunnerMakerScript = "$RepoRoot\Other_Tools\Custom_Git-Runner_Maker.ps1"
 
 # $RepoRoot = "C:\ProgramData\AdminScriptSuite\AdminScriptSuite-Repo"
 # $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
@@ -52,7 +54,11 @@ function New-IntuneGitRunnerCommand {
 %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath'"
 "@
     }
-    
+
+    # Create the custom script with the current params
+    & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParams $ScriptParams
+
+    # done
     return $command
 }
 
@@ -166,6 +172,8 @@ Write-Host "Install command saved here: $InstallCommandTXT"
 
 $installCommand | Set-Clipboard 
 Write-Host "Install command saved to your clip board!"
+
+# Create a custom git runner
 
 
 
