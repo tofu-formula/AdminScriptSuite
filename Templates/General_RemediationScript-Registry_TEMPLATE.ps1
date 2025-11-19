@@ -316,7 +316,7 @@ Write-Log "==================================================================="
 
 if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
 
-    Write-Log "Registry changes requested. Beginning check work..."
+    Write-Log "SCRIPT: $ThisFileName | Registry changes requested. Beginning check work..."
 
     Foreach($line in $TotalRegistryChangesArray){
 
@@ -349,14 +349,14 @@ if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
 
         if ($Function -eq "Detect"){
 
-            Write-Log "Now attempt to check the registry for these values..."
+            Write-Log "SCRIPT: $ThisFileName | Now attempt to check the registry for these values..."
 
             CheckReg
 
 
         } elseif($Function -eq "Remediate") {
 
-            Write-Log "Now attempt to apply these values to the registry..."
+            Write-Log "SCRIPT: $ThisFileName | Now attempt to apply these values to the registry..."
 
             Try {
                 $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -KeyName $KeyName -KeyType $KeyType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify"
@@ -365,7 +365,7 @@ if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
                 Exit 1
             }
 
-            Write-Log "Now final checking..."
+            Write-Log "SCRIPT: $ThisFileName | Now final checking..."
 
             CheckReg
 
