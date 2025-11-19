@@ -191,7 +191,7 @@ Function Reg-Read{
 
             $ThisValue = Get-ItemProperty -Path $registryPath -Name $Key -ErrorAction SilentlyContinue
             $ReturnValue = $($ThisValue.$Key)
-            Write-Host "Current value: $ReturnValue"
+            Write-Log "Current value: $ReturnValue"
             Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
             Return $ReturnValue

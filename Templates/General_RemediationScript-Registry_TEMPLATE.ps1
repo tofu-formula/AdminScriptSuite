@@ -181,7 +181,11 @@ Function CheckReg {
 
     $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -KeyName $KeyName -KeyType $KeyType -WorkingDirectory $WorkingDirectory -Function "Read"
 
+    Write-Log "SCRIPT: $ThisFileName | Value read from registry: $EndValue"
+    Write-Log "SCRIPT: $ThisFileName | Target Value to match: $Value"
+    
     if($EndValue -eq $Value){
+
 
 
         Write-Log "SCRIPT: $ThisFileName | Registry values match for: $line" "SUCCESS"
