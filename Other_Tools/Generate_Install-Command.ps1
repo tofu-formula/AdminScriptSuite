@@ -1,6 +1,5 @@
-# Helper script to generate Intune commands
-
-
+# Helper script to generate Intune commands and create custom Git Runners. 
+# This is the main script you will use to build your new infrastructure based on this suite.
 
 
 <#
@@ -17,7 +16,9 @@ navigate to the dir of git runner template (on mac you may need to do pushd)
 
 #>
 
-# Vars
+########
+# Vars #
+########
 
 # These are for identifying the running environment of this script not for the end script
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
@@ -29,6 +30,10 @@ $CustomGitRunnerMakerScript = "$RepoRoot\Other_Tools\Custom_Git-Runner_Maker.ps1
 # $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
 
 $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+
+#############
+# Functions #
+#############
 
 function New-IntuneGitRunnerCommand {
     param(
@@ -56,15 +61,22 @@ function New-IntuneGitRunnerCommand {
     }
 
     # Create the custom script with the current params
-    & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParams $ScriptParams
+    & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64
 
     # done
     return $command
 }
 
+########
+# MAIN #
+########
 
+# See the examples below. You can uncomment one to generate the command you want.
 
-# Example: Update repo only
+#################################
+### Example: Update repo only ###
+#################################
+
 <#
 $updateCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "Test00" `
@@ -78,7 +90,9 @@ Write-Host ""
 
 
 
-### Example: Run a Remediation script - DETECT
+##################################################
+### Example: Run a Remediation script - DETECT ###
+##################################################
 
 # Set the registry changes. first
  
@@ -141,7 +155,10 @@ Output for remediate
 ###
 
 
-# Example: Install Dell Command Update (custom install script)
+####################################################################
+### Example: Install Dell Command Update (custom install script) ###
+####################################################################
+
 <#
 $installCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "AdminScriptSuite-Repo" `
@@ -151,7 +168,10 @@ $installCommand = New-IntuneGitRunnerCommand `
 #>
 
 
-# Example: Install Zoom Workplace (standard WinGet install)
+#################################################################
+### Example: Install Zoom Workplace (standard WinGet install) ###
+#################################################################
+
 <#
 $installCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "AdminScriptSuite-Repo" `
@@ -165,6 +185,10 @@ $installCommand = New-IntuneGitRunnerCommand `
     }
 #>
 
+
+
+# Output the command to a txt file and to clipboard
+
 If (!(Test-Path $InstallCommandTXT)){New-item -path $InstallCommandTXT -ItemType File -Force | out-null}
 
 $installCommand | Set-Content -Encoding utf8 $InstallCommandTXT
@@ -173,12 +197,3 @@ Write-Host "Install command saved here: $InstallCommandTXT"
 $installCommand | Set-Clipboard 
 Write-Host "Install command saved to your clip board!"
 
-# Create a custom git runner
-
-
-
-
-
-# Intune run example
-
-# %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'Test00' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\Test00' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'eyJBcHBJRCI6Ijd6aXAuN3ppcCIsIkFwcE5hbWUiOiI3LXppcCIsIldvcmtpbmdEaXJlY3RvcnkiOiJDOlxcUHJvZ3JhbURhdGFcXFRlc3QwMCJ9'"

@@ -1,10 +1,14 @@
 # Custom Git Runner maker
+
+# Run Generate_Install-Command.ps1 to call this script
+
 param(
     [string]$RepoNickName,
     [string]$RepoUrl,
     [string]$WorkingDirectory,
     [string]$ScriptPath,
-    [hashtable]$ScriptParams
+    #[hashtable]$ScriptParams,
+    [string]$ScriptParamsBase64
 )
 
 # $RepoNickName = 'TEST'
@@ -18,6 +22,7 @@ $RepoNickName = "'" +    $RepoNickName + "'"
 $RepoUrl = "'" +    $RepoUrl + "'"
 $WorkingDirectory = "'" +    $WorkingDirectory + "'"
 $ScriptPath = "'" +    $ScriptPath + "'"
+$ScriptParamsBase64 = "'" +    $ScriptParamsBase64 + "'"
 
     # $RepoNickName
     # $RepoUrl
@@ -44,11 +49,12 @@ $EndScript ="Git-Runner_Custom.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
 
 # ---
 
-    $RepoNickName_DEC = '$RepoNickName ='+$RepoNickName
-    $RepoUrl_DEC = '$RepoUrl ='+$RepoUrl
-    $WorkingDirectory_DEC = '$WorkingDirectory ='+$WorkingDirectory
-    $ScriptPath_DEC = '$ScriptPath ='+$ScriptPath
-    $ScriptParams_DEC = '$ScriptParams = ' + ($ScriptParams | % Out-String)
+    $RepoNickName_DEC = '$RepoNickName = '+$RepoNickName
+    $RepoUrl_DEC = '$RepoUrl = '+$RepoUrl
+    $WorkingDirectory_DEC = '$WorkingDirectory = '+$WorkingDirectory
+    $ScriptPath_DEC = '$ScriptPath = '+$ScriptPath
+    $ScriptParamsBase64_DEC = '$ScriptParamsBase64 = '+$ScriptParamsBase64
+
 
 # --- config ---
 $KeyPhrase    = "#####" # the marker/keyphrase
@@ -59,7 +65,7 @@ $NewCode      = @"
     $RepoUrl_DEC
     $WorkingDirectory_DEC
     $ScriptPath_DEC
-    $ScriptParams_DEC $ScriptParams
+    $ScriptParamsBase64_DEC
 
 # --- injected code end ---
 "@
@@ -95,7 +101,7 @@ TRY{
     # Overwrite the copied script (original remains untouched)
     $updatedContent | Set-Content -Path $CopyPath -Encoding UTF8
 
-    Write-Host "Updated script written to: $CopyPath"
+    Write-Host "Custom Git-Runner script written to: $CopyPath"
 
 }CATCH{
 
