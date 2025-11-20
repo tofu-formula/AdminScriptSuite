@@ -486,7 +486,7 @@ function Reg-Lockdown{
         
     } Catch {
 
-        Write-Log "SCRIPT: $ThisFileName | ERROR updating permissions on $regPath: $_" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | ERROR updating permissions on $regPath : $_" "ERROR"
         Exit 1
 
     }
