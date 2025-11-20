@@ -8,7 +8,8 @@ param(
     [string]$WorkingDirectory,
     [string]$ScriptPath,
     #[hashtable]$ScriptParams,
-    [string]$ScriptParamsBase64
+    [string]$ScriptParamsBase64,
+    [string]$CustomNameModifier
 )
 
 # $RepoNickName = 'TEST'
@@ -45,7 +46,12 @@ $DestinationPath = "$ThisWorkingDirectory\TEMP\Custom_Git_Runners"
 # $BaseName = [System.IO.Path]::GetFileNameWithoutExtension($TargetScript)
 $Ext      = [System.IO.Path]::GetExtension($TargetScript)
 
-$EndScript ="Git-Runner_Custom.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
+if($CustomNameModifier){
+    $EndScript ="Git-Runner_Custom.$CustomNameModifier.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
+}
+else {
+    $EndScript ="Git-Runner_Custom.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
+}
 
 # ---
 

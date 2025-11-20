@@ -5,7 +5,7 @@
 
 Param(
 
-    [ValidateSet("Backup", "Modify", "Read","Read-All")]
+    [ValidateSet("Backup", "Modify", "Read","Read-All","Lockdown")]
     [string]$Function="Modify", # Backup, Modify, Read, or Read-All
 
     #[Parameter(Mandatory=$true)]
@@ -177,7 +177,7 @@ Function Reg-Read{
     param(
 
         [string]$registryPath = "$KeyPath",
-        [string]$ValueName = "$ValueName"
+        [string]$ValueNameToRead = "$ValueName"
 
     )
 
@@ -187,10 +187,16 @@ Function Reg-Read{
     # Check if the key exists
     if (Test-Path $registryPath) {
 
+        If($ValueNameToRead -eq "") {
+            Write-Log "No ValueName provided to read at key path, BUT the path was found: ($registryPath)"
+            Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
+            Return "Path found only"
+        }
+
         Try {
 
-            $ThisValue = Get-ItemProperty -Path $registryPath -Name $ValueName -ErrorAction SilentlyContinue
-            $ReturnValue = $($ThisValue.$ValueName)
+            $ThisValue = Get-ItemProperty -Path $registryPath -Name $ValueNameToRead -ErrorAction SilentlyContinue
+            $ReturnValue = $($ThisValue.$ValueNameToRead)
             Write-Log "Current value: $ReturnValue"
             Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
@@ -199,10 +205,10 @@ Function Reg-Read{
 
         } catch {
 
-            Write-Log "Could not read key: ($ValueName) at key path: ($registryPath)"
+            Write-Log "Could not read key: ($ValueNameToRead) at key path: ($registryPath)"
             Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
-            Return "Could not read"
+            Return "KeyPath exists, but could not read value"
 
         }
 
@@ -211,7 +217,7 @@ Function Reg-Read{
 
         Write-Log "KeyPath does not exist: $registryPath"
         Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
-        Return "Could not read"
+        Return "KeyPath does not exist"
 
     }
 
@@ -423,6 +429,69 @@ function Get-RegistryTreeHashtable {
 
 }
 
+function Reg-Lockdown{
+
+    # NOTE: THIS IS UNTESTED
+
+    Try {
+
+        # Set ACL on a specific registry key to restrict access
+
+        # 1. Registry key you want to protect
+        $regPath = $KeyPath
+
+        # 2. Get current ACL
+        $acl = Get-Acl -Path $KeyPath
+
+        # 3. Build identities for Administrators and SYSTEM
+        $admins = New-Object System.Security.Principal.NTAccount('BUILTIN', 'Administrators')
+        $system = New-Object System.Security.Principal.NTAccount('NT AUTHORITY', 'SYSTEM')
+
+        # 4. Stop inheriting permissions from parent and remove existing inherited rules
+        #    First bool: protect from inheritance
+        #    Second bool: keep inherited rules (we set to $false to drop them)
+        $acl.SetAccessRuleProtection($true, $false)
+
+        # 5. Remove any existing explicit access rules
+        $acl.Access | ForEach-Object {
+            $acl.RemoveAccessRule($_) | Out-Null
+        }
+
+        # 6. Create new access rules – only Admins and SYSTEM get FullControl
+        $ruleAdmins = New-Object System.Security.AccessControl.RegistryAccessRule(
+            $admins,
+            'FullControl',
+            [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor `
+            [System.Security.AccessControl.InheritanceFlags]::ObjectInherit,
+            [System.Security.AccessControl.PropagationFlags]::None,
+            [System.Security.AccessControl.AccessControlType]::Allow
+        )
+
+        $ruleSystem = New-Object System.Security.AccessControl.RegistryAccessRule(
+            $system,
+            'FullControl',
+            [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor `
+            [System.Security.AccessControl.InheritanceFlags]::ObjectInherit,
+            [System.Security.AccessControl.PropagationFlags]::None,
+            [System.Security.AccessControl.AccessControlType]::Allow
+        )
+
+        $acl.AddAccessRule($ruleAdmins)
+        $acl.AddAccessRule($ruleSystem)
+
+        # 7. Apply the new ACL
+        Set-Acl -Path $regPath -AclObject $acl
+
+        Write-Log "SCRIPT: $ThisFileName | Permissions updated. Only Administrators and SYSTEM can access $regPath"
+        
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | ERROR updating permissions on $regPath: $_" "ERROR"
+        Exit 1
+
+    }
+}
+
 function Convert-RegistryRootToAbbrev {
     param(
         [Parameter(Mandatory)]
@@ -622,9 +691,9 @@ Write-Log "---------------------------------"
 $ReturnValue = Reg-Read
 $NoFoundValue = $False
 
-if ($ReturnValue -eq "Could not read"){
+if ($ReturnValue -eq "KeyPath exists, but could not read value" -or $ReturnValue -eq "KeyPath does not exist") {
 
-    Write-Log "SCRIPT: $ThisFileName | No returnable value at ($KeyPath\$ValueName). Check logs above for reason why." "WARNING"
+    Write-Log "SCRIPT: $ThisFileName | No returnable value at ($KeyPath\$ValueName): $ReturnValue" "WARNING"
     $NoFoundValue = $True
 
 } else {
@@ -637,24 +706,26 @@ if ($ReturnValue -eq "Could not read"){
 
 if ($function -eq "Read"){
 
-    if($ReturnValue -eq "Could not read"){
-
-        Write-Log "SCRIPT: $ThisFileName | END | Returning ""Could not read"" to runner." "WARNING"
-        return "Could not read"
+    Write-Log "SCRIPT: $ThisFileName | END | Returning ""$ReturnValue"" to runner."
+    return $Returnvalue
     
-    }else{
-        
-        Write-Log "SCRIPT: $ThisFileName | END | Returning value to runner." "SUCCESS"
-        return $Returnvalue
-    
-    }
-
 }
 
 Write-Log "---------------------------------"
 
+If ($function -eq "Lockdown"){
 
-if ($function -eq "Modify" -or $function -eq "backup"){
+    Write-Log "SCRIPT: $ThisFileName | STEP 2: Lockdown Registry Key"
+    Write-Log "---------------------------------"
+
+    Reg-Lockdown
+
+    Write-Log "SCRIPT: $ThisFileName | END | Lockdown complete" "SUCCESS"
+    Exit 0
+
+}
+
+if ($function -eq "Modify" -or $function -eq "Backup"){
 
     # Do a backup 
     Write-Log "---------------------------------"

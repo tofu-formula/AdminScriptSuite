@@ -189,9 +189,9 @@ Function CheckReg {
         Write-Log "SCRIPT: $ThisFileName | Registry values match for: $line" "SUCCESS"
         # Exit 0
 
-    } elseif($EndValue -eq "Could not read") {
+    } elseif(($EndValue -eq "KeyPath exists, but could not read value" -or $EndValue -eq "KeyPath does not exist")) {
 
-        Write-Log "SCRIPT: $ThisFileName | END | Could not read target registry value" "WARNING"
+        Write-Log "SCRIPT: $ThisFileName | END | Could not read target registry value: $EndValue" "WARNING"
         Exit 1
 
     } else {
