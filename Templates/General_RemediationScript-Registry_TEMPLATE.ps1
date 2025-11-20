@@ -351,14 +351,14 @@ if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
 
         if ($Function -eq "Detect"){
 
-            Write-Log "SCRIPT: $ThisFileName | Now attempt to check the registry for these values..."
+            Write-Log "SCRIPT: $ThisFileName | Now attempting to check the registry for these values..."
 
             CheckReg
 
 
         } elseif($Function -eq "Remediate") {
 
-            Write-Log "SCRIPT: $ThisFileName | Now attempt to apply these values to the registry..."
+            Write-Log "SCRIPT: $ThisFileName | Now attempting to apply these values to the registry..."
 
             Try {
                 $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -ValueName $ValueName -ValueType $ValueType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify"
