@@ -5,19 +5,19 @@
 
 Param(
 
-    [ValidateSet("Backup", "Modify", "Read")]
-    [string]$Function="Modify", # Backup, Modify, or Read
+    [ValidateSet("Backup", "Modify", "Read","Read-All")]
+    [string]$Function="Modify", # Backup, Modify, Read, or Read-All
 
-    [Parameter(Mandatory=$true)]
+    #[Parameter(Mandatory=$true)]
     [string]$KeyPath,
 
-    [Parameter(Mandatory=$true)]
-    [string]$KeyName,
+    #[Parameter(Mandatory=$true)]
+    [string]$ValueName, # Change to ValueName
     
     [ValidateSet("String", "DWord", "QWord", "Binary", "MultiString", "ExpandString")]
-    [string]$KeyType,
+    [string]$ValueType, # Change to ValueType
 
-    [string]$Value,
+    [string]$Value, # Change to ValueData
     
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory
@@ -30,9 +30,9 @@ Param(
 $ThisFileName = $MyInvocation.MyCommand.Name
 $LogRoot = "$WorkingDirectory\Logs\Config_Logs"
 
-$LogPath = "$LogRoot\$ThisFileName.$KeyName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LogPath = "$LogRoot\$ThisFileName.$ValueName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
-$BackupPath = "$WorkingDirectory\temp\Registry_Backups\RegBackup.$KeyName._$(Get-Date -Format 'yyyyMMdd_HHmmss').reg"
+$BackupPath = "$WorkingDirectory\temp\Registry_Backups\RegBackup.$ValueName._$(Get-Date -Format 'yyyyMMdd_HHmmss').reg"
 
 
 
@@ -168,7 +168,7 @@ function Write-Log {
 
 
 # ============================================
-# BASIC REGISTRY OPERATIONS
+# REGISTRY OPERATIONS
 # ============================================
 
 
@@ -177,7 +177,7 @@ Function Reg-Read{
     param(
 
         [string]$registryPath = "$KeyPath",
-        [string]$Key = "$KeyName"
+        [string]$ValueName = "$ValueName"
 
     )
 
@@ -189,8 +189,8 @@ Function Reg-Read{
 
         Try {
 
-            $ThisValue = Get-ItemProperty -Path $registryPath -Name $Key -ErrorAction SilentlyContinue
-            $ReturnValue = $($ThisValue.$Key)
+            $ThisValue = Get-ItemProperty -Path $registryPath -Name $ValueName -ErrorAction SilentlyContinue
+            $ReturnValue = $($ThisValue.$ValueName)
             Write-Log "Current value: $ReturnValue"
             Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
@@ -199,7 +199,7 @@ Function Reg-Read{
 
         } catch {
 
-            Write-Log "Could not read key: ($key) at key path: ($registryPath)"
+            Write-Log "Could not read key: ($ValueName) at key path: ($registryPath)"
             Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
             Return "Could not read"
@@ -316,13 +316,13 @@ function Reg-Modify {
         # Set the value
         Write-Log "Attempting to set the following:"
         Write-Log "KeyPath: $KeyPath"
-        Write-Log "KeyName: $KeyName"
+        Write-Log "ValueName: $ValueName"
         Write-Log "Value: $Value"       
-        Write-Log "Type: $KeyType"
+        Write-Log "Type: $ValueType"
 
-        Set-ItemProperty -Path $KeyPath -Name $KeyName -Value $Value -Type $KeyType
+        Set-ItemProperty -Path $KeyPath -Name $ValueName -Value $Value -Type $ValueType
 
-        Write-Log "Successfully set $KeyName in $KeyPath" "SUCCESS"
+        Write-Log "Successfully set $ValueName in $KeyPath" "SUCCESS"
         Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
         return $true
@@ -333,6 +333,87 @@ function Reg-Modify {
 
         return $false
     }
+}
+
+function Get-RegistryTreeHashtable {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    # Example of use from another script:
+    <#
+    Write-Host "Requesting read of all registry values under: $RegistryRoot`n"
+    $RegData = & $RegEditScriptPath `
+        -Function "Read-All" `
+        -WorkingDirectory $WorkingDirectory `
+        -KeyPath $RegistryRoot
+
+    Write-Host "`nTesting access to specific registry values:"
+
+    $RegData["HKLM:\Software\AdminScriptSuite-Test\Applications"]["ApplicationContainerSASkey"]
+    #>
+
+    # Master hashtable:
+    #   Key   = registry key path (HKLM:\Software\...)
+    #   Value = hashtable of value-name/value-data for that key
+    $result = @{}
+
+    # Resolve the root key and all child keys
+    $keys = @()
+
+    try {
+        $rootKey = Get-Item -LiteralPath $Path -ErrorAction Stop
+        $keys += $rootKey
+    }
+    catch {
+        Write-Error "Could not open root key '$Path': $_"
+        return $null
+    }
+
+    $keys += Get-ChildItem -LiteralPath $Path -Recurse -ErrorAction SilentlyContinue
+
+    foreach ($key in $keys) {
+        # $key is a Microsoft.Win32.RegistryKey
+        try {
+            $valueNames = $key.GetValueNames()
+        }
+        catch {
+            # Some keys are protected / weird, just skip them
+            continue
+        }
+
+        if (-not $valueNames -or $valueNames.Count -eq 0) { continue }
+
+        $keyTable = @{}
+
+        foreach ($name in $valueNames) {
+            $value = $key.GetValue($name)
+            $keyTable[$name] = $value
+        }
+
+        if ($keyTable.Count -eq 0) { continue }
+
+        # Convert .Name (e.g. 'HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite')
+        # into a friendly PS-style path (HKLM:\SOFTWARE\AdminScriptSuite)
+        $rawName = $key.Name
+        $psPath  = switch -Regex ($rawName) {
+            '^HKEY_LOCAL_MACHINE\\(.*)'    { "HKLM:\$($Matches[1])"; break }
+            '^HKEY_CURRENT_USER\\(.*)'     { "HKCU:\$($Matches[1])"; break }
+            '^HKEY_CLASSES_ROOT\\(.*)'     { "HKCR:\$($Matches[1])"; break }
+            '^HKEY_USERS\\(.*)'            { "HKU:\$($Matches[1])"; break }
+            '^HKEY_CURRENT_CONFIG\\(.*)'   { "HKCC:\$($Matches[1])"; break }
+            default                        { $rawName }
+        }
+
+        # Normalize backslashes after the drive
+        $psPath = $psPath -replace '\\', '\'
+
+        $result[$psPath] = $keyTable
+    }
+
+    return $result
 }
 
 function Convert-RegistryRootToAbbrev {
@@ -426,10 +507,10 @@ Foreach ($KeyPathToTest in $KeyPathsToTest.keys){
 
 }
 
-Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied KeyType is valid format"
+Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied ValueType is valid format"
 Try {
 
-    switch ($KeyType) {
+    switch ($ValueType) {
     'DWord'    { if ($Value -notmatch '^\d+$') { Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Value must be an integer for DWord. Attempting to convert." -ForegroundColor Yellow}; $Value = [int]$Value }
     'QWord'    { if ($Value -notmatch '^\d+$') { Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Value must be an integer for QWord. Attempting to convert." -ForegroundColor Yellow}; $Value = [long]$Value }
     'MultiString' { if (-not ($Value -is [string[]])) { $Value = @($Value -split ';') } }
@@ -439,7 +520,7 @@ Try {
 
 } catch {
 
-    Write-Host "ERROR: Issue with KeyType: $_" -ForegroundColor Red
+    Write-Host "ERROR: Issue with ValueType: $_" -ForegroundColor Red
     Exit 1
 
 }
@@ -463,9 +544,9 @@ Write-Log "===== Registry Configurator ====="
 Write-Log "Function: $Function"
 Write-Log "Targetted registry key:"
 Write-Log "  KeyPath: $KeyPath"
-Write-Log "  KeyName: $KeyName"
+Write-Log "  ValueName: $ValueName"
 Write-Log "  Value: $Value"       
-Write-Log "  Type: $KeyType"
+Write-Log "  Type: $ValueType"
 Write-log "================================="
 
 Write-Log "SCRIPT: $ThisFileName | START "
@@ -473,8 +554,14 @@ Write-Log "SCRIPT: $ThisFileName | START "
 
 
 # addition checks that should be logged
+
 if ($KeyPath -notmatch '^HK(LM|CU|CR|U|CC):\\') {
     Write-Log "SCRIPT: $ThisFileName | END | KeyPath must start with registry hive (HKLM:\, HKCU:\, etc.)" "ERROR"
+    Exit 1
+}
+
+if ($function -ne "Read-All" -and [string]::IsNullOrWhiteSpace($KeyPath)) {
+    Write-Log "SCRIPT: $ThisFileName | END | ValueName and KeyPath parameter is required unless Function is 'Read-All'" "ERROR"
     Exit 1
 }
 
@@ -483,12 +570,35 @@ if ($Function -eq "Modify") {
         Write-Log "SCRIPT: $ThisFileName | END | Value parameter is required when Function is 'Modify'" "ERROR"
         Exit 1
     }
-    if ([string]::IsNullOrWhiteSpace($KeyType)) {
-        Write-Log "SCRIPT: $ThisFileName | END | KeyType parameter is required when Function is 'Modify'" "ERROR"
+    if ([string]::IsNullOrWhiteSpace($ValueType)) {
+        Write-Log "SCRIPT: $ThisFileName | END | ValueType parameter is required when Function is 'Modify'" "ERROR"
         Exit 1
     }
 }
 # 
+if ($function -eq "Read-All"){
+
+    Write-Log "SCRIPT: $ThisFileName | Read-All function selected. Reading entire registry tree at $KeyPath"
+
+    $RegData = Get-RegistryTreeHashtable -Path $KeyPath
+
+    Write-Log = "SCRIPT: $ThisFileName | Registry tree read complete. Here are the found results:"
+    $regData.GetEnumerator() | ForEach-Object {
+        $keyPath = $_.Key
+        $values  = $_.Value  # this is a hashtable
+
+        Write-log "[$keyPath]"
+        $values.GetEnumerator() | ForEach-Object {
+            Write-Host "  $($_.Key) = $($_.Value)"
+        }
+    }
+
+    Write-Log "SCRIPT: $ThisFileName | END | Returning registry tree hashtable to runner." "SUCCESS"
+
+    Return $RegData
+
+}
+
 
 # Do a read (check)
 Write-Log "---------------------------------"
@@ -500,12 +610,12 @@ $NoFoundValue = $False
 
 if ($ReturnValue -eq "Could not read"){
 
-    Write-Log "SCRIPT: $ThisFileName | No returnable value at ($KeyPath\$KeyName). Check logs above for reason why." "WARNING"
+    Write-Log "SCRIPT: $ThisFileName | No returnable value at ($KeyPath\$ValueName). Check logs above for reason why." "WARNING"
     $NoFoundValue = $True
 
 } else {
 
-    Write-Log "SCRIPT: $ThisFileName | Current value of ($KeyPath\$KeyName) is: $ReturnValue"
+    Write-Log "SCRIPT: $ThisFileName | Current value of ($KeyPath\$ValueName) is: $ReturnValue"
 
 }
 
@@ -584,7 +694,7 @@ if ($function -eq "Modify" -or $function -eq "backup"){
             Write-Log "---------------------------------"
 
 
-            Write-Log "SCRIPT: $ThisFileName | Final local value of key $KeyName : $FinalValue"
+            Write-Log "SCRIPT: $ThisFileName | Final local value of key $ValueName : $FinalValue"
 
             if($FinalValue -eq $Value){
 
