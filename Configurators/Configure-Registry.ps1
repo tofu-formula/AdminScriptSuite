@@ -381,10 +381,16 @@ function Get-RegistryTreeHashtable {
         }
         catch {
             # Some keys are protected / weird, just skip them
+            Write-Log "Values not found for key: $key. Continuing anyways." "WARNING"
             continue
         }
 
-        if (-not $valueNames -or $valueNames.Count -eq 0) { continue }
+        if (-not $valueNames -or $valueNames.Count -eq 0) { continue } else {
+
+            Write-Log "Values not found for key: $key. Continuing anyways." "WARNING"
+            Continue
+
+        }
 
         $keyTable = @{}
 
@@ -414,6 +420,7 @@ function Get-RegistryTreeHashtable {
     }
 
     return $result
+
 }
 
 function Convert-RegistryRootToAbbrev {
@@ -583,6 +590,13 @@ if ($function -eq "Read-All"){
     $RegData = Get-RegistryTreeHashtable -Path $KeyPath
 
     Write-Log = "SCRIPT: $ThisFileName | Registry tree read complete. Here are the found results:"
+
+    # Check first if data is empty or invalid
+    if((!$RegData) -or ($RegData.Count -eq 0)) {
+        Write-Log "SCRIPT: $ThisFileName | END | No data returned from registry read!" "ERROR"
+        return $null
+    }
+
     $regData.GetEnumerator() | ForEach-Object {
         $keyPath = $_.Key
         $values  = $_.Value  # this is a hashtable
