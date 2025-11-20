@@ -6,9 +6,9 @@
 Param(
 
     # $RegistryChanges = '`
-    # -KeyPath "" -KeyName "" -Value "" -KeyType "",`
-    # -KeyPath "" -KeyName "" -Value "" -KeyType "",`
-    # -KeyPath "" -KeyName "" -Value "" -KeyType ""',
+    # -KeyPath "" -ValueName "" -Value "" -ValueType "",`
+    # -KeyPath "" -ValueName "" -Value "" -ValueType "",`
+    # -KeyPath "" -ValueName "" -Value "" -ValueType ""',
 
     $RegistryChanges,
     $WorkingDirectory,
@@ -44,9 +44,9 @@ $RegEditScriptPath = "$LocalRepoPath\Configurators\Configure-Registry.ps1"
 
 
 # if(    $RegistryChanges -eq '`
-#     -KeyPath "" -KeyName "" -Value "" -KeyType "",`
-#     -KeyPath "" -KeyName "" -Value "" -KeyType "",`
-#     -KeyPath "" -KeyName "" -Value "" -KeyType ""') {$RegistryChanges = ""}
+#     -KeyPath "" -ValueName "" -Value "" -ValueType "",`
+#     -KeyPath "" -ValueName "" -Value "" -ValueType "",`
+#     -KeyPath "" -ValueName "" -Value "" -ValueType ""') {$RegistryChanges = ""}
 
 
 ###############
@@ -179,14 +179,12 @@ function Test-PathSyntaxValidity {
 
 Function CheckReg {
 
-    $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -KeyName $KeyName -KeyType $KeyType -WorkingDirectory $WorkingDirectory -Function "Read"
+    $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -ValueName $ValueName -ValueType $ValueType -WorkingDirectory $WorkingDirectory -Function "Read"
 
     Write-Log "SCRIPT: $ThisFileName | Value read from registry: $EndValue"
     Write-Log "SCRIPT: $ThisFileName | Target Value to match: $Value"
-    
+
     if($EndValue -eq $Value){
-
-
 
         Write-Log "SCRIPT: $ThisFileName | Registry values match for: $line" "SUCCESS"
         # Exit 0
@@ -305,14 +303,14 @@ Try{
 
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
-Write-Log "===== General Remediation Script Suite - Registry - DETECTION ====="
+Write-Log "===== General Remediation Script Suite - Registry ====="
 
 Write-Log "Function: $Function"
 Write-Log "Registry Changes:"
 Foreach($line in $TotalRegistryChangesArray) {Write-Log "   $Line"}
 
 
-Write-Log "==================================================================="
+Write-Log "========================================================"
 
 
 
@@ -326,7 +324,7 @@ if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
 
         # Build a key/value map from -Param "value" pairs (order doesn't matter)
         $pairs = @{}
-        foreach ($m in [regex]::Matches($line, '-(?<k>KeyPath|KeyName|Value|KeyType)\s+"(?<v>(?:[^"]|"")*)"')) {
+        foreach ($m in [regex]::Matches($line, '-(?<k>KeyPath|ValueName|Value|ValueType)\s+"(?<v>(?:[^"]|"")*)"')) {
             $name = $m.Groups['k'].Value
             # Unescape doubled quotes inside values (e.g., "" -> ")
             $val  = $m.Groups['v'].Value -replace '""','"'
@@ -335,35 +333,35 @@ if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
 
     
         [string]$KeyPath = $pairs['KeyPath']
-        [string]$KeyName = $pairs['KeyName']
+        [string]$ValueName = $pairs['ValueName']
         [string]$Value   = $pairs['Value']
-        [string]$KeyType = $pairs['KeyType']
+        [string]$ValueType = $pairs['ValueType']
 
         Write-Log "Target values:"
 
         
         Write-Log "   KeyPath: $keypath"
 
-        Write-log "   KeyName: $KeyName"
+        Write-log "   ValueName: $ValueName"
 
         Write-log "   Value: $Value"
 
-        Write-Log "   KeyType: $KeyType"
+        Write-Log "   ValueType: $ValueType"
 
 
         if ($Function -eq "Detect"){
 
-            Write-Log "SCRIPT: $ThisFileName | Now attempt to check the registry for these values..."
+            Write-Log "SCRIPT: $ThisFileName | Now attempting to check the registry for these values..."
 
             CheckReg
 
 
         } elseif($Function -eq "Remediate") {
 
-            Write-Log "SCRIPT: $ThisFileName | Now attempt to apply these values to the registry..."
+            Write-Log "SCRIPT: $ThisFileName | Now attempting to apply these values to the registry..."
 
             Try {
-                $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -KeyName $KeyName -KeyType $KeyType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify"
+                $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -ValueName $ValueName -ValueType $ValueType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify"
             } catch {
                 Write-Log "SCRIPT: $ThisFileName | END | Failed to write these values to the registry: $line" "ERROR"
                 Exit 1
