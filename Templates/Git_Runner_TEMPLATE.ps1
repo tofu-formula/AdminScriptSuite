@@ -583,7 +583,7 @@ try {
 
 }
 catch {
-    Write-Log "SCRIPT: $ThisFileName | END | Failed to execute script: $_" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Script failed: $FullScriptPath. Exit code: $_" "ERROR"
     Exit 1
 }
 
