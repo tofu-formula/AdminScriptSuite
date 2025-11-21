@@ -1,6 +1,8 @@
-# Custom Git Runner maker
+# Custom script maker
 
 # Run Generate_Install-Command.ps1 to call this script
+
+# It can technically create custom scripts from any template script, but it's primarily designed to create custom Git-Runner scripts. Almost every command can be passed as a parameter to the Git-Runner script.
 
 param(
     [string]$RepoNickName,
@@ -9,7 +11,8 @@ param(
     [string]$ScriptPath,
     #[hashtable]$ScriptParams,
     [string]$ScriptParamsBase64,
-    [string]$CustomNameModifier
+    [string]$CustomNameModifier,
+    [string]$TemplateScript="GitRunnerScript"
 )
 
 # $RepoNickName = 'TEST'
@@ -38,22 +41,18 @@ $ThisWorkingDirectory = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $LogRoot = "$ThisWorkingDirectory\Logs\Other_Logs"
 $LogPath = "$LogRoot\$ThisFileName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
+$DestinationPath = "$ThisWorkingDirectory\TEMP\Custom_Scripts"
+
 $GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+$PrinterDetectionScript = "$RepoRoot\Templates\Detection-Script-Printer_TEMPLATE.ps1"
+$WinGetDetectionScript = "$RepoRoot\Templates\Detection-Script-WinGetApp_TEMPLATE.ps1"
 
-$TargetScript = $GitRunnerScript   # original script
-
-$DestinationPath = "$ThisWorkingDirectory\TEMP\Custom_Git_Runners"
-# $BaseName = [System.IO.Path]::GetFileNameWithoutExtension($TargetScript)
-$Ext      = [System.IO.Path]::GetExtension($TargetScript)
-
-if($CustomNameModifier){
-    $EndScript ="Git-Runner_Custom.$CustomNameModifier.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
-}
-else {
-    $EndScript ="Git-Runner_Custom.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
-}
-
-# ---
+if ($TemplateScript -eq "GitRunnerScript"){
+    
+    #$GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+    $EndScriptNameTemplate = "Git-Runner_Custom"
+    $TargetScript = $GitRunnerScript   # original script
+    # ---
 
     $RepoNickName_DEC = '$RepoNickName = '+$RepoNickName
     $RepoUrl_DEC = '$RepoUrl = '+$RepoUrl
@@ -62,7 +61,7 @@ else {
     $ScriptParamsBase64_DEC = '$ScriptParamsBase64 = '+$ScriptParamsBase64
 
 
-# --- config ---
+# --- config for GitRunnerScript ---
 $KeyPhrase    = "#####" # the marker/keyphrase
 $NewCode      = @"
 # --- injected code start ---
@@ -75,6 +74,30 @@ $NewCode      = @"
 
 # --- injected code end ---
 "@
+
+} elseif( $TemplateScript -eq "PrinterDetectionScript"){
+
+    $EndScriptNameTemplate = "Detect-Printer_Custom"
+    Write-Log "this functionality is not yet implemented" "ERROR"
+    Exit 1
+    
+}else {
+    Write-Host "ERROR: Unknown TemplateScript value: $TemplateScript"
+    #return
+    Exit 1
+}
+
+
+# $BaseName = [System.IO.Path]::GetFileNameWithoutExtension($TargetScript)
+$Ext      = [System.IO.Path]::GetExtension($TargetScript)
+
+if($CustomNameModifier){
+    $EndScript ="$EndScriptNameTemplate.$CustomNameModifier.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
+}
+else {
+    $EndScript ="$EndScriptNameTemplate.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
+}
+
 
 TRY{
 
