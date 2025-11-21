@@ -24,12 +24,11 @@ navigate to the dir of git runner template (on mac you may need to do pushd)
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
 $GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
-$CustomGitRunnerMakerScript = "$RepoRoot\Other_Tools\Custom_Git-Runner_Maker.ps1"
+$CustomGitRunnerMakerScript = "$RepoRoot\Other_Tools\Generate_Custom-Script_FromTemplate.ps1"
 
 # $RepoRoot = "C:\ProgramData\AdminScriptSuite\AdminScriptSuite-Repo"
 # $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
 
-$InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
 
 #############
 # Functions #
@@ -41,10 +40,15 @@ function New-IntuneGitRunnerCommand {
         [string]$RepoUrl,
         [string]$WorkingDirectory,
         [string]$ScriptPath,
-        [hashtable]$ScriptParams
+        [hashtable]$ScriptParams,
+        [string]$CustomNameModifier
     )
     
     if ($ScriptParams) {
+
+        Write-Host "Script parameters to encode:" #-ForegroundColor Cyan
+        $ScriptParams | Format-List | Out-Host
+
         # Encode the parameters
         $paramsJson = $ScriptParams | ConvertTo-Json -Compress
         $paramsBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($paramsJson))
@@ -61,15 +65,47 @@ function New-IntuneGitRunnerCommand {
     }
 
     # Create the custom script with the current params
-    & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64
+    if($CustomNameModifier){
+        & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64 -CustomNameModifier $CustomNameModifier
+    }
+    else {
+        & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64
+    }   
 
     # done
+    Write-Host ""
     return $command
 }
 
-########
-# MAIN #
-########
+function ExportTXT {
+
+    if($CustomNameModifier){
+
+        $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\$CustomNameModifier.Install-Command_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+    } else {
+
+        $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\Install-Command_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+   
+    }
+
+    If (!(Test-Path $InstallCommandTXT)){New-item -path $InstallCommandTXT -ItemType File -Force | out-null}
+
+    # Output the command to a txt file and to clipboard
+
+    Write-Host "Final install command:"
+    Write-Host $installCommand #-ForegroundColor Green
+
+
+    $installCommand | Set-Content -Encoding utf8 $InstallCommandTXT
+    Write-Host "Install command saved here: $InstallCommandTXT"
+
+    $installCommand | Set-Clipboard 
+    Write-Host "Install command saved to your clip board!"
+
+    Write-Host ""
+}
+
+
 
 # See the examples below. You can uncomment one to generate the command you want.
 
@@ -90,68 +126,146 @@ Write-Host ""
 
 
 
-##################################################
-### Example: Run a Remediation script - DETECT ###
-##################################################
+############################################################
+### Example: Create Detect/Remediation Script for InTune ###
+############################################################
+Function RemediationScript {
 
-# Set the registry changes. first
- 
-    # Set which function you want to do
-    $Function = "Remediate"
+    Write-Host "Generating Detect/Remediation scripts for Registry changes..." -ForegroundColor Cyan
+    # Choose the registry changes.
 
-    # Declare as list to bypass the Git Runner's function of putting passed string params into double quotes. This breaks the pass to the remediation script.
-    $RegistryChanges = @()
+        # Declare as list to bypass the Git Runner's function of putting passed string params into double quotes. This breaks the pass to the remediation script.
+        $RegistryChanges = @()
 
-    # Registry Value 1
-    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
-    $KeyName = "Test"
-    $KeyType = "String"
-    $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        <#
+        # Registry Value 1
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
+        $ValueName = "Test"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "1"
 
-    $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"]"+","
-
-
-    # Registry Value 2
-    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
-    $KeyName = "Test 2"
-    $KeyType = "String"
-    $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss') 2"
-
-    $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -KeyName ""$KeyName"" -KeyType ""$KeyType"" -Value ""$Value"""+"]" # no comma at the end cuz this is the end of the list
-
-    # Make as many as you need
-
-    # Create a passable object
-    $RegistryChangesSTRING = ''''+$RegistryChangesSTRING+''''
-    $RegistryChanges+=$RegistryChangesSTRING
-
-  
-    # This works too!
-    # $RegistryChanges = @()
-    # $RegistryChanges += '''[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -KeyName "Test" -KeyType "String" -Value "zz"],[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -KeyName "Test 2" -KeyType "String" -Value "zz 2"]'''
+        $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
 
-# Then compose the install command args
-$installCommand = New-IntuneGitRunnerCommand `
-    -RepoNickName "AdminScriptSuite-Repo" `
-    -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
-    -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
-    -ScriptParams @{
-        RegistryChanges = $RegistryChanges
-        RepoNickName = "AdminScriptSuite-Repo"
-        WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
-        Function = $Function
-    }
+        # Registry Value 2
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
+        $ValueName = "Test 2"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss') 2"
+        $Value = "2"
 
-<#
+        $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]" # no comma at the end cuz this is the end of the list
+        #>
 
-Output for detect:
-%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'AdminScriptSuite-Repo' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\AdminScriptSuite' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
 
-Output for remediate
-#>
+        # Registry Value 1
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\General"
+        $ValueName = "StorageAccountName"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "genericdeploy"
 
+        $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
+
+        # Registry Value 2
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Printers"
+        $ValueName = "PrinterDataJSONpath"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "printers/PrinterData.json"
+
+        $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
+
+        # Registry Value 3
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Printers"
+        $ValueName = "PrinterContainerSASkey"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "sp=r&st=2025-11-20T21:36:42Z&se=2025-11-21T05:51:42Z&spr=https&sv=2024-11-04&sr=c&sig=VuVRS2UPs987gdasGLrxiu1O5i28z2QtMAOz2pn3FCs%3D"
+
+        $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
+
+        # Registry Value 4
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Applications"
+        $ValueName = "ApplicationDataJSONpath"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "applications/ApplicationData.json"
+
+        $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
+
+        # Registry Value 5
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Applications"
+        $ValueName = "ApplicationContainerSASkey"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "zz"
+
+        $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"
+
+
+        # Make as many as you need
+
+        # Create a passable object
+        $RegistryChangesSTRING = ''''+$RegistryChangesSTRING+''''
+        $RegistryChanges+=$RegistryChangesSTRING
+
+    
+        # This works too!
+        # $RegistryChanges = @()
+        # $RegistryChanges += '''[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -ValueName "Test" -ValueType "String" -Value "zz"],[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -ValueName "Test 2" -ValueType "String" -Value "zz 2"]'''
+
+        Write-Host "Registry Changes to process: $RegistryChanges" #-ForegroundColor Yellow
+
+    # Then compose the install command args and run for DETECT
+    Write-Host ""
+    Write-Host "DETECT SCRIPT" -ForegroundColor Cyan
+    $CustomNameModifier = "Detect"
+    $installCommand = New-IntuneGitRunnerCommand `
+        -RepoNickName "AdminScriptSuite-Repo" `
+        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
+        -CustomNameModifier "$CustomNameModifier" `
+        -ScriptParams @{
+            RegistryChanges = $RegistryChanges
+            RepoNickName = "AdminScriptSuite-Repo"
+            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            Function = "Detect"
+        }
+
+    # Export the txt file
+    ExportTXT
+
+    # Then compose the install command args and run for REMEDIATE
+    Write-Host ""
+    Write-Host "REMEDIATION SCRIPT" -ForegroundColor Cyan
+    $CustomNameModifier = "Remediate"
+    $installCommand = New-IntuneGitRunnerCommand `
+        -RepoNickName "AdminScriptSuite-Repo" `
+        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
+        -CustomNameModifier "$CustomNameModifier" `
+        -ScriptParams @{
+            RegistryChanges = $RegistryChanges
+            RepoNickName = "AdminScriptSuite-Repo"
+            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            Function = "Remediate"
+        }
+
+    # Export the txt file
+    ExportTXT
+
+    <#
+
+    Output for detect:
+    %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'AdminScriptSuite-Repo' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\AdminScriptSuite' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
+
+    Output for remediate
+    #>
+}
 ###
 
 
@@ -186,14 +300,61 @@ $installCommand = New-IntuneGitRunnerCommand `
 #>
 
 
+##############################################################
+### Example: Install Printer by IP (custom install script) ###
+##############################################################
+function InstallPrinterByIP {
 
-# Output the command to a txt file and to clipboard
+    Write-Host "Generating Install script for Printer by IP..." -ForegroundColor Cyan
 
-If (!(Test-Path $InstallCommandTXT)){New-item -path $InstallCommandTXT -ItemType File -Force | out-null}
+    $PrinterName = "Auckland"
 
-$installCommand | Set-Content -Encoding utf8 $InstallCommandTXT
-Write-Host "Install command saved here: $InstallCommandTXT"
+    # Main install command:
+    Write-Host ""
+    Write-Host "INSTALL COMMAND" -ForegroundColor Cyan
+    $CustomNameModifier = "Install-Printer-IP.$PrinterName"
+    $installCommand = New-IntuneGitRunnerCommand `
+        -RepoNickName "AdminScriptSuite-Repo" `
+        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -ScriptPath "Installers\Install-Printer-IP.ps1" `
+        -CustomNameModifier "$CustomNameModifier" `
+        -ScriptParams @{
+            PrinterName = "$PrinterName"
+            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        }
 
-$installCommand | Set-Clipboard 
-Write-Host "Install command saved to your clip board!"
+    # Export the txt file
+    ExportTXT
 
+    # Detection script command:
+    Write-Host ""
+    Write-Host "DETECT SCRIPT" -ForegroundColor Cyan
+    $CustomNameModifier = "Detect-Printer.$PrinterName"
+    $installCommand = New-IntuneGitRunnerCommand `
+        -RepoNickName "AdminScriptSuite-Repo" `
+        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -ScriptPath "Templates\Detection-Script-Printer_TEMPLATE.ps1" `
+        -CustomNameModifier "$CustomNameModifier" `
+        -ScriptParams @{
+            PrinterName = "$PrinterName"
+            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        }
+
+    # Export the txt file
+    ExportTXT
+
+}
+
+########
+# MAIN #
+########
+
+# Choose what function to run here:
+# TODO: Make this a selectable menu
+InstallPrinterByIP
+
+
+
+Write-Host "End of script."
