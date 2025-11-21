@@ -74,6 +74,9 @@ $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 
 $DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
 
+$OrgRegReader_ScriptPath = "$RepoRoot\Templates\Organization_CustomRegistryValues-Reader_TEMPLATE.ps1"
+
+
 $PrinterData_JSON_BlobName = "PrinterData.json"
 $PrinterData_JSON_ContainerName = "printers"
 
@@ -185,10 +188,7 @@ if($PortName -ne "" -and $PortName -ne $null -and $PrinterIP -ne "" -and $Printe
 
 if($GetJSON -eq $True) {
 
-    # Scenario A: Get the JSON URI from the registry
-
-
-    # Scenario B: Get JSON from Azure
+    # Scenario A: Get JSON from Azure
     Write-Log "Determining URI for the PrinterData.json based on supplied params"
     if($StorageAccountName -ne "" -and $StorageAccountName -ne $null -and $SasToken -ne "" -and $SasToken -ne $null -and $PrinterData_JSON_ContainerName -ne "" -and $PrinterData_JSON_ContainerName -ne $null -and $PrinterData_JSON_BlobName -ne "" -and $PrinterData_JSON_BlobName -ne $null){
 
@@ -196,12 +196,61 @@ if($GetJSON -eq $True) {
 
     } else {
 
-        Write-Log "Insufficient params. Each of these cannot be empty:" "ERROR"
+        # Scenario B: Get the JSON URI from the registry
+        Write-Log "No specific Azure Blob info supplied, attempting to read Custom Organization Registry values..."
+
+        $ReturnHash = & $OrgRegReader_ScriptPath
+
+        # Check the returned hashtable
+        if(($ReturnHash -eq $null) -or ($ReturnHash.Count -eq 0)){
+            Write-Log "No data returned from Organization Registry Reader script!" "ERROR"
+            Exit 1
+        }
+        Write-Log "Organization custom registry values retrieved:"
+        foreach ($key in $ReturnHash.Keys) {
+            $value = $ReturnHash[$key]
+            Write-Log "   $key : $value"
+        }    
+
+        # Turn the returned hashtable into variables
+        Write-Log "Setting organization custom registry values as local variables..."
+        foreach ($key in $ReturnHash.Keys) {
+            Set-Variable -Name $key -Value $ReturnHash[$key] -Scope Local
+            # Write-Log "Should be: $key = $($ReturnHash[$key])"
+            $targetValue = Get-Variable -Name $key -Scope Local
+            Write-Log "Ended up as: $key = $($targetValue.Value)"
+
+        }
+
+        # Create the URI
+
+        # Split on the first backslash only
+        #$parts = $PrinterDataJSONpath -split '\', 2
+        $parts = $PrinterDataJSONpath -split '/', 2
+
+        $PrinterData_JSON_ContainerName = $parts[0]      
+        $PrinterData_JSON_BlobName = $parts[1]
+
+        # $parts = $ApplicationDataJSONpath -split '\\', 2
+        # $ApplicationData_JSON_ContainerName = $parts[0]      
+        # $ApplicationData_JSON_BlobName = $parts[1]
+
+        $SasToken = $PrinterContainerSASkey
+
+        # Write-Log "Insufficient params. Each of these cannot be empty:" "ERROR"
+        # Write-Log "StorageAccountName: $StorageAccountName"
+        # Write-Log "SasToken: $SasToken"
+        # Write-Log "PrinterData_JSON_ContainerName: $PrinterData_JSON_ContainerName"
+        # Write-Log "PrinterData_JSON_BlobName: $PrinterData_JSON_BlobName"
+        # Exit 1
+
+        Write-Log "Final values to be used to build PrinterData.json URI:"
         Write-Log "StorageAccountName: $StorageAccountName"
         Write-Log "SasToken: $SasToken"
         Write-Log "PrinterData_JSON_ContainerName: $PrinterData_JSON_ContainerName"
         Write-Log "PrinterData_JSON_BlobName: $PrinterData_JSON_BlobName"
-        Exit 1
+
+        $printerJSONUri = "https://$StorageAccountName.blob.core.windows.net/$PrinterData_JSON_ContainerName/$PrinterData_JSON_BlobName"+"?"+"$SasToken"
 
     }
 

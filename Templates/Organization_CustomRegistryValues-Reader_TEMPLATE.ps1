@@ -1,0 +1,103 @@
+# This scripts acts as a centralized configurator to read organization-specific custom registry values. It's just a middleman. See the template section below to see what to add.
+
+Param(
+
+    [string]$RegistryStoredScriptValuesRoot="HKLM:\Software\AdminScriptSuite"
+
+)
+
+
+$RepoRoot = Split-Path -Path $PSScriptRoot -Parent
+$WorkingDirectory = Split-Path -Path $RepoRoot -Parent
+$ThisFileName = $MyInvocation.MyCommand.Name
+
+$RegEditScriptPath = "$RepoRoot\Configurators\Configure-Registry.ps1"
+
+
+
+###############
+## Functions ##
+###############
+
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+    
+    switch ($Level) {
+        "ERROR"   { Write-Host $logEntry -ForegroundColor Red }
+        "WARNING" { Write-Host $logEntry -ForegroundColor Yellow }
+        "SUCCESS" { Write-Host $logEntry -ForegroundColor Green }
+        "DRYRUN"  { Write-Host $logEntry -ForegroundColor Cyan }
+        default   { Write-Host $logEntry }
+    }
+    
+    # Ensure log directory exists
+    $logDir = Split-Path $LogPath -Parent
+    if (!(Test-Path $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+    
+    Add-Content -Path $LogPath -Value $logEntry
+}
+
+
+##########
+## MAIN ##
+##########
+
+Write-Log "SCRIPT: $ThisFileName | START"
+
+# checks
+if( !(Test-Path $RegEditScriptPath) ) {
+    Write-Log "SCRIPT: $ThisFileName | ERROR: Registry edit script not found at path: $RegEditScriptPath" "ERROR"
+    return $null
+}
+
+#Write-Host "Requesting read of all registry values under: $RegistryRoot`n"
+$RegData = & $RegEditScriptPath `
+    -Function "Read-All" `
+    -WorkingDirectory $WorkingDirectory `
+    -KeyPath $RegistryStoredScriptValuesRoot
+
+#Write-Host "`nTesting access to specific registry values:"
+if((!$RegData) -or ($RegData.Count -eq 0) -or $RegData -eq $null) {
+    Write-Log "SCRIPT: $ThisFileName | No data returned from registry read!" "ERROR"
+    return $null
+}
+
+
+## TEMPLATE: Set the needed variables for your organization
+    $ApplicationContainerSASkey = $RegData["HKLM:\Software\AdminScriptSuite\Applications"]["ApplicationContainerSASkey"]
+    $ApplicationDataJSONpath = $RegData["HKLM:\Software\AdminScriptSuite\Applications"]["ApplicationDataJSONpath"]
+    $PrinterDataJSONpath = $RegData["HKLM:\Software\AdminScriptSuite\Printers"]["PrinterDataJSONpath"]
+    $PrinterContainerSASkey = $RegData["HKLM:\Software\AdminScriptSuite\Printers"]["PrinterContainerSASkey"]
+    $StorageAccountName = $RegData["HKLM:\Software\AdminScriptSuite\General"]["StorageAccountName"]
+
+    # Build a hashtable of the values
+    $Hash = @{
+        "ApplicationContainerSASkey" = $ApplicationContainerSASkey
+        "ApplicationDataJSONpath"    = $ApplicationDataJSONpath
+        "PrinterDataJSONpath"        = $PrinterDataJSONpath
+        "PrinterContainerSASkey"     = $PrinterContainerSASkey
+        "StorageAccountName"         = $StorageAccountName
+    }
+##
+
+Write-Log "SCRIPT: $ThisFileName | Retrieved the following organization custom registry values:"
+foreach ($key in $Hash.Keys) {
+    $value = $Hash[$key]
+    Write-Log "SCRIPT: $ThisFileName |     $key : $value"
+}   
+
+Write-Log "SCRIPT: $ThisFileName | END | Returning hashtable of organization custom registry values." 
+
+
+return $Hash
+
+
+
+
