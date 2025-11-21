@@ -341,7 +341,7 @@ function Reg-Modify {
     }
 }
 
-function Get-RegistryTreeHashtable {
+function Reg-Read-All {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -361,11 +361,137 @@ function Get-RegistryTreeHashtable {
     $RegData["HKLM:\Software\AdminScriptSuite-Test\Applications"]["ApplicationContainerSASkey"]
     #>
 
+    Function AddValues-To-Hash{
+
+        Param(
+
+            [Parameter(Mandatory)]
+            [string]$Key
+
+        )
+
+        $ConvertedKey = Convert-RegistryRootToAbbrev -InputString $Key
+        Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Converted Key: $ConvertedKey"
+
+        # Resolve the key
+        Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Reading values for key: $ConvertedKey"
+
+            try {
+
+                $ConvertedKeyObj = Get-Item -LiteralPath $ConvertedKey -ErrorAction SilentlyContinue
+
+                if (-not $ConvertedKeyObj) {
+                    Write-Log "Get-Item returned `$null for path: $ConvertedKey" "WARNING"
+                    return
+                }
+
+                $valueNames = $ConvertedKeyObj.GetValueNames()
+                #$valueNames = Get-ItemProperty -LiteralPath $ConvertedKey -ErrorAction SilentlyContinue
+                Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Retrieved value names:"
+                foreach( $vn in $valueNames) {
+                    Write-Log " - $vn"
+                }
+            }
+            catch {
+                # Some keys are protected / weird, just skip them
+                Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Values not found for key: $ConvertedKey. Continuing anyways." "WARNING"
+                continue
+            }
+
+            if (-not $valueNames -or $valueNames.Count -eq 0) {
+                Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Result: No values found for key: $ConvertedKey. Continuing anyways." "WARNING"
+                
+            }
+
+
+            $keyTable = @{}
+
+            foreach ($name in $valueNames) {
+                #$value = $key.GetValue($name)
+                $value = $ConvertedKeyObj.GetValue($name)
+
+                $keyTable[$name] = $value
+            }
+
+            if ($keyTable.Count -eq 0) { continue }
+
+            # Convert .Name (e.g. 'HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite')
+            # into a friendly PS-style path (HKLM:\SOFTWARE\AdminScriptSuite)
+            #$rawName = $ConvertedKeyObj.Name
+            $psPath  = switch -Regex ($rawName) {
+                '^HKEY_LOCAL_MACHINE\\(.*)'    { "HKLM:\$($Matches[1])"; break }
+                '^HKEY_CURRENT_USER\\(.*)'     { "HKCU:\$($Matches[1])"; break }
+                '^HKEY_CLASSES_ROOT\\(.*)'     { "HKCR:\$($Matches[1])"; break }
+                '^HKEY_USERS\\(.*)'            { "HKU:\$($Matches[1])"; break }
+                '^HKEY_CURRENT_CONFIG\\(.*)'   { "HKCC:\$($Matches[1])"; break }
+                #default                        { $rawName }
+                default                        { $ConvertedKey }
+            }
+
+
+            Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Adding ValueName/Values to hashtable"
+
+            # Normalize backslashes after the drive
+            $psPath = $psPath -replace '\\', '\'
+
+            $SCRIPT:result[$psPath] = $keyTable
+
+
+
+    }
+
+    Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Attempting Read-All on path: $Path"
     # Master hashtable:
     #   Key   = registry key path (HKLM:\Software\...)
     #   Value = hashtable of value-name/value-data for that key
-    $result = @{}
+    $SCRIPT:result = @{}
 
+    #$KeyPathsToCheck = @()
+    #$KeyPathsToCheck += $Path
+
+    $KeyPathsToCheck = [System.Collections.Generic.Queue[string]]::new()
+    $KeyPathsToCheck.Enqueue($Path)
+
+    while ($KeyPathsToCheck.Count -gt 0) {
+
+        $KeyPath = $KeyPathsToCheck.Dequeue()
+
+        Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Reading values for key: $KeyPath"
+
+
+
+        # Enqueue children
+        $children = Get-ChildItem -LiteralPath $KeyPath -ErrorAction SilentlyContinue
+
+        # If you want that “Found X children” log:
+        if ($children) {
+            Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Found $($children.Count) child keys under: $KeyPath"
+        }
+
+        foreach ($child in $children) {
+
+            $ChildName = $child.Name
+            # .Name looks like "HKEY_LOCAL_MACHINE\Software\AdminScriptSuite\Printers"
+            $KeyPathsToCheck.Enqueue($ChildName)
+
+            Write-Log "   $ChildName"
+        }
+
+
+
+        # Process this key
+        # Write-Log "Reading values for key: $KeyPath"
+        AddValues-To-Hash -Key $KeyPath
+
+        Write-log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Keys remaining to process: $($KeyPathsToCheck.Count)"
+    }
+
+
+
+
+
+
+<#
     # Resolve the root key and all child keys
     $keys = @()
 
@@ -380,52 +506,63 @@ function Get-RegistryTreeHashtable {
 
     $keys += Get-ChildItem -LiteralPath $Path -Recurse -ErrorAction SilentlyContinue
 
+    Write-Log "SCRIPT: ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Found $($keys.Count) keys under $Path to read."
+
+
+
     foreach ($key in $keys) {
         # $key is a Microsoft.Win32.RegistryKey
-        try {
-            $valueNames = $key.GetValueNames()
-        }
-        catch {
-            # Some keys are protected / weird, just skip them
-            Write-Log "Values not found for key: $key. Continuing anyways." "WARNING"
-            continue
-        }
 
-        if (-not $valueNames -or $valueNames.Count -eq 0) { continue } else {
+        Write-Log "SCRIPT: ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Reading values for key: $key"
 
-            Write-Log "Values not found for key: $key. Continuing anyways." "WARNING"
-            Continue
 
-        }
 
-        $keyTable = @{}
+        # End command when no more keys in path
+            try {
+                $valueNames = $key.GetValueNames()
+            }
+            catch {
+                # Some keys are protected / weird, just skip them
+                Write-Log "Values not found for key: $key. Continuing anyways." "WARNING"
+                continue
+            }
 
-        foreach ($name in $valueNames) {
-            $value = $key.GetValue($name)
-            $keyTable[$name] = $value
-        }
+            if (-not $valueNames -or $valueNames.Count -eq 0) { continue } else {
 
-        if ($keyTable.Count -eq 0) { continue }
+                Write-Log "Result: No values found for key: $key. Continuing anyways." "WARNING"
+                Continue
 
-        # Convert .Name (e.g. 'HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite')
-        # into a friendly PS-style path (HKLM:\SOFTWARE\AdminScriptSuite)
-        $rawName = $key.Name
-        $psPath  = switch -Regex ($rawName) {
-            '^HKEY_LOCAL_MACHINE\\(.*)'    { "HKLM:\$($Matches[1])"; break }
-            '^HKEY_CURRENT_USER\\(.*)'     { "HKCU:\$($Matches[1])"; break }
-            '^HKEY_CLASSES_ROOT\\(.*)'     { "HKCR:\$($Matches[1])"; break }
-            '^HKEY_USERS\\(.*)'            { "HKU:\$($Matches[1])"; break }
-            '^HKEY_CURRENT_CONFIG\\(.*)'   { "HKCC:\$($Matches[1])"; break }
-            default                        { $rawName }
-        }
+            }
 
-        # Normalize backslashes after the drive
-        $psPath = $psPath -replace '\\', '\'
+            $keyTable = @{}
 
-        $result[$psPath] = $keyTable
+            foreach ($name in $valueNames) {
+                $value = $key.GetValue($name)
+                $keyTable[$name] = $value
+            }
+
+            if ($keyTable.Count -eq 0) { continue }
+
+            # Convert .Name (e.g. 'HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite')
+            # into a friendly PS-style path (HKLM:\SOFTWARE\AdminScriptSuite)
+            $rawName = $key.Name
+            $psPath  = switch -Regex ($rawName) {
+                '^HKEY_LOCAL_MACHINE\\(.*)'    { "HKLM:\$($Matches[1])"; break }
+                '^HKEY_CURRENT_USER\\(.*)'     { "HKCU:\$($Matches[1])"; break }
+                '^HKEY_CLASSES_ROOT\\(.*)'     { "HKCR:\$($Matches[1])"; break }
+                '^HKEY_USERS\\(.*)'            { "HKU:\$($Matches[1])"; break }
+                '^HKEY_CURRENT_CONFIG\\(.*)'   { "HKCC:\$($Matches[1])"; break }
+                default                        { $rawName }
+            }
+
+            # Normalize backslashes after the drive
+            $psPath = $psPath -replace '\\', '\'
+
+            $result[$psPath] = $keyTable
     }
 
-    return $result
+    #>
+    return $SCRIPT:result
 
 }
 
@@ -656,9 +793,9 @@ if ($function -eq "Read-All"){
 
     Write-Log "SCRIPT: $ThisFileName | Read-All function selected. Reading entire registry tree at $KeyPath"
 
-    $RegData = Get-RegistryTreeHashtable -Path $KeyPath
+    $RegData = Reg-Read-All -Path $KeyPath
 
-    Write-Log = "SCRIPT: $ThisFileName | Registry tree read complete. Here are the found results:"
+    Write-Log "SCRIPT: $ThisFileName | Registry tree read complete. Here are the found results:"
 
     # Check first if data is empty or invalid
     if((!$RegData) -or ($RegData.Count -eq 0)) {
