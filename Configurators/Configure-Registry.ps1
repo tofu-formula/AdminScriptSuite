@@ -30,7 +30,7 @@ Param(
 $ThisFileName = $MyInvocation.MyCommand.Name
 $LogRoot = "$WorkingDirectory\Logs\Config_Logs"
 
-$LogPath = "$LogRoot\$ThisFileName.$ValueName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LogPath = "$LogRoot\$ThisFileName.$Function.$ValueName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 $BackupPath = "$WorkingDirectory\temp\Registry_Backups\RegBackup.$ValueName._$(Get-Date -Format 'yyyyMMdd_HHmmss').reg"
 
@@ -378,10 +378,16 @@ function Reg-Read-All {
 
             try {
 
+                if(!(Test-Path $ConvertedKey)) {
+                    Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Key does not exist: $ConvertedKey" "WARNING"
+                    #return
+                }
+                      
                 $ConvertedKeyObj = Get-Item -LiteralPath $ConvertedKey -ErrorAction SilentlyContinue
-
+                
                 if (-not $ConvertedKeyObj) {
                     Write-Log "Get-Item returned `$null for path: $ConvertedKey" "WARNING"
+                    Write-Log "$ConvertedKeyObj"
                     return
                 }
 
@@ -486,82 +492,6 @@ function Reg-Read-All {
         Write-log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Keys remaining to process: $($KeyPathsToCheck.Count)"
     }
 
-
-
-
-
-
-<#
-    # Resolve the root key and all child keys
-    $keys = @()
-
-    try {
-        $rootKey = Get-Item -LiteralPath $Path -ErrorAction Stop
-        $keys += $rootKey
-    }
-    catch {
-        Write-Error "Could not open root key '$Path': $_"
-        return $null
-    }
-
-    $keys += Get-ChildItem -LiteralPath $Path -Recurse -ErrorAction SilentlyContinue
-
-    Write-Log "SCRIPT: ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Found $($keys.Count) keys under $Path to read."
-
-
-
-    foreach ($key in $keys) {
-        # $key is a Microsoft.Win32.RegistryKey
-
-        Write-Log "SCRIPT: ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Reading values for key: $key"
-
-
-
-        # End command when no more keys in path
-            try {
-                $valueNames = $key.GetValueNames()
-            }
-            catch {
-                # Some keys are protected / weird, just skip them
-                Write-Log "Values not found for key: $key. Continuing anyways." "WARNING"
-                continue
-            }
-
-            if (-not $valueNames -or $valueNames.Count -eq 0) { continue } else {
-
-                Write-Log "Result: No values found for key: $key. Continuing anyways." "WARNING"
-                Continue
-
-            }
-
-            $keyTable = @{}
-
-            foreach ($name in $valueNames) {
-                $value = $key.GetValue($name)
-                $keyTable[$name] = $value
-            }
-
-            if ($keyTable.Count -eq 0) { continue }
-
-            # Convert .Name (e.g. 'HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite')
-            # into a friendly PS-style path (HKLM:\SOFTWARE\AdminScriptSuite)
-            $rawName = $key.Name
-            $psPath  = switch -Regex ($rawName) {
-                '^HKEY_LOCAL_MACHINE\\(.*)'    { "HKLM:\$($Matches[1])"; break }
-                '^HKEY_CURRENT_USER\\(.*)'     { "HKCU:\$($Matches[1])"; break }
-                '^HKEY_CLASSES_ROOT\\(.*)'     { "HKCR:\$($Matches[1])"; break }
-                '^HKEY_USERS\\(.*)'            { "HKU:\$($Matches[1])"; break }
-                '^HKEY_CURRENT_CONFIG\\(.*)'   { "HKCC:\$($Matches[1])"; break }
-                default                        { $rawName }
-            }
-
-            # Normalize backslashes after the drive
-            $psPath = $psPath -replace '\\', '\'
-
-            $result[$psPath] = $keyTable
-    }
-
-    #>
     return $SCRIPT:result
 
 }
@@ -789,35 +719,7 @@ if ($Function -eq "Modify") {
     }
 }
 # 
-if ($function -eq "Read-All"){
 
-    Write-Log "SCRIPT: $ThisFileName | Read-All function selected. Reading entire registry tree at $KeyPath"
-
-    $RegData = Reg-Read-All -Path $KeyPath
-
-    Write-Log "SCRIPT: $ThisFileName | Registry tree read complete. Here are the found results:"
-
-    # Check first if data is empty or invalid
-    if((!$RegData) -or ($RegData.Count -eq 0)) {
-        Write-Log "SCRIPT: $ThisFileName | END | No data returned from registry read!" "ERROR"
-        return $null
-    }
-
-    $regData.GetEnumerator() | ForEach-Object {
-        $keyPath = $_.Key
-        $values  = $_.Value  # this is a hashtable
-
-        Write-log "[$keyPath]"
-        $values.GetEnumerator() | ForEach-Object {
-            Write-Host "  $($_.Key) = $($_.Value)"
-        }
-    }
-
-    Write-Log "SCRIPT: $ThisFileName | END | Returning registry tree hashtable to runner." "SUCCESS"
-
-    Return $RegData
-
-}
 
 
 # Do a read (check)
@@ -846,6 +748,36 @@ if ($function -eq "Read"){
     Write-Log "SCRIPT: $ThisFileName | END | Returning ""$ReturnValue"" to runner."
     return $Returnvalue
     
+}
+
+if ($function -eq "Read-All"){
+
+    Write-Log "SCRIPT: $ThisFileName | Read-All function selected. Reading entire registry tree at $KeyPath"
+
+    $RegData = Reg-Read-All -Path $KeyPath
+
+    Write-Log "SCRIPT: $ThisFileName | Registry tree read complete. Here are the found results:"
+
+    # Check first if data is empty or invalid
+    if((!$RegData) -or ($RegData.Count -eq 0)) {
+        Write-Log "SCRIPT: $ThisFileName | END | No data returned from registry read!" "ERROR"
+        return $null
+    }
+
+    $regData.GetEnumerator() | ForEach-Object {
+        $keyPath = $_.Key
+        $values  = $_.Value  # this is a hashtable
+
+        Write-log "[$keyPath]"
+        $values.GetEnumerator() | ForEach-Object {
+            Write-Host "  $($_.Key) = $($_.Value)"
+        }
+    }
+
+    Write-Log "SCRIPT: $ThisFileName | END | Returning registry tree hashtable to runner." "SUCCESS"
+
+    Return $RegData
+
 }
 
 Write-Log "---------------------------------"
