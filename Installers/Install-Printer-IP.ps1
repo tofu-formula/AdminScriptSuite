@@ -572,12 +572,43 @@ If (-not $ThrowBad) {
             $pnputilPath = "$env:WINDIR\System32\pnputil.exe"
         }
 
+        # Extra validation for troubleshooting
+        Write-Log "=== FILE SYSTEM CHECK ==="
+        $parentDir = Split-Path $FullINFPath -Parent
+        Write-Log "Parent Directory: $parentDir"
+        Write-Log "Parent Dir Exists: $(Test-Path $parentDir)"
+        Write-Log "Files in parent dir:"
+        Get-ChildItem $parentDir | ForEach-Object {
+            Write-Log "  - $($_.Name) [$(if($_.PSIsContainer){'DIR'}else{'FILE'})]"
+        }
+
+        # Try alternate path formats
+        $alternativePath = (Get-Item $INFpath).FullName
+        Write-Log "Alternative path resolution: $alternativePath"
+        Write-Log "Alternative path exists: $(Test-Path $alternativePath)"
+
+
+        Write-Log "Executing pnputil command: $pnputilPath /add-driver $FullINFPath"
+
         #$result = & $pnputilPath /a $INFPath
-        $result = & $pnputilPath /a $FullINFPath
+        $result = & $pnputilPath /add-driver $FullINFPath
 
         # $result = & $pnputilPath /add-driver "$FullINFPath" /install
+        $alt=$false
+        Foreach ($line in $result){
+            Write-Log "pnputil.exe : $Line"
+            if ($line -match "failed" -or $line -match "error"){
+                $alt=$true
+            }
+        }
 
-        Foreach ($line in $result){Write-Log "pnputil.exe : $Line"}
+        if ($alt -eq $true){
+            Write-Log "pnputil reported errors, attempting alternate command with /install switch"
+            $result2 = & $pnputilPath /add-driver "$alternativePath"
+            Foreach ($line in $result2){
+                Write-Log "pnputil.exe (alt) : $Line"
+            }
+        }
 
         # Write-Log "Refining INF path..." # This may not be necessary but this is where I got it from: https://serverfault.com/questions/968120/unable-to-add-printer-driver-using-add-printerdriver-on-2012-r2-print-server
 
