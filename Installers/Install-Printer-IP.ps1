@@ -534,13 +534,12 @@ $INFFilePath = $LocalDestinationPath
 
 If (-not $ThrowBad) {
 
-    Try {
+    # Try {
 
         # Stage driver to driver store
         Write-Log "Staging Driver to Windows Driver Store using INF ""$($INFFile)"""
         #Write-Log "Running command: Start-Process pnputil.exe -ArgumentList $($INFARGS) -wait -passthru"
         #Push-Location $TargetDirectory
-        #Push-Location $EXTRACTED_LocalDriverZipPath
 
 
         $INFpath = "$EXTRACTED_LocalDriverZipPath\$INFFile"
@@ -555,9 +554,9 @@ If (-not $ThrowBad) {
         $FullINFPath = [System.IO.Path]::GetFullPath($INFPath)
         Write-Log "Attempting pnputil with fully qualified path: $FullINFPath"
 
-        if (-not (Test-Path $FullINFPath)) {
-            Throw "ERROR: INF file not accessible at: $FullINFPath"
-        }
+        # if (-not (Test-Path $FullINFPath)) {
+        #     Throw "ERROR: INF file not accessible at: $FullINFPath"
+        # }
 
         #Start-Process pnputil.exe -ArgumentList $INFARGS -wait -passthru
         #pnputil /add-driver "`"$INFPath`"" /install #| Out-Null
@@ -567,9 +566,13 @@ If (-not $ThrowBad) {
         if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {
             # Running 32-bit on 64-bit OS - use Sysnative
             $pnputilPath = "$env:WINDIR\Sysnative\pnputil.exe"
+            Write-Log "Using 64-bit pnputil via Sysnative"
+
         } else {
             # Running native
             $pnputilPath = "$env:WINDIR\System32\pnputil.exe"
+            Write-Log "Using native pnputil"
+
         }
 
         # Extra validation for troubleshooting
@@ -587,28 +590,82 @@ If (-not $ThrowBad) {
         Write-Log "Alternative path resolution: $alternativePath"
         Write-Log "Alternative path exists: $(Test-Path $alternativePath)"
 
+        # Save current location and change to the driver directory
+        $originalLocation = Get-Location
+        Write-Log "Current directory: $originalLocation"
+        Write-Log "Changing to driver directory: $EXTRACTED_LocalDriverZipPath"
 
-        Write-Log "Executing pnputil command: $pnputilPath /add-driver $FullINFPath"
+        Push-Location $EXTRACTED_LocalDriverZipPath
 
-        #$result = & $pnputilPath /a $INFPath
-        $result = & $pnputilPath /add-driver $FullINFPath
-
-        # $result = & $pnputilPath /add-driver "$FullINFPath" /install
-        $alt=$false
-        Foreach ($line in $result){
-            Write-Log "pnputil.exe : $Line"
-            if ($line -match "failed" -or $line -match "error"){
-                $alt=$true
+        try {
+            Write-Log "Working directory for pnputil: $(Get-Location)"
+            Write-Log "Executing: $pnputilPath /add-driver `"$INFFile`" "
+            
+            $result = & $pnputilPath /add-driver "$INFFile" 2>&1
+            $exitCode = $LASTEXITCODE
+            
+            # Log all output
+            foreach ($line in $result) {
+                if ($line -match "error|failed" -and $exitCode -ne 0) {
+                    Write-Log "PNPUTIL ERROR: $line" "ERROR"
+                } else {
+                    Write-Log "PNPUTIL: $line"
+                }
             }
+            
+            Write-Log "PNPUTIL Exit Code: $exitCode"
+            
+            if ($exitCode -ne 0) {
+                # If relative path fails, try with full path as fallback
+                Write-Log "Relative path failed, trying with full path as fallback..." "WARNING"
+                $result = & $pnputilPath /add-driver "$FullINFPath" 2>&1
+                $exitCode = $LASTEXITCODE
+                
+                foreach ($line in $result) {
+                    Write-Log "PNPUTIL (fallback): $line"
+                }
+                
+                if ($exitCode -ne 0) {
+                    throw "PnpUtil failed with exit code: $exitCode"
+                }
+            }
+            
+            Write-Log "Driver successfully staged to Windows Driver Store" "SUCCESS"
+
+        } Catch {
+
+            Write-Log "Error staging driver to Driver Store" "ERROR"
+            Write-Log "$($_.Exception.Message)" "ERROR"
+            $ThrowBad = $True
+
         }
 
-        if ($alt -eq $true){
-            Write-Log "pnputil reported errors, attempting alternate command with /install switch"
-            $result2 = & $pnputilPath /add-driver "$alternativePath"
-            Foreach ($line in $result2){
-                Write-Log "pnputil.exe (alt) : $Line"
-            }
-        }
+        # Always restore the original directory
+        Pop-Location
+        Write-Log "Restored working directory to: $(Get-Location)"
+
+
+        # Write-Log "Executing pnputil command: $pnputilPath /add-driver $FullINFPath"
+
+        # #$result = & $pnputilPath /a $INFPath
+        # $result = & $pnputilPath /add-driver $FullINFPath
+
+        # # $result = & $pnputilPath /add-driver "$FullINFPath" /install
+        # $alt=$false
+        # Foreach ($line in $result){
+        #     Write-Log "pnputil.exe : $Line"
+        #     if ($line -match "failed" -or $line -match "error"){
+        #         $alt=$true
+        #     }
+        # }
+
+        # if ($alt -eq $true){
+        #     Write-Log "pnputil reported errors, attempting alternate command with /install switch"
+        #     $result2 = & $pnputilPath /add-driver "$alternativePath"
+        #     Foreach ($line in $result2){
+        #         Write-Log "pnputil.exe (alt) : $Line"
+        #     }
+        # }
 
         # Write-Log "Refining INF path..." # This may not be necessary but this is where I got it from: https://serverfault.com/questions/968120/unable-to-add-printer-driver-using-add-printerdriver-on-2012-r2-print-server
 
@@ -635,14 +692,14 @@ If (-not $ThrowBad) {
 
         #Pop-Location
 
-    }
-    Catch {
-        Write-Log "Error staging driver to Driver Store" "ERROR"
-        Write-Log "$($_.Exception.Message)" "ERROR"
-        # Write-Log "Error staging driver to Driver Store" "ERROR"
-        # Write-Log "$($_.Exception)" "ERROR"
-        $ThrowBad = $True
-    }
+    # }
+    # Catch {
+    #     Write-Log "Error staging driver to Driver Store" "ERROR"
+    #     Write-Log "$($_.Exception.Message)" "ERROR"
+    #     # Write-Log "Error staging driver to Driver Store" "ERROR"
+    #     # Write-Log "$($_.Exception)" "ERROR"
+    #     $ThrowBad = $True
+    # }
 }
 
 
