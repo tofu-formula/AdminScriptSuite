@@ -88,15 +88,45 @@ $PrinterData_JSON_ContainerName = "printers"
 $Throwbad = $Null
 
 # Run script in 64bit PowerShell to enumerate correct path for pnputil
-If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
-    Try {
-        &"$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -File $PSCOMMANDPATH -PortName $PortName -PrinterIP $PrinterIP -DriverName $DriverName -PrinterName $PrinterName -INFFile $INFFile
+# If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
+#     Try {
+#         &"$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -File $PSCOMMANDPATH -PortName $PortName -PrinterIP $PrinterIP -DriverName $DriverName -PrinterName $PrinterName -INFFile $INFFile
+#     }
+#     Catch {
+#         Write-Error "Failed to start $PSCOMMANDPATH"
+#         Write-Warning "$($_.Exception.Message)"
+#         $Throwbad = $True
+#     }
+# }
+
+if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {
+    Write-Host "Detected 32-bit PowerShell on 64-bit OS. Relaunching in 64-bit..." "WARNING"
+    
+    # Build arguments for relaunch
+    $arguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$PSCommandPath`""
+    )
+    
+    # Add all original parameters
+    foreach ($key in $PSBoundParameters.Keys) {
+        $value = $PSBoundParameters[$key]
+        if ($value -is [switch]) {
+            if ($value) { $arguments += "-$key" }
+        } elseif ($value -is [string]) {
+            $arguments += "-$key", "`"$value`""
+        } else {
+            $arguments += "-$key", $value
+        }
     }
-    Catch {
-        Write-Error "Failed to start $PSCOMMANDPATH"
-        Write-Warning "$($_.Exception.Message)"
-        $Throwbad = $True
-    }
+    
+    # Relaunch in 64-bit
+    $proc = Start-Process "$env:WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe" `
+        -ArgumentList $arguments `
+        -Wait -PassThru -NoNewWindow
+    
+    exit $proc.ExitCode
 }
 
 
@@ -284,10 +314,10 @@ if($GetJSON -eq $True) {
 
         # Can comment out
         Write-Log "Here are all the printers we found from the JSON:"
-        $jsonData.printers.PrinterName
+        $jsonData.printers.PrinterName # TODO: Make this into a write-log
 
 
-        Write-Log "This run as asking to install this printer: $PrinterName. Here is all the data on that printer:"
+        Write-Log "This run is asking to install this printer: $PrinterName. Here is all the data on that printer:"
         $printer = $jsonData.printers | Where-Object { $_.PrinterName -eq $PrinterName }
 
         if ($printer) {
@@ -517,15 +547,36 @@ If (-not $ThrowBad) {
 
         # Check for the INF File
         If (Test-Path $INFpath){
-            Write-Log "INF File found here: $EXTRACTED_LocalDriverZipPath"
+            Write-Log "INF File found here: $INFpath"
         } else {
-            Throw "INF File NOT found here: $EXTRACTED_LocalDriverZipPath"
+            Throw "INF File NOT found here: $INFpath"
+        }
+
+        $FullINFPath = [System.IO.Path]::GetFullPath($INFPath)
+        Write-Log "Attempting pnputil with fully qualified path: $FullINFPath"
+
+        if (-not (Test-Path $FullINFPath)) {
+            Throw "ERROR: INF file not accessible at: $FullINFPath"
         }
 
         #Start-Process pnputil.exe -ArgumentList $INFARGS -wait -passthru
         #pnputil /add-driver "`"$INFPath`"" /install #| Out-Null
 
-        $result = pnputil /a $INFPath
+        # $result = pnputil /a $INFPath
+
+        if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {
+            # Running 32-bit on 64-bit OS - use Sysnative
+            $pnputilPath = "$env:WINDIR\Sysnative\pnputil.exe"
+        } else {
+            # Running native
+            $pnputilPath = "$env:WINDIR\System32\pnputil.exe"
+        }
+
+        #$result = & $pnputilPath /a $INFPath
+        $result = & $pnputilPath /a $FullINFPath
+
+        # $result = & $pnputilPath /add-driver "$FullINFPath" /install
+
         Foreach ($line in $result){Write-Log "pnputil.exe : $Line"}
 
         # Write-Log "Refining INF path..." # This may not be necessary but this is where I got it from: https://serverfault.com/questions/968120/unable-to-add-printer-driver-using-add-printerdriver-on-2012-r2-print-server
