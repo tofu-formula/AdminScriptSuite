@@ -132,11 +132,14 @@ TRY{
 
     Write-Host "Custom Git-Runner script written to: $CopyPath"
 
+    Return $CopyPath
+
 }CATCH{
 
     $ErrorMessage = $_.Exception.Message
     $FailedItem   = $_.Exception.ItemName
     Write-Host "Error: $ErrorMessage"
     Write-Host "Failed Item: $FailedItem"
+    Exit 1
 
 }

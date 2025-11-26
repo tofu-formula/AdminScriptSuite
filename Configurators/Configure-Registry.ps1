@@ -405,7 +405,7 @@ function Reg-Read-All {
             }
 
             if (-not $valueNames -or $valueNames.Count -eq 0) {
-                Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Result: No values found for key: $ConvertedKey. Continuing anyways." "WARNING"
+                Write-Log "SCRIPT: $ThisFileName | Function: $($MyInvocation.MyCommand.Name) | Result: No values found for key: $ConvertedKey. Continuing anyways." #"WARNING"
                 
             }
 

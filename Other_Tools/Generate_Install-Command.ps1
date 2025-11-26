@@ -16,6 +16,13 @@ navigate to the dir of git runner template (on mac you may need to do pushd)
 
 #>
 
+Param(
+
+    [string]$DesiredFunction = "InstallPrinterByIP",
+    [hashtable]$FunctionParams
+
+)
+
 ########
 # Vars #
 ########
@@ -66,16 +73,17 @@ function New-IntuneGitRunnerCommand {
 
     # Create the custom script with the current params
     if($CustomNameModifier){
-        & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64 -CustomNameModifier $CustomNameModifier
+        $global:CustomScript = & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64 -CustomNameModifier $CustomNameModifier
     }
     else {
-        & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64
+        $global:CustomScript = & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64
     }   
 
     # done
     Write-Host ""
     return $command
 }
+
 
 function ExportTXT {
 
@@ -103,6 +111,8 @@ function ExportTXT {
     Write-Host "Install command saved to your clip board!"
 
     Write-Host ""
+
+    return $InstallCommandTXT
 }
 
 
@@ -131,7 +141,7 @@ Write-Host ""
 ############################################################
 Function RemediationScript {
 
-    Write-Host "Generating Detect/Remediation scripts for Registry changes..." -ForegroundColor Cyan
+    Write-Host "Generating Detect/Remediation scripts for Registry changes..." -ForegroundColor Yellow
     # Choose the registry changes.
 
         # Declare as list to bypass the Git Runner's function of putting passed string params into double quotes. This breaks the pass to the remediation script.
@@ -220,7 +230,7 @@ Function RemediationScript {
 
     # Then compose the install command args and run for DETECT
     Write-Host ""
-    Write-Host "DETECT SCRIPT" -ForegroundColor Cyan
+    Write-Host "DETECT SCRIPT" -ForegroundColor Yellow
     $CustomNameModifier = "Detect"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "AdminScriptSuite-Repo" `
@@ -240,7 +250,7 @@ Function RemediationScript {
 
     # Then compose the install command args and run for REMEDIATE
     Write-Host ""
-    Write-Host "REMEDIATION SCRIPT" -ForegroundColor Cyan
+    Write-Host "REMEDIATION SCRIPT" -ForegroundColor Yellow
     $CustomNameModifier = "Remediate"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "AdminScriptSuite-Repo" `
@@ -305,13 +315,52 @@ $installCommand = New-IntuneGitRunnerCommand `
 ##############################################################
 function InstallPrinterByIP {
 
-    Write-Host "Generating Install script for Printer by IP..." -ForegroundColor Cyan
+    Param(
 
-    $PrinterName = "Auckland"
+        [hashtable]$FunctionParams,
+        [String]$PrinterName
+
+    )
+
+    Write-Host "Generating Install script for Printer by IP..." -ForegroundColor Yellow
+
+    Write-Host "Function parameters received:"
+    # Check the returned hashtable
+    if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
+        Write-Host "No data returned! Checking if a printer was explicitly specified..." #"ERROR"
+        if(-not $PrinterName){
+            Write-Host "No printer specified. Exiting!" #"ERROR"
+            Exit 1
+
+        } else {
+            Write-Host "Printer specified as: $PrinterName"
+        }
+    } else {
+
+        Write-Host "Values retrieved:"
+        foreach ($key in $FunctionParams.Keys) {
+            $value = $FunctionParams[$key]
+            Write-Host "   $key : $value"
+        }    
+
+        # Turn the returned hashtable into variables
+        Write-Host "Setting values as local variables..."
+        foreach ($key in $FunctionParams.Keys) {
+            Set-Variable -Name $key -Value $FunctionParams[$key] -Scope Local
+            # Write-Log "Should be: $key = $($ReturnHash[$key])"
+            $targetValue = Get-Variable -Name $key -Scope Local
+            Write-Host "Ended up as: $key = $($targetValue.Value)"
+
+        }
+
+    }
+
+
+    #$PrinterName = "Auckland"
 
     # Main install command:
     Write-Host ""
-    Write-Host "INSTALL COMMAND" -ForegroundColor Cyan
+    Write-Host "INSTALL COMMAND" -ForegroundColor Yellow
     $CustomNameModifier = "Install-Printer-IP.$PrinterName"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "AdminScriptSuite-Repo" `
@@ -324,14 +373,15 @@ function InstallPrinterByIP {
             WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
         }
 
+    $InstallPrinterScript = $global:CustomScript
     # Export the txt file
-    ExportTXT
+    $InstallCommandTXT = ExportTXT
 
     # Detection script command:
     Write-Host ""
-    Write-Host "DETECT SCRIPT" -ForegroundColor Cyan
+    Write-Host "DETECT SCRIPT" -ForegroundColor Yellow
     $CustomNameModifier = "Detect-Printer.$PrinterName"
-    $installCommand = New-IntuneGitRunnerCommand `
+    $detectCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "AdminScriptSuite-Repo" `
         -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
         -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
@@ -342,9 +392,23 @@ function InstallPrinterByIP {
             WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
         }
 
-    # Export the txt file
-    ExportTXT
+    $DetectPrinterScript = $global:CustomScript
 
+    # Export the txt file
+    $DetectCommandTXT = ExportTXT
+
+    $ReturnHash = @{
+        MainInstallCommand = $installCommand
+        MainInstallCommandTXT = $InstallCommandTXT
+        MainDetectCommand = $detectCommand
+        MainDetectCommandTXT = $DetectCommandTXT
+        InstallPrinterScript = $InstallPrinterScript
+        DetectPrinterScript = $DetectPrinterScript
+    }
+
+    Write-host "Return values prepared."
+    $ReturnHash.Keys | ForEach-Object { Write-Host "   $_ : $($ReturnHash[$_])" }   
+    Return $ReturnHash
 }
 
 ########
@@ -353,8 +417,12 @@ function InstallPrinterByIP {
 
 # Choose what function to run here:
 # TODO: Make this a selectable menu
-InstallPrinterByIP
+#Write-Host "Generating Intune Install Commands from function: $DesiredFunction..."
+#Write-Host ""
 
+$ReturnHash = & $DesiredFunction @FunctionParams
 
+Return $ReturnHash
 
-Write-Host "End of script."
+#Write-Host "End of script."
+# Return something
