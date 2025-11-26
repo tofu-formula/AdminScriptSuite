@@ -575,8 +575,10 @@ If (-not $ThrowBad) {
 
         }
 
+        # A lot of this is unnecessary but useful for troubleshooting path issues
+
         # Extra validation for troubleshooting
-        Write-Log "=== FILE SYSTEM CHECK ==="
+        #Write-Log "=== FILE SYSTEM CHECK ==="
         $parentDir = Split-Path $FullINFPath -Parent
         Write-Log "Parent Directory: $parentDir"
         Write-Log "Parent Dir Exists: $(Test-Path $parentDir)"
