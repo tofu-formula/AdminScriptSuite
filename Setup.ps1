@@ -26,6 +26,11 @@ $General_RemediationScript_Registry_TEMPLATE = "$RepoRoot\Templates\General_Reme
 $OrgRegReader_ScriptPath = "$RepoRoot\Templates\Organization_CustomRegistryValues-Reader_TEMPLATE.ps1"
 # path of Generate_Install-Command script
 $GenerateInstallCommand_ScriptPath = "$RepoRoot\Other_Tools\Generate_Install-Command.ps1"
+# path of the Azure Blob SAS downloader script
+$DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
+# Path to the printer install script
+$InstallPrinterIP_ScriptPath = "$RepoRoot\Installers\Install-Printer-IP.ps1"
+
 
 $ExamplePrinterJSON = @"
 {
@@ -264,7 +269,7 @@ function Make-InTuneWin32app-MSI{}
 
 function Make-InTuneWin32app-Printer_IP_AzureBlob{}
 
-function Make-Azure-Printer{
+function Setup--Azure-Printer{
 
     # vars
 
@@ -303,6 +308,10 @@ function Make-Azure-Printer{
     Write-Log ""
     Pause
     Write-Log ""
+    Write-Log "Please enter the name of your printer:" "WARNING"
+    $PrinterName = Read-Host "Printer Name"
+    Write-Log ""
+
 
     # Determine the location of the azure blob based off of registry values
         
@@ -318,7 +327,7 @@ function Make-Azure-Printer{
     Write-Log ""
     Write-Log " 2 - Select this storage account: $StorageAccountName"
     Write-Log ""
-    Write-Log " 3 - Select 'Containers' from the left menu"
+    Write-Log " 3 - Select 'Data Storage' > 'Containers' from the left menu"
     Write-Log ""
     Write-Log " 4 - Select this container: $PrinterData_JSON_ContainerName"
     Write-Log ""
@@ -334,11 +343,15 @@ function Make-Azure-Printer{
     Write-Log ""
     Write-Log "The location of your printer driver ZIP files in your Azure Blob Storage is: $PrinterData_JSON_ContainerName\Drivers"
     Write-Log ""
-    Write-Log "Tip: - Use the Drivers folder to keep a neat structure of general driver packs from the manufacturers." 
+    Write-Log "Please note the following"
+    Write-Log "     - Use the Drivers folder to keep a neat structure of general driver packs from the manufacturers." 
     Write-Log "     - Example: $PrinterData_JSON_ContainerName\Drivers\HP\HP_Universal_Printing_PCL_6\[latestVersion].zip" 
-    Write-Log "     - These driver packs carry the INF file needed for installation for most of their printers."
-    Write-Log "     - Most of the time you WILL NOT need to upload a new driver if you have pre-existing manufacturer driver packs here."
-    Write-Log "     - You can download the ZIP from the blob and explore the INF files for your printer model."
+    Write-Log "     - These driver packs carry the INF file needed for installation for most of the specific manufacturer's printers."
+    Write-Log "     - Most of the time you WILL NOT need to upload a new driver if you have pre-existing manufacturer driver packs (PCL/PostScript) here."
+    Write-Log "     - How do you determine the appropriate INF?"
+    Write-Log "       - EXAMPLE: After looking up your specific Printer's driver for Windows Server..."
+    Write-Log "       - If HP says an appropriate driver is ""HP Universal Print Driver for Windows PCL6 (64-bit)"", then the INF file that should end up being targetted is always hpcu***u.inf (the only INF in that pack with those drivers)"
+    Write-Log "     - If you end up needing to download the driver, when you are looking for the driver online you may need to change the target OS to Windows Server in order to find the PCL/PostScript drivers."
     Write-Log ""    
     Write-Log "If your required printer driver is not already in Azure Blob, please upload it now. Record the path you upload it to for later use."
     Write-Log ""    
@@ -364,6 +377,37 @@ function Make-Azure-Printer{
     Pause
     Write-Log ""
 
+    # Suggest testing the JSON with the local install script
+    Write-Log "After updating the Printer Data JSON, it is highly recommended to test the installation of the new printer on a local machine before proceeding with Intune deployment."
+    Write-Log "This will help ensure that all details are correct and the installation process works as expected."
+    Write-Log ""
+    Write-Log "Would you like this script to test this printer installation from the JSON on this local machine? (y/n)" "WARNING"
+    $Answer = Read-Host "y/n"
+    Write-Log ""
+
+
+        if ($answer -eq "y"){
+
+            Write-Log "Before proceeding, please make sure this printer is not already installed locally on this machine. If it is, please uninstall it first." "WARNING"
+            Pause
+            Write-Log "Proceeding with local installation test..."
+
+            & Install--Local-Printer -PrinterName $PrinterName
+
+            if($LASTEXITCODE -ne 0){
+                Write-Log "Local printer installation test failed with exit code: $LASTEXITCODE" "ERROR"
+                Write-Log "Please resolve any issues before proceeding with Intune deployment."
+                Exit $LASTEXITCODE
+            } else {
+                Write-Log "Local printer installation test succeeded! This configuration for the JSON works!" "SUCCESS"
+            }   
+
+        } else {
+
+            Write-Log "Skipping local installation test. Proceeding with Intune deployment setup."
+
+        }
+
 
     # Add the printer to InTune
         # Create the win32app
@@ -377,8 +421,8 @@ function Make-Azure-Printer{
     Write-Log "The Intune Win32 app package has been created at: $PrinterIntuneWinPath"
     Write-Log ""    
 
-    Write-Log "Next we will create the install commands/scripts, please enter the name of your printer:" "WARNING"
-    $PrinterName = Read-Host "Printer Name"
+    Write-Log "Next we will automatically create the install commands/scripts"
+
     Write-Log "" "INFO2"
 
         [hashtable]$FunctionParams = @{
@@ -451,14 +495,14 @@ function Make-Azure-Printer{
     Write-Log ""
     Pause
     Write-Log ""
-    Write-Log "Printer deployment setup is complete! Please verify functionality on a test device. The printer will both be available from the Company Portal for the assigned devices AND from the local Printer Installer script in this repo." "SUCCESS"
+    Write-Log "Printer deployment setup is complete! Please verify functionality on a test device. The printer will both be available from the Company Portal for the assigned devices AND from the local Printer Installer function in this script." "SUCCESS"
     Write-Log ""    
     Pause
 
 
 }
 
-Function Make-Azure-WindowsApplication{
+Function Setup--Azure-WindowsApp{
 
     Write-Log "This function is under construction." "ERROR"
     Exit 1
@@ -551,6 +595,198 @@ Function Make-InTuneWin {
 
 }
 
+Function Install--Local-Printer{
+    Param(
+
+        $PrinterName=$null
+
+    )
+
+    Write-Log "To begin we will access the PrinterData.json file stored in Azure Blob Storage to show you the available printers."
+    Write-Log ""
+
+    Pause
+
+    Write-Log "Now constructing URI for accessing PrinterData.json..." "INFO2"
+    
+    ## Show available printers from JSON ##
+
+    # This snippet was taken from the Install-Printer-IP script
+
+    $parts = $PrinterDataJSONpath -split '/', 2
+
+    $PrinterData_JSON_ContainerName = $parts[0]      
+    $PrinterData_JSON_BlobName = $parts[1]
+
+    # $parts = $ApplicationDataJSONpath -split '\\', 2
+    # $ApplicationData_JSON_ContainerName = $parts[0]      
+    # $ApplicationData_JSON_BlobName = $parts[1]
+
+    $SasToken = $PrinterContainerSASkey
+
+    # Write-Log "Insufficient params. Each of these cannot be empty:" "ERROR"
+    # Write-Log "StorageAccountName: $StorageAccountName"
+    # Write-Log "SasToken: $SasToken"
+    # Write-Log "PrinterData_JSON_ContainerName: $PrinterData_JSON_ContainerName"
+    # Write-Log "PrinterData_JSON_BlobName: $PrinterData_JSON_BlobName"
+    # Exit 1
+
+    Write-Log "Final values to be used to build PrinterData.json URI:" "INFO2"
+    Write-Log "StorageAccountName: $StorageAccountName" "INFO2"
+    Write-Log "SasToken: $SasToken" "INFO2"
+    Write-Log "PrinterData_JSON_ContainerName: $PrinterData_JSON_ContainerName" "INFO2"
+    Write-Log "PrinterData_JSON_BlobName: $PrinterData_JSON_BlobName" "INFO2"
+
+    $printerJSONUri = "https://$StorageAccountName.blob.core.windows.net/$PrinterData_JSON_ContainerName/$PrinterData_JSON_BlobName"+"?"+"$SasToken"
+
+
+    Write-Log "Attempting to access PrinterData.json with this URI: $printerJSONUri" "INFO2"
+
+    Try{
+
+        # TODO: Try and create a snippet that can directly parse JSOn from web
+        #$data = Invoke-RestMethod "$printerJSONUri"
+
+        #$Result =Invoke-WebRequest -Uri $printerJSONUri -OutFile "$WorkingDirectory\temp\PrinterData.json" -UseBasicParsing
+
+        Write-Log "Beginning download..." "INFO2"
+        & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $PrinterData_JSON_BlobName -StorageAccountName $StorageAccountName -ContainerName $PrinterData_JSON_ContainerName -SasToken $SasToken
+        if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+        Write-Log "Parsing JSON" "INFO2"
+        $LocalJSONpath = "$WorkingDirectory\TEMP\$PrinterData_JSON_BlobName"
+        if (Test-Path $LocalJSONpath) {Write-Log "Local JSON found. Attempting to get content." "INFO2"} else { Write-Log "Local JSON not found" "ERROR"; throw "Local JSON not found" }
+        #$jsonData = Get-Content -Raw $LocalJSONpath | ConvertFrom-Json
+        try {
+            $jsonText = Get-Content -LiteralPath $LocalJSONpath -Raw -Encoding UTF8
+            $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            throw "ConvertFrom-Json failed: $($_.Exception.Message)"
+        }
+
+        # "Printers count: {0}" -f ($jsonData.printers.Count)
+        # $jsonData.printers[0] | Format-List *
+        Write-Log "" "INFO2"
+
+        # Can comment out
+        Write-Log "Here are all the printers we found from the JSON:"
+        Write-Log ""
+        $list = $jsonData.printers.PrinterName 
+        Foreach ($item in $list) {
+            Write-Log "$item"
+        }
+        Write-Log "" 
+
+
+    }catch{
+
+        Write-Log "Accessing JSON failed. Exit code returned: $_"
+        Exit 1
+        
+    }
+
+    ## Prompt user to select printer IF one was not provided ##
+    if ($PrinterName -ne $null) {
+
+        Write-Log "Printer name provided as parameter: $PrinterName"
+
+
+    } else {
+
+        Write-Log "Please enter the name of the printer you wish to install from the above list:" "WARNING"
+        $PrinterName = Read-Host "Printer Name"
+        While ([string]::IsNullOrWhiteSpace($PrinterName)) {
+            Write-Log "No printer name provided. Please enter a printer name from the list above:" "ERROR"
+            $PrinterName = Read-Host "Printer Name"
+        }
+
+    }
+
+
+    Write-Log ""
+
+
+    ## Install selected printer ##
+
+        Write-Log "Here is all the data on Printer ($PrinterName):" "INFO2"
+        $printer = $jsonData.printers | Where-Object { $_.PrinterName -eq $PrinterName }
+        Write-Log "" "INFO2"
+
+        if ($printer) {
+            
+            # Write-Log "Formatted list:"
+            # $printer | Format-List *
+
+            # Write-Log "This is the IP address"
+            # $printer.PrinterIP
+
+
+            # Write-Log "Attempting to digest data into PowerShell objects..." "INFO2"
+            Set-VariablesFromObject -InputObject $printer -Scope Script
+            # Write-Log "" "INFO2"
+            # Write-Log "These are the obtained values that are now PowerShell objects:" "INFO2"
+            Write-Log "Port Name: $PortName" "INFO2"
+            Write-Log "Printer IP: $PrinterIP" "INFO2"
+            Write-Log "Printer Name: $PrinterName" "INFO2"
+            Write-Log "Driver Name: $DriverName" "INFO2"
+            Write-Log "INF File: $INFFile" "INFO2"
+            Write-Log "DriverZip: $DriverZip" "INFO2"
+            # Write-Log "" "INFO2"
+
+        } else {
+            Write-Log "Printer '$PrinterName' not found. Your spelling may be incorrect." "ERROR"
+            Exit 1
+        }
+    # Call the Install-Printer-IP script with the obtained values
+    Write-Log "" "INFO2"
+    Write-Log "Next we will attempt to install the selected printer ($PrinterName) using the install script."
+    Write-Log ""
+    Pause
+
+    & $InstallPrinterIP_ScriptPath -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
+    
+    
+    Write-Log "" 
+    if($LASTEXITCODE -ne 0){
+        Write-Log "Install-Printer-IP script failed with exit code: $LASTEXITCODE" "ERROR"
+        Exit $LASTEXITCODE
+    } else {
+        Write-Log "Printer '$PrinterName' installed successfully!" "SUCCESS"
+    }   
+
+}   
+
+Function Install--Local-Application{
+
+    # vars
+
+    # main 
+
+    Write-Log "This function is under construction." "ERROR"
+    Exit 1
+
+}
+
+function Set-VariablesFromObject {
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)] $InputObject,
+        #[string]$Prefix = 'Printer_',
+        [ValidateSet('Local','Script','Global')] [string]$Scope = 'Local'
+    )
+    process {
+        foreach ($p in $InputObject.PSObject.Properties) {
+            # sanitize to a valid PowerShell variable name
+            $name = $p.Name -replace '[^A-Za-z0-9_]', '_'
+            if ($name -notmatch '^[A-Za-z_]') { $name = "_$name" }
+
+            #$varName = "$Prefix$name"
+            $VarName= $Name
+            Set-Variable -Name $varName -Value $p.Value -Scope $Scope -Force
+        }
+    }
+}
+
+
 ##########
 ## MAIN ##
 ########## 
@@ -560,11 +796,13 @@ Function Make-InTuneWin {
 
 Write-Log "SCRIPT: $ThisFileName | START"
 Write-Log ""
-Write-Log "================================="
-Write-Log "===== Set Up Asset in Azure ====="
-Write-Log "================================="
+Write-Log "========================"
+Write-Log "===== Set Up Asset ====="
+Write-Log "========================"
 Write-Log ""
-Write-Log "Welcome to Azure Asset Setup! This helper will guide you through creating various Azure-related assets for deployment via Azure/Intune."
+Write-Log "Welcome! This script can:"
+Write-Log " - Install a printer/app on your local machine"
+Write-Log " - Guide and help automate the process of making a printer/app available for deployment via Azure/Intune."
 Write-Log ""
 Write-Log "When you are ready we will begin by checking pre-requisites..."
 Write-Log ""
@@ -612,7 +850,7 @@ Write-Log ""
 Write-Log "These are the functions currently available through this script:"
 Write-Log ""
 
-$methods = Get-Command -CommandType Function -Name "Make-Azure-*" | Select-Object -ExpandProperty Name
+$methods = Get-Command -CommandType Function -Name "*--*" | Select-Object -ExpandProperty Name
 
 $AvailableTests = @{}
 
@@ -631,6 +869,13 @@ Write-Log ""
 
 Write-Log "Enter the # of your desired function:" "WARNING"
 [int]$SelectedFunctionNumber = Read-Host "Please enter a #"
+
+
+While ($SelectedFunctionNumber -lt 1 -or $SelectedFunctionNumber -ge $COUNTER) {
+    Write-Log "No function selected. Please enter a function number from the list above:" "ERROR"
+    [int]$SelectedFunctionNumber = Read-Host "Please enter a #"
+}
+
 
 $SelectedFunction = $AvailableTests[$SelectedFunctionNumber]
 Write-Log ""
