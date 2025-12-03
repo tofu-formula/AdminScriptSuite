@@ -43,7 +43,7 @@ $ExamplePrinterJSON = @"
       "INFFile":"hpcu270u.inf",
       "DriverZip":"printers/Drivers/HP/testDrivers.zip"
     },
-		{
+	{
       "PrinterName": "NEW_Printer",
       "PortName": "010.020.030.041",
       "PrinterIP":"10.20.30.41",
@@ -51,6 +51,44 @@ $ExamplePrinterJSON = @"
       "INFFile":"hpcu345u.inf",
       "DriverZip":"printers/Drivers/HP/HP_Universal_Printing_PCL_6/upd-pcl6-x64-7.9.0.26347.zip"
     }
+}
+"@
+
+$ExampleAppJSON = @"
+{
+  "Applications": [
+    {
+      "ApplicationName": "Visual_Studio_Code",
+      "InstallMetod": "WinGet",
+      "WinGetID":"Microsoft.VisualStudioCode"
+    },
+    {
+      "ApplicationName": "Adobe_Creative_Cloud",
+      "InstallMetod": "WinGet",
+      "WinGetID":"Adobe.CreativeCloud"
+    },
+    {
+      "ApplicationName": "Adobe_Acrobat_Pro",
+      "InstallMetod": "WinGet",
+      "WinGetID":"Adobe.Acrobat.Pro"
+    },
+	{
+        "ApplicationName": "7zip",
+        "InstallMetod": "MSI-Online",
+        "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
+    },
+    {
+        "ApplicationName": ".NET_3.5",
+        "InstallMetod": "Custom_Script",
+        "ScriptPathFromRepoRoot":"Installers\Install-DotNET.ps1",
+        "Version":"3.5"    
+    },
+    {
+        "ApplicationName": "Dell_CommandUpdate",
+        "InstallMetod": "Custom_Script",
+        "ScriptPathFromRepoRoot":"Installers\InstallApp-DellCommandUpdate-FullClean.ps1", 
+    }
+    ]
 }
 "@
 
