@@ -446,6 +446,9 @@ function Setup--Azure-Printer{
 
         }
 
+    Write-Log ""
+    Pause
+    Write-Log ""
 
     # Add the printer to InTune
         # Create the win32app
@@ -495,8 +498,9 @@ function Setup--Azure-Printer{
     Write-Log ""           
     Write-Log "We will next create an application in InTune for this printer using the new .intunewin file. Here are your instructions:"
     Write-Log ""    
-    Write-Log " 1 - Navigate to Microsoft Endpoint Manager admin center > Devices > Windows > Windows apps > + Create > App type: Windows app (Win32)"
+    Write-Log " 1 - Navigate to Microsoft Endpoint Manager admin center > Devices > Windows > Windows apps"
     Write-Log "     - Alt url: https://intune.microsoft.com/#view/Microsoft_Intune_DeviceSettings/AppsWindowsMenu/~/windowsApps"
+    Write-Log "     - + Create > App type: Windows app (Win32)"
     Write-Log ""   
     Write-Log " 2 - Upload the .intunewin file located here: $PrinterIntuneWinPath"
     Write-Log ""    
@@ -522,7 +526,7 @@ function Setup--Azure-Printer{
     Write-Log " 6 - DETECTION:"
     Write-Log "     - Rules format: Use a custom detection script"
     Write-Log "     - Script File: Upload this script: $DetectPrinterScript"
-    Write-Log "     - Run script as 32-bit process on 64-bit clients: Yes"
+    Write-Log "     - Run script as 32-bit process on 64-bit clients: No"
     Write-Log "     - Enforce script signature check: No"
     Write-Log ""
     Write-Log " 7 - DEPENDENCIES: None"

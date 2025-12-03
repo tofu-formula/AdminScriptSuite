@@ -2,7 +2,7 @@
 
 Param(
 
-    $TargetAppName,
+    $TargetAppName="Visual_Studio_Code"
 
 )
 
@@ -10,11 +10,23 @@ Param(
 
 
 
-$RepoRoot = Split-Path -Path $PSScriptRoot -Parent
+$RepoRoot = (Split-Path -Path $PSScriptRoot -Parent)
+$RepoRoot
 $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
+$WorkingDirectory
+
+Pause
 $LocalJSONpath = "$WorkingDirectory\TEMP\ApplicationData.json"
 
 $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
+
+$ThisFileName = $MyInvocation.MyCommand.Name
+
+$LogRoot = "$WorkingDirectory\Logs\Installer_Logs"
+
+$LogPath = "$LogRoot\$ThisFileName.$TargetAppName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
+
 
 ## FUNCTIONS ##
 
@@ -199,7 +211,7 @@ $list = $PublicJSONdata.applications.ApplicationName
 
         }catch{
 
-            Write-Log "Accessing JSON failed. Exit code returned: $_"
+            Write-Log "Accessing JSON from private share failed. Exit code returned: $_"
             Exit 1
             
         }
@@ -219,6 +231,7 @@ $list = $PublicJSONdata.applications.ApplicationName
 
     }
 
+    pause
 ### If the script makes it this far, attempt to begin installation
 
 ### Determine installation method
