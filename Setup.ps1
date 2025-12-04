@@ -5,9 +5,9 @@
 
 
 $ThisFileName = $MyInvocation.MyCommand.Name
-$LogRoot = "$WorkingDirectory\Logs\Suite_Logs"
+$LogRoot = "$WorkingDirectory\Logs\Setup_Logs"
 
-$LogPath = "$LogRoot\$ThisFileName.$ValueName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LogPath = "$LogRoot\$ThisFileName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 $WorkingDirectory = (Split-Path $PSScriptRoot -Parent)
 $RepoRoot = $PSScriptRoot
@@ -19,17 +19,17 @@ $UninstallerScript = "$RepoRoot\Uninstallers\General_Uninstaller.ps1"
 # path of the DotNet installer
 $DotNetInstallerScript = "$RepoRoot\Installers\Install-DotNET.ps1"
 # path to Git Runner
-$GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+$GitRunnerScript = "$RepoRoot\Templates\Git-Runner_TEMPLATE.ps1"
 # path of General_RemediationScriptSuite-Registry-Detection_TEMPLATE
 $General_RemediationScript_Registry_TEMPLATE = "$RepoRoot\Templates\General_RemediationScript-Registry_TEMPLATE.ps1"
 # path of Organization_CustomRegistryValues-Reader_TEMPLATE
-$OrgRegReader_ScriptPath = "$RepoRoot\Templates\Organization_CustomRegistryValues-Reader_TEMPLATE.ps1"
+$OrgRegReader_ScriptPath = "$RepoRoot\Templates\OrganizationCustomRegistryValues-Reader_TEMPLATE.ps1"
 # path of Generate_Install-Command script
 $GenerateInstallCommand_ScriptPath = "$RepoRoot\Other_Tools\Generate_Install-Command.ps1"
 # path of the Azure Blob SAS downloader script
 $DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
 # Path to the printer install script
-$InstallPrinterIP_ScriptPath = "$RepoRoot\Installers\Install-Printer-IP.ps1"
+$InstallPrinterIP_ScriptPath = "$RepoRoot\Installers\General_IP-Printer_Installer.ps1"
 
 
 $ExamplePrinterJSON = @"
@@ -348,6 +348,15 @@ function Setup--Azure-Printer{
     Write-Log ""
     Write-Log "Please enter the name of your printer:" "WARNING"
     $PrinterName = Read-Host "Printer Name"
+    While ([string]::IsNullOrWhiteSpace($PrinterName)) {
+        Write-Log "No printer name provided. Please enter a printer name." "ERROR"
+        $PrinterName = Read-Host "Printer Name"
+    }
+    Write-Log "Printer Name set to: $PrinterName"
+
+
+
+
     Write-Log ""
 
 
@@ -446,6 +455,9 @@ function Setup--Azure-Printer{
 
         }
 
+    Write-Log ""
+    Pause
+    Write-Log ""
 
     # Add the printer to InTune
         # Create the win32app
@@ -495,8 +507,9 @@ function Setup--Azure-Printer{
     Write-Log ""           
     Write-Log "We will next create an application in InTune for this printer using the new .intunewin file. Here are your instructions:"
     Write-Log ""    
-    Write-Log " 1 - Navigate to Microsoft Endpoint Manager admin center > Devices > Windows > Windows apps > + Create > App type: Windows app (Win32)"
+    Write-Log " 1 - Navigate to Microsoft Endpoint Manager admin center > Devices > Windows > Windows apps"
     Write-Log "     - Alt url: https://intune.microsoft.com/#view/Microsoft_Intune_DeviceSettings/AppsWindowsMenu/~/windowsApps"
+    Write-Log "     - + Create > App type: Windows app (Win32)"
     Write-Log ""   
     Write-Log " 2 - Upload the .intunewin file located here: $PrinterIntuneWinPath"
     Write-Log ""    
@@ -522,7 +535,7 @@ function Setup--Azure-Printer{
     Write-Log " 6 - DETECTION:"
     Write-Log "     - Rules format: Use a custom detection script"
     Write-Log "     - Script File: Upload this script: $DetectPrinterScript"
-    Write-Log "     - Run script as 32-bit process on 64-bit clients: Yes"
+    Write-Log "     - Run script as 32-bit process on 64-bit clients: No"
     Write-Log "     - Enforce script signature check: No"
     Write-Log ""
     Write-Log " 7 - DEPENDENCIES: None"
@@ -555,8 +568,8 @@ Function Make-InTuneWin {
         [string]$SourceFile,   # Path to your installer/script (exe, msi, ps1, etc.)
 
         [string]$IntuneToolsDir = "$WorkingDirectory\Temp\Tools",
-        [string]$TempRoot       = "$WorkingDirectory\Temp\IntuneSource\$(Get-Date -Format 'yyyyMMdd_HHmmss')",
-        [string]$OutputFolder   = "$WorkingDirectory\Temp\IntuneOutput\$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        [string]$TempRoot       = "$WorkingDirectory\Temp\IntuneWin_Source\$(Get-Date -Format 'yyyyMMdd_HHmmss')",
+        [string]$OutputFolder   = "$WorkingDirectory\Temp\IntuneWin_Output\$(Get-Date -Format 'yyyyMMdd_HHmmss')"
     )
 
     $ErrorActionPreference = 'Stop'

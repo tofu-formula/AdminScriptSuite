@@ -4,7 +4,7 @@
 Param(
 
     [string]$PrinterName,
-    [string]$WorkingDirectory="C:\ProgramData\AdminScriptSuite"
+    [string]$WorkingDirectory= "C:\ProgramData\AdminScriptSuite" # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
 )
 
 

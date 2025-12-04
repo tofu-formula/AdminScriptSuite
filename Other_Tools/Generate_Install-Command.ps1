@@ -30,7 +30,7 @@ Param(
 # These are for identifying the running environment of this script not for the end script
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
-$GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+$GitRunnerScript = "$RepoRoot\Templates\Git-Runner_TEMPLATE.ps1"
 $CustomGitRunnerMakerScript = "$RepoRoot\Other_Tools\Generate_Custom-Script_FromTemplate.ps1"
 
 # $RepoRoot = "C:\ProgramData\AdminScriptSuite\AdminScriptSuite-Repo"
@@ -62,12 +62,12 @@ function New-IntuneGitRunnerCommand {
         
         # Build the command
         $command = @"
-%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath' -ScriptParamsBase64 '$paramsBase64'"
+%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath' -ScriptParamsBase64 '$paramsBase64'"
 "@
     } else {
         # for a no param script
         $command = @"
-%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath'"
+%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath'"
 "@
     }
 
@@ -89,10 +89,10 @@ function ExportTXT {
 
     if($CustomNameModifier){
 
-        $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\$CustomNameModifier.Install-Command_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+        $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune_Install-Commands_Output\$CustomNameModifier.Install-Command_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
     } else {
 
-        $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune-Install-Commands\Install-Command_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+        $InstallCommandTXT = "$WorkingDirectory\TEMP\Intune_Install-Commands_Output\Install-Command_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
    
     }
 
@@ -174,7 +174,7 @@ Function RemediationScript {
         $ValueName = "StorageAccountName"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "genericdeploy"
+        $Value = "genericdeploy" # Modify this
 
         $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -183,7 +183,7 @@ Function RemediationScript {
         $ValueName = "PrinterDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "printers/PrinterData.json"
+        $Value = "printers/PrinterData.json" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -192,7 +192,7 @@ Function RemediationScript {
         $ValueName = "PrinterContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "sp=r&st=2025-11-20T21:36:42Z&se=2025-11-21T05:51:42Z&spr=https&sv=2024-11-04&sr=c&sig=VuVRS2UPs987gdasGLrxiu1O5i28z2QtMAOz2pn3FCs%3D"
+        $Value = "" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -201,7 +201,7 @@ Function RemediationScript {
         $ValueName = "ApplicationDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "applications/ApplicationData.json"
+        $Value = "applications/ApplicationData.json" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -210,7 +210,7 @@ Function RemediationScript {
         $ValueName = "ApplicationContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "zz"
+        $Value = "" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"
 
@@ -271,7 +271,7 @@ Function RemediationScript {
     <#
 
     Output for detect:
-    %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'AdminScriptSuite-Repo' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\AdminScriptSuite' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
+    %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'AdminScriptSuite-Repo' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\AdminScriptSuite' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
 
     Output for remediate
     #>
@@ -318,7 +318,7 @@ function InstallPrinterByIP {
     Param(
 
         [hashtable]$FunctionParams,
-        [String]$PrinterName
+        [String]$PrinterName="zz"
 
     )
 
@@ -366,7 +366,7 @@ function InstallPrinterByIP {
         -RepoNickName "AdminScriptSuite-Repo" `
         -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
         -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
-        -ScriptPath "Installers\Install-Printer-IP.ps1" `
+        -ScriptPath "Installers\General_IP-Printer_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             PrinterName = "$PrinterName"

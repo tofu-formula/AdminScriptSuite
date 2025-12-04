@@ -55,8 +55,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$Version,
 
-    [Parameter(Mandatory=$true)]
-    [string]$WorkingDirectory,
+    [string]$WorkingDirectory="C:\ProgramData\AdminScriptSuite",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("Desktop", "SDK", "AspNet", "Runtime")]

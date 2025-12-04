@@ -43,7 +43,7 @@
     NOTE: The directory will be created if it does not already exist
     NOTE: A seperate WorkingDirectory path will need to be provided in the params passed to the target script
     EXAMPLE
-        C:\ProgramData\COMPANY_NAME
+        C:\ProgramData\AdminScriptSuite
 
 .PARAMETER ScriptParams
     Params to pass to the target script
@@ -51,13 +51,13 @@
     NOTE: Enclose in single brackets
     EXAMPLE 
         for General_Uninstaller.ps1: 
-            '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"'
+            '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"'
 
 
 .EXAMPLE
-    .\Git_Runner_TEMPLATE.ps1 -RepoNickName "Win-AdminScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"'
+    .\Git-Runner_TEMPLATE.ps1 -RepoNickName "Win-AdminScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\AdminScriptSuite" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"'
     
-    Template: .\Git_Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
+    Template: .\Git-Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
 
 
 .NOTES
@@ -72,13 +72,13 @@
 
             General deployment of the ScriptSuite to local machine:
                 IntuneWin contents:
-                    Git_Runner_TEMPLATE.ps1
+                    Git-Runner_TEMPLATE.ps1
                 Install command:
-                    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git_Runner_TEMPLATE.ps1' -RepoNickName 'Test7' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -UpdateLocalRepoOnly:1 -WorkingDirectory 'C:\ProgramData\Test7'"
+                    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'Test7' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -UpdateLocalRepoOnly:1 -WorkingDirectory 'C:\ProgramData\Test7'"
                 Detect rule:
                     Rule type: File
                     Path: C:\ProgramData\Test7\Test7\Templates
-                    File: Git_Runner_TEMPLATE.ps1
+                    File: Git-Runner_TEMPLATE.ps1
                     Detection method: File exists
 
             Install 7-zip
@@ -99,7 +99,7 @@ param(
     [string]$ScriptPath, # Path from repo root to the target script
 
     [Parameter(Mandatory=$true)]
-    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
+    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\AdminScriptSuite"
 
     [Boolean]$forcemachinecontext,
 
