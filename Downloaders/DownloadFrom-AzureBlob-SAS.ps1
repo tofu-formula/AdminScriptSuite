@@ -28,10 +28,6 @@ Param(
 ### Vars ###
 ############
 
-
-
-
-
 ##
 
 $TargetDirectory = "$WorkingDirectory\TEMP"
@@ -42,6 +38,7 @@ $LocalDestinationPath = "$TargetDirectory\$BlobName"
 $ThisFileName = $MyInvocation.MyCommand.Name
 $LogRoot = "$WorkingDirectory\Logs\Download_Logs"
 $LogPath = "$LogRoot\$ThisFileName._$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
 
 #################
 ### Functions ###
@@ -261,11 +258,24 @@ Write-Log "Target URL: $BlobUri"
 
 Try {
 
+
+
     # Ensure directory exists
-    Write-Log "Checking if target directory exists at: $TargetDirectory"
-    if (!(Test-Path $TargetDirectory)) {
+
+
+    $ExtraFilePath = Split-Path $LocalDestinationPath -Parent
+    $FinalFileName = Split-Path $LocalDestinationPath -Leaf
+
+    if ($ExtraFilePath -ne "" -and $ExtraFilePath -ne $null){
+        $FinalDirectory = $ExtraFilePath
+    } else {
+        $FinalDirectory = $TargetDirectory
+    }
+
+    Write-Log "Checking if target directory exists at: $FinalDirectory"
+    if (!(Test-Path $FinalDirectory)) {
         Write-Log "Target directory not detected. Attempting to create."
-        New-Item -ItemType Directory -Path $TargetDirectory -Force | Out-Null
+        New-Item -ItemType Directory -Path $FinalDirectory -Force | Out-Null
         Write-Log "Target directory has been created."
     } else {
         Write-Log "Target directory already exists."

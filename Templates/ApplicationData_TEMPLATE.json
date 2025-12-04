@@ -1,36 +1,46 @@
 {
   "Applications": [
-    {
-      "ApplicationName": "Visual_Studio_Code",
-      "InstallMetod": "WinGet",
-      "WinGetID":"Microsoft.VisualStudioCode"
-    },
-    {
-      "ApplicationName": "Adobe_Creative_Cloud",
-      "InstallMetod": "WinGet",
-      "WinGetID":"Adobe.CreativeCloud"
-    },
-    {
-      "ApplicationName": "Adobe_Acrobat_Pro",
-      "InstallMetod": "WinGet",
-      "WinGetID":"Adobe.Acrobat.Pro"
-    },
-	{
-        "ApplicationName": "7zip",
-        "InstallMetod": "MSI-Online",
-        "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
-        "MSI_name":"7z2201-x64.msi"
-    },
-    {
-        "ApplicationName": ".NET_3.5",
-        "InstallMetod": "Custom_Script",
-        "ScriptPathFromRepoRoot":"Installers\\Install-DotNET.ps1",
-        "Version":"3.5"    
-    },
-    {
-        "ApplicationName": "Dell_CommandUpdate",
-        "InstallMetod": "Custom_Script",
-        "ScriptPathFromRepoRoot":"Installers\\InstallApp-DellCommandUpdate-FullClean.ps1" 
-    }
-    ]
+  {
+    "ApplicationName": "Visual_Studio_Code",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Microsoft.VisualStudioCode"
+  },
+  {
+    "ApplicationName": "Adobe_Creative_Cloud",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Adobe.CreativeCloud"
+  },
+  {
+    "ApplicationName": "Adobe_Acrobat_Pro",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Adobe.Acrobat.Pro"
+  },
+  {
+    "ApplicationName": "FlameShot",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Flameshot.Flameshot"
+  },
+  {
+    "ApplicationName": "7zip",
+    "InstallMethod": "MSI-Online",
+    "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
+    "MSI_name":"7z2201-x64.msi"
+  },
+  {
+    "ApplicationName": ".NET_3.5",
+    "InstallMethod": "Custom_Script",
+    "ScriptPathFromRepoRoot":"Installers\\Install-DotNET.ps1",
+    "CustomScriptArgs":"-Version \"3.5\""
+  },
+  {
+    "ApplicationName": "Dell_CommandUpdate",
+    "InstallMethod": "Custom_Script",
+    "ScriptPathFromRepoRoot":"Installers\\InstallApp-DellCommandUpdate-FullClean.ps1" 
+  },
+  {
+    "ApplicationName": "Google_Chrome",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Google.Chrome"
+  } 
+  ]
 }
