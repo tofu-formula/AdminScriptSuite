@@ -712,7 +712,8 @@ Function Install--Local-Printer{
             $jsonText = Get-Content -LiteralPath $LocalJSONpath -Raw -Encoding UTF8
             $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
         } catch {
-            throw "ConvertFrom-Json failed: $($_.Exception.Message)"
+            Write-Log "ConvertFrom-Json failed: $($_.Exception.Message)" "ERROR"
+            throw $_
         }
 
         # "Printers count: {0}" -f ($jsonData.printers.Count)

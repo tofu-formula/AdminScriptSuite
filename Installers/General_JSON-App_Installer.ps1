@@ -2,7 +2,7 @@
 
 Param(
 
-    $TargetAppName="Flameshot"
+    $TargetAppName="PreRequisite_Tester"
 
 )
 
@@ -66,7 +66,7 @@ function Write-Log {
 
 Function InstallApp-via-WinGet {
 
-    Write-Log "Calling General_WinGet_Installer script to install $TargetAppName via WinGet..."
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START | Calling General_WinGet_Installer script to install $TargetAppName via WinGet..."
 
     if ($Version){
 
@@ -78,6 +78,7 @@ Function InstallApp-via-WinGet {
 
     }
 
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
 }
 
 Function InstallApp-via-MSI-Private-AzureBlob {
@@ -85,7 +86,7 @@ Function InstallApp-via-MSI-Private-AzureBlob {
     # Works
 
     # Download the custom MSI from Azure Blob Storage
-    Write-Log "Downloading MSI from Private Azure Blob Storage..."
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START | Downloading MSI from Private Azure Blob Storage..."
 
 
     $MSIPathFromContainerRoot
@@ -172,7 +173,7 @@ Function InstallApp-via-MSI-Private-AzureBlob {
 
     }
 
-
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
 
 }
 
@@ -186,7 +187,7 @@ Function InstallApp-via-MSI-Online {
 
 Function InstallApp-via-CustomScript {
 
-    Write-Log "Calling custom installation script: $ScriptPathFromRepoRoot"
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START |Calling custom installation script: $ScriptPathFromRepoRoot"
 
     $CustomScriptPath = "$RepoRoot\$ScriptPathFromRepoRoot"
 
@@ -217,6 +218,7 @@ Function InstallApp-via-CustomScript {
 
     }
 
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
 
 }
 
@@ -225,6 +227,8 @@ Function ParseJSON {
     param(
         [string]$JSONpath
     )
+
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START"
     
     if (Test-Path $JSONpath) {Write-Log "Local JSON found. Attempting to get content."} else { Write-Log "Local JSON not found" "ERROR"; throw "Local JSON not found" }
 
@@ -232,7 +236,8 @@ Function ParseJSON {
         $jsonText = Get-Content -LiteralPath $JSONpath -Raw -Encoding UTF8
         $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
     } catch {
-        throw "ConvertFrom-Json failed: $($_.Exception.Message)"
+        Write-Log "ConvertFrom-Json failed: $($_.Exception.Message)" "ERROR"
+        Throw $_
     }
 
 
@@ -247,7 +252,177 @@ Function ParseJSON {
     # }
     # Write-Log "" 
 
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
     return $jsonData
+
+}
+
+Function InstallSomethingMain{
+
+    Param(
+
+        $AppNameToFind,
+
+        $InstallIt = $true
+    )
+
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START | Searching for application: $AppNameToFind"
+    Write-Log "Parsing Public JSON"
+
+    $PublicJSONdata = ParseJSON -JSONpath $PublicJSONpath
+    $list = $PublicJSONdata.applications.ApplicationName
+
+
+    if ($list -contains $AppNameToFind) {
+
+        Write-Log "Found $AppNameToFind in public JSON data."
+        $AppData = $PublicJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
+
+        Write-log "Application data for $AppNameToFind retrieved from JSON:"
+        Write-Log ($AppData | ConvertTo-Json -Depth 10)
+
+    } else {
+
+        ### If nothing found, attempt to search the  JSON...
+
+        Write-Log "Application $AppNameToFind not found in public JSON data." "WARNING"
+
+        ### Download the private JSON file from Azure Blob Storage
+
+        Write-Log "Now constructing URI for accessing private json..." 
+        
+
+        $parts = $ApplicationDataJSONpath -split '/', 2
+
+        $ApplicationData_JSON_ContainerName = $parts[0]      
+        $ApplicationData_JSON_BlobName = $parts[1]
+
+        $ApplicationContainerSASkey
+                $SasToken = $ApplicationContainerSASkey
+        $SasToken
+        pause
+
+        Write-Log "Final values to be used to build ApplicationData.json URI:"
+        Write-Log "StorageAccountName: $StorageAccountName"
+        Write-Log "SasToken: $SasToken"
+        Write-Log "ApplicationData_JSON_ContainerName: $ApplicationData_JSON_ContainerName" 
+        Write-Log "ApplicationData_JSON_BlobName: $ApplicationData_JSON_BlobName" 
+        $applicationJSONUri = "https://$StorageAccountName.blob.core.windows.net/$ApplicationData_JSON_ContainerName/$ApplicationData_JSON_BlobName"+"?"+"$SasToken"
+
+
+        Write-Log "Attempting to access ApplicationData.json with this URI: $applicationJSONUri"
+
+        Try{
+
+
+            Write-Log "Beginning download..."
+            & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $ApplicationData_JSON_BlobName -StorageAccountName $StorageAccountName -ContainerName $ApplicationData_JSON_ContainerName -SasToken $SasToken
+            if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+
+            ### Ingest the private JSON data
+
+            Write-Log "Parsing JSON"
+            #$LocalJSONpath = "$WorkingDirectory\TEMP\$ApplicationData_JSON_BlobName"
+            $JSONpath = $LocalJSONpath
+
+            $PrivateJSONdata = ParseJSON -JSONpath $JSONpath
+            $list = $PrivateJSONdata.applications.ApplicationName 
+
+
+
+        }catch{
+
+            Write-Log "Accessing JSON from private share failed. Exit code returned: $_"
+            Exit 1
+            
+        }
+        
+        ### Search for the target application in the private JSON data
+
+        if ($list -contains $AppNameToFind) {
+            Write-Log "Found $AppNameToFind in private JSON data."
+            $AppData = $PrivateJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
+
+            Write-log "Application data for $AppNameToFind retrieved from private JSON:"
+            Write-Log ($AppData | ConvertTo-Json -Depth 10)
+        } else {
+            Write-Log "Application $AppNameToFind not found in either public or private JSON data." "ERROR"
+            Exit 1
+        }
+
+    }
+
+
+    # Convert the JSON values into local variables for access later
+    Write-Log "Setting application data values as local variables..."
+    foreach ($property in $AppData.PSObject.Properties) {
+
+        $propName = $property.Name
+        $propValue = $property.Value
+        Set-Variable -Name $propName -Value $propValue -Scope Local
+        Write-Log "Should be: $propName = $propValue"
+        $targetValue = Get-Variable -Name $propName -Scope Local
+        Write-Log "Ended up as: $propName = $($targetValue.Value)"
+
+    }
+
+    if ($Prerequisites){
+        # Set the Prerequisites variable to global scope so it can be accessed later
+        Set-Variable -Name "Prerequisites" -Value $Prerequisites -Scope Global
+    } else {
+        # Ensure Prerequisites variable is empty if not set in JSON
+        Set-Variable -Name "Prerequisites" -Value $null -Scope Global
+    }
+
+    if ($InstallIt) {
+        InstallRunner -AppToInstall $AppNameToFind
+    } else {
+        Write-Log "InstallIt parameter set to false. Skipping installation for $AppNameToFind." "DRYRUN"
+    }
+
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
+}
+
+Function InstallRunner {
+
+    Param (
+
+        $AppToInstall
+
+    )
+
+    ### Determine installation method
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START | Requested installation method: $InstallMethod"
+
+    if($InstallMethod -eq "WinGet"){
+
+        Write-Log "Beginning installation via WinGet..."
+        InstallApp-via-WinGet
+
+    } elseif ($InstallMethod -eq "MSI-Private-AzureBlob") {
+
+        Write-Log "Beginning installation via MSI from Private Azure Blob..."
+        InstallApp-via-MSI-Private-AzureBlob
+
+    } elseif ($InstallMethod -eq "MSI-Online") {
+
+        Write-Log "Beginning installation via MSI from Online source..."
+        InstallApp-via-MSI-Online
+
+    } elseif ($InstallMethod -eq "Custom_Script") {
+
+        Write-Log "Beginning installation via Custom Script..."
+        InstallApp-via-CustomScript
+
+    } else {
+
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Unknown installation method specified: $InstallMethod" "ERROR"
+        Exit 1
+
+    }
+
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
 
 }
 
@@ -298,147 +473,56 @@ Try{
 Write-Log ""
 Write-Log "================================="
 
-### Ingest the public JSON data
+
+# Check if the target application exists in either JSON and if it has prerequisites
+InstallSomethingMain -AppNameToFind $TargetAppName -InstallIt $false
 
 
-Write-Log "Parsing Public JSON"
-$PublicJSONdata = ParseJSON -JSONpath $PublicJSONpath
+## If there are prerequisites, install them first
+if ($Prerequisites) {  
 
-$list = $PublicJSONdata.applications.ApplicationName
+    Write-Log "SCRIPT: $ThisFileName | Beginning installation of prerequisite applications: $Prerequisites"
+    # Take the prerequisites string and split into an array
+    $PrereqList = $Prerequisites -split ','
 
-    ### Search for the target application in the JSON data
+    Foreach ($Prereq in $PrereqList) {
 
-    if ($list -contains $TargetAppName) {
+        Write-Log "SCRIPT: $ThisFileName | Beginning installation of prerequisite application: $Prereq"
 
-        Write-Log "Found $TargetAppName in public JSON data."
-        $AppData = $PublicJSONdata.applications | Where-Object { $_.ApplicationName -eq $TargetAppName }
+        # Call the InstallRunner function for each prerequisite
+        $PreReqAppName = $Prereq.Trim()
 
+        InstallSomethingMain -AppNameToFind $PreReqAppName -InstallIt $true
 
-
-        Write-log "Application data for $TargetAppName retrieved from public JSON:"
-        Write-Log ($AppData | ConvertTo-Json -Depth 10)
-
-    } else {
-
-        ### If nothing found, attempt to search the private JSON...
-
-        Write-Log "Application $TargetAppName not found in public JSON data." "WARNING"
-
-        ### Download the private JSON file from Azure Blob Storage
-
-        Write-Log "Now constructing URI for accessing private json..." 
-        
-
-        $parts = $ApplicationDataJSONpath -split '/', 2
-
-        $ApplicationData_JSON_ContainerName = $parts[0]      
-        $ApplicationData_JSON_BlobName = $parts[1]
-
-$ApplicationContainerSASkey
-        $SasToken = $ApplicationContainerSASkey
-$SasToken
-pause
-
-        Write-Log "Final values to be used to build ApplicationData.json URI:"
-        Write-Log "StorageAccountName: $StorageAccountName"
-        Write-Log "SasToken: $SasToken"
-        Write-Log "ApplicationData_JSON_ContainerName: $ApplicationData_JSON_ContainerName" 
-        Write-Log "ApplicationData_JSON_BlobName: $ApplicationData_JSON_BlobName" 
-        $applicationJSONUri = "https://$StorageAccountName.blob.core.windows.net/$ApplicationData_JSON_ContainerName/$ApplicationData_JSON_BlobName"+"?"+"$SasToken"
-
-
-        Write-Log "Attempting to access ApplicationData.json with this URI: $applicationJSONUri"
-
-        Try{
-
-
-            Write-Log "Beginning download..."
-            & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $ApplicationData_JSON_BlobName -StorageAccountName $StorageAccountName -ContainerName $ApplicationData_JSON_ContainerName -SasToken $SasToken
-            if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
-
-
-            ### Ingest the private JSON data
-
-            Write-Log "Parsing JSON"
-            #$LocalJSONpath = "$WorkingDirectory\TEMP\$ApplicationData_JSON_BlobName"
-            $JSONpath = $LocalJSONpath
-
-            $PrivateJSONdata = ParseJSON -JSONpath $JSONpath
-            $list = $PrivateJSONdata.applications.ApplicationName 
-
-
-
-        }catch{
-
-            Write-Log "Accessing JSON from private share failed. Exit code returned: $_"
-            Exit 1
-            
-        }
-        
-        ### Search for the target application in the private JSON data
-
-        if ($list -contains $TargetAppName) {
-            Write-Log "Found $TargetAppName in private JSON data."
-            $AppData = $PrivateJSONdata.applications | Where-Object { $_.ApplicationName -eq $TargetAppName }
-
-            Write-log "Application data for $TargetAppName retrieved from private JSON:"
-            Write-Log ($AppData | ConvertTo-Json -Depth 10)
+        # Check for success/fail
+        if($LASTEXITCODE -ne 0){
+            Write-Log "SCRIPT: $ThisFileName | END | Prerequisite installation for $Prereq failed with exit code $LASTEXITCODE" "ERROR"
+            Exit $LASTEXITCODE
         } else {
-            Write-Log "Application $TargetAppName not found in either public or private JSON data." "ERROR"
-            Exit 1
+            Write-Log "SCRIPT: $ThisFileName | Prerequisite installation for $Prereq completed successfully." "SUCCESS"
         }
 
-    }
+   } 
 
-### If the script makes it this far, attempt to begin installation
+    Write-Log "SCRIPT: $ThisFileName | All prerequisites installed successfully." "SUCCESS"
 
-        # Convert the JSON values into local variables for easier access later
-        Write-Log "Setting application data values as local variables..."
-        foreach ($property in $AppData.PSObject.Properties) {
-            $propName = $property.Name
-            $propValue = $property.Value
-            Set-Variable -Name $propName -Value $propValue -Scope Local
-            Write-Log "Should be: $propName = $propValue"
-            $targetValue = Get-Variable -Name $propName -Scope Local
-            Write-Log "Ended up as: $propName = $($targetValue.Value)"
-        }
+} Else {
 
-### Determine installation method
-Write-Log "Requested installation method: $InstallMethod"
-
-if($InstallMethod -eq "WinGet"){
-
-    Write-Log "Beginning installation via WinGet..."
-    InstallApp-via-WinGet
-
-} elseif ($InstallMethod -eq "MSI-Private-AzureBlob") {
-
-    Write-Log "Beginning installation via MSI from Private Azure Blob..."
-    InstallApp-via-MSI-Private-AzureBlob
-
-} elseif ($InstallMethod -eq "MSI-Online") {
-
-    Write-Log "Beginning installation via MSI from Online source..."
-    InstallApp-via-MSI-Online
-
-} elseif ($InstallMethod -eq "Custom_Script") {
-
-    Write-Log "Beginning installation via Custom Script..."
-    InstallApp-via-CustomScript
-
-} else {
-
-    Write-Log "Unknown installation method specified: $InstallMethod" "ERROR"
-    Exit 1
-
+    Write-Log "SCRIPT: $ThisFileName | No prerequisites specified for $TargetAppName. Proceeding to main installation."
 }
+
+## Install main requested application
+
+Write-Log "SCRIPT: $ThisFileName | Beginning installation of main application: $TargetAppName"
+
+InstallSomethingMain -AppNameToFind $TargetAppName -InstallIt $true
 
 # Check for success/fail
 if($LASTEXITCODE -ne 0){
-    Write-Log "Installation script failed with exit code $LASTEXITCODE" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Installation script failed with exit code $LASTEXITCODE" "ERROR"
     Exit $LASTEXITCODE
 } else {
-    Write-Log "Installation script completed successfully." "SUCCESS"
+    Write-Log "SCRIPT: $ThisFileName | END | Installation script completed successfully." "SUCCESS"
     Exit 0
 }
 

@@ -22,6 +22,11 @@
   },
   {
     "ApplicationName": "7zip",
+    "InstallMethod": "WinGet",
+    "WinGetID":"7zip.7zip"
+  },
+  {
+    "ApplicationName": "7zip.MSI",
     "InstallMethod": "MSI-Online",
     "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
     "MSI_name":"7z2201-x64.msi"
@@ -41,6 +46,12 @@
     "ApplicationName": "Google_Chrome",
     "InstallMethod": "WinGet",
     "WinGetID":"Google.Chrome"
-  } 
+  }, 
+  {
+    "ApplicationName": "PreRequisite_Tester",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Flameshot.Flameshot",
+    "PreRequisites":"Google_Chrome,7zip,Dell_CommandUpdate"
+  }
   ]
 }
