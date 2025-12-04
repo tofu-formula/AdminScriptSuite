@@ -705,7 +705,7 @@ Function Install--Local-Printer{
         if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
 
         Write-Log "Parsing JSON" "INFO2"
-        $LocalJSONpath = "$WorkingDirectory\TEMP\$PrinterData_JSON_BlobName"
+        $LocalJSONpath = "$WorkingDirectory\TEMP\Downloads\$PrinterData_JSON_BlobName"
         if (Test-Path $LocalJSONpath) {Write-Log "Local JSON found. Attempting to get content." "INFO2"} else { Write-Log "Local JSON not found" "ERROR"; throw "Local JSON not found" }
         #$jsonData = Get-Content -Raw $LocalJSONpath | ConvertFrom-Json
         try {

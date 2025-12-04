@@ -30,7 +30,7 @@ Param(
 
 ##
 
-$TargetDirectory = "$WorkingDirectory\TEMP"
+$TargetDirectory = "$WorkingDirectory\TEMP\Downloads"
 $LocalDestinationPath = "$TargetDirectory\$BlobName"
 
 ##

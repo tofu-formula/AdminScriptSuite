@@ -43,15 +43,15 @@
     Default: $false
 
 .EXAMPLE
-    .\General_MSI_Installer.ps1 -MSIPath "C:\Temp\app.msi" -AppName "MyApp" -DisplayName "My Application" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"
+    .\General_MSI_Installer.ps1 -MSIPath "C:\Temp\Downloads\app.msi" -AppName "MyApp" -DisplayName "My Application" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"
     Installs app.msi with verification
 
 .EXAMPLE
-    .\General_MSI_Installer.ps1 -MSIPath "C:\Temp\AdobeAcrobat.msi" -AppName "Adobe_Acrobat_Pro" -DisplayName "Adobe Acrobat" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"
+    .\General_MSI_Installer.ps1 -MSIPath "C:\Temp\Downloads\AdobeAcrobat.msi" -AppName "Adobe_Acrobat_Pro" -DisplayName "Adobe Acrobat" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"
     Installs Adobe Acrobat and verifies using wildcard match
 
 .EXAMPLE
-    .\General_MSI_Installer.ps1 -MSIPath "C:\Temp\app.msi" -AppName "MyApp" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -SkipVerification
+    .\General_MSI_Installer.ps1 -MSIPath "C:\Temp\Downloads\app.msi" -AppName "MyApp" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" -SkipVerification
     Installs app.msi without post-install verification
 
 .NOTES

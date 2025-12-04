@@ -2,7 +2,7 @@
 
 Param(
 
-    $TargetAppName="Escape_Online_5"
+    $TargetAppName="Flameshot"
 
 )
 
@@ -16,7 +16,7 @@ $RepoRoot = (Split-Path -Path $PSScriptRoot -Parent)
 
 $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
 
-$LocalJSONpath = "$WorkingDirectory\TEMP\ApplicationData.json"
+#$LocalJSONpath = "$WorkingDirectory\TEMP\Downloads\ApplicationData.json"
 
 $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 
@@ -165,10 +165,10 @@ Function InstallApp-via-MSI-Private-AzureBlob {
 
     if ($InstallArgs) {
         Write-Log "Using custom install arguments: $InstallArgs"
-        & $MSIinstallScriptPath -MSIPath "$WorkingDirectory\TEMP\$MSIPath2" -InstallArgs $InstallArgs -WorkingDirectory $WorkingDirectory -AppName $TargetAppName -DisplayName $DisplayName
+        & $MSIinstallScriptPath -MSIPath "$WorkingDirectory\TEMP\Downloads\$MSIPath2" -InstallArgs $InstallArgs -WorkingDirectory $WorkingDirectory -AppName $TargetAppName -DisplayName $DisplayName
 
     } else {
-        & $MSIinstallScriptPath -MSIPath "$WorkingDirectory\TEMP\$MSIPath2" -WorkingDirectory $WorkingDirectory -AppName $TargetAppName -DisplayName $DisplayName
+        & $MSIinstallScriptPath -MSIPath "$WorkingDirectory\TEMP\Downloads\$MSIPath2" -WorkingDirectory $WorkingDirectory -AppName $TargetAppName -DisplayName $DisplayName
 
     }
 
@@ -322,7 +322,7 @@ $list = $PublicJSONdata.applications.ApplicationName
 
         ### If nothing found, attempt to search the private JSON...
 
-        Write-Log "Application $TargetAppName not found in either public JSON data." "WARNING"
+        Write-Log "Application $TargetAppName not found in public JSON data." "WARNING"
 
         ### Download the private JSON file from Azure Blob Storage
 

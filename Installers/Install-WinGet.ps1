@@ -591,7 +591,7 @@ Function Install-WinGet {
             # Use official shortlink which redirects to the current App Installer bundle
             Write-Log 'Invoking web requesty'
             $url = "https://aka.ms/getwinget"
-            Invoke-WebRequest -Uri $url -OutFile $bundle -UseBasicParsing
+            Invoke-WebRequest -Uri $url -OutFile $bundle -UseBasicParsing # TODO: Replace with an external script to act as downloader?
 
             Add-AppxProvisionedPackage -Online -PackagePath $bundle -SkipLicense | Out-Null
             Write-Log "Provisioned App Installer."
