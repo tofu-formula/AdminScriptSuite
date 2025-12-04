@@ -381,7 +381,7 @@ Function InstallSomethingMain{
     if ($InstallIt) {
         InstallRunner -AppToInstall $AppNameToFind
     } else {
-        Write-Log "InstallIt parameter set to false. Skipping installation for $AppNameToFind." "DRYRUN"
+        Write-Log "InstallIt parameter set to false. Skipping installation for $AppNameToFind."# "DRYRUN"
     }
 
     Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"

@@ -411,6 +411,121 @@ function InstallPrinterByIP {
     Return $ReturnHash
 }
 
+
+######################################
+### Example: Install App with JSON ###
+######################################
+function InstallAppWithJSON {
+
+    Param(
+
+        [hashtable]$FunctionParams,
+        [String]$AppName
+
+    )
+
+    Write-Host "Generating Install script for App with JSON..." -ForegroundColor Yellow
+    Write-Host "Function parameters received:"
+    # Check the returned hashtable
+    if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
+        Write-Host "No data returned! Checking if an app was explicitly specified..." #"ERROR"
+        if(-not $AppName){
+            Write-Host "No app specified. Exiting!" #"ERROR"
+            Exit 1
+
+        } else {
+            Write-Host "App specified as: $AppName"
+        }
+    } else {
+
+        Write-Host "Values retrieved:"
+        foreach ($key in $FunctionParams.Keys) {
+            $value = $FunctionParams[$key]
+            Write-Host "   $key : $value"
+        }    
+
+        # Turn the returned hashtable into variables
+        Write-Host "Setting values as local variables..."
+        foreach ($key in $FunctionParams.Keys) {
+            Set-Variable -Name $key -Value $FunctionParams[$key] -Scope Local
+            # Write-Log "Should be: $key = $($ReturnHash[$key])"
+            $targetValue = Get-Variable -Name $key -Scope Local
+            Write-Host "Ended up as: $key = $($targetValue.Value)"
+
+        }
+
+    }
+
+
+
+
+    # Main install command:
+    Write-Host ""
+    Write-Host "INSTALL COMMAND" -ForegroundColor Yellow
+    $CustomNameModifier = "Install-JSON-App.$AppName"
+    $installCommand = New-IntuneGitRunnerCommand `
+        -RepoNickName "AdminScriptSuite-Repo" `
+        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -ScriptPath "Installers\General_JSON-App_Installer.ps1" `
+        -CustomNameModifier "$CustomNameModifier" `
+        -ScriptParams @{
+            TargetAppName = "$AppName"
+            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        }
+
+
+        
+    $InstallAppScript = $global:CustomScript
+    # Export the txt file
+    $InstallCommandTXT = ExportTXT
+
+    # Detection script command:
+    Write-Host ""
+    Write-Host "DETECT SCRIPT" -ForegroundColor Yellow
+
+    If ($DetectMethod -eq "WinGet"){
+
+        $CustomNameModifier = "Detect-App.Winget.$AppName"
+        $detectCommand = New-IntuneGitRunnerCommand `
+            -RepoNickName "AdminScriptSuite-Repo" `
+            -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+            -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+            -ScriptPath "Templates\Detection-Script-Printer_TEMPLATE.ps1" `
+            -CustomNameModifier "$CustomNameModifier" `
+            -ScriptParams @{
+                WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+                $AppToDetect = $AppID
+            }
+
+    } else {
+
+        Write-Error "Unsupported DetectMethod specified: $DetectMethod"
+        Exit 1
+
+    }
+
+
+    $DetectAppScript = $global:CustomScript
+
+    # Export the txt file
+    $DetectCommandTXT = ExportTXT
+
+    $ReturnHash = @{
+        MainInstallCommand = $installCommand
+        MainInstallCommandTXT = $InstallCommandTXT
+        MainDetectCommand = $detectCommand
+        MainDetectCommandTXT = $DetectCommandTXT
+        InstallAppScript = $InstallAppScript
+        DetectAppScript = $DetectAppScript
+    }
+
+    Write-host "Return values prepared."
+    $ReturnHash.Keys | ForEach-Object { Write-Host "   $_ : $($ReturnHash[$_])" }   
+    Return $ReturnHash
+}
+
+
 ########
 # MAIN #
 ########

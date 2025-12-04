@@ -62,38 +62,60 @@ $ExamplePrinterJSON = @"
 $ExampleAppJSON = @"
 {
   "Applications": [
-    {
-      "ApplicationName": "Visual_Studio_Code",
-      "InstallMetod": "WinGet",
-      "WinGetID":"Microsoft.VisualStudioCode"
-    },
-    {
-      "ApplicationName": "Adobe_Creative_Cloud",
-      "InstallMetod": "WinGet",
-      "WinGetID":"Adobe.CreativeCloud"
-    },
-    {
-      "ApplicationName": "Adobe_Acrobat_Pro",
-      "InstallMetod": "WinGet",
-      "WinGetID":"Adobe.Acrobat.Pro"
-    },
-	{
-        "ApplicationName": "7zip",
-        "InstallMetod": "MSI-Online",
-        "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
-    },
-    {
-        "ApplicationName": ".NET_3.5",
-        "InstallMetod": "Custom_Script",
-        "ScriptPathFromRepoRoot":"Installers\Install-DotNET.ps1",
-        "Version":"3.5"    
-    },
-    {
-        "ApplicationName": "Dell_CommandUpdate",
-        "InstallMetod": "Custom_Script",
-        "ScriptPathFromRepoRoot":"Installers\InstallApp-DellCommandUpdate-FullClean.ps1", 
-    }
-    ]
+  {
+    "ApplicationName": "Visual_Studio_Code",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Microsoft.VisualStudioCode"
+  },
+  {
+    "ApplicationName": "Adobe_Creative_Cloud",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Adobe.CreativeCloud"
+  },
+  {
+    "ApplicationName": "Adobe_Acrobat_Pro",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Adobe.Acrobat.Pro"
+  },
+  {
+    "ApplicationName": "FlameShot",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Flameshot.Flameshot"
+  },
+  {
+    "ApplicationName": "7zip",
+    "InstallMethod": "WinGet",
+    "WinGetID":"7zip.7zip"
+  },
+  {
+    "ApplicationName": "7zip.MSI",
+    "InstallMethod": "MSI-Online",
+    "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
+    "MSI_name":"7z2201-x64.msi"
+  },
+  {
+    "ApplicationName": ".NET_3.5",
+    "InstallMethod": "Custom_Script",
+    "ScriptPathFromRepoRoot":"Installers\\Install-DotNET.ps1",
+    "CustomScriptArgs":"-Version \"3.5\""
+  },
+  {
+    "ApplicationName": "Dell_CommandUpdate",
+    "InstallMethod": "Custom_Script",
+    "ScriptPathFromRepoRoot":"Installers\\InstallApp-DellCommandUpdate-FullClean.ps1" 
+  },
+  {
+    "ApplicationName": "Google_Chrome",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Google.Chrome"
+  }, 
+  {
+    "ApplicationName": "PreRequisite_Tester",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Flameshot.Flameshot",
+    "PreRequisites":"Google_Chrome,7zip,Dell_CommandUpdate"
+  }
+  ]
 }
 "@
 
@@ -307,10 +329,6 @@ function Make-InTuneWin32app-WinGet{
     # Run tests
 
 }
-
-function Make-InTuneWin32app-MSI{}
-
-function Make-InTuneWin32app-Printer_IP_AzureBlob{}
 
 function Setup--Azure-Printer{
 
@@ -560,8 +578,142 @@ function Setup--Azure-Printer{
 
 Function Setup--Azure-WindowsApp{
 
-    Write-Log "This function is under construction." "ERROR"
-    Exit 1
+
+    # vars
+
+    $parts = $ApplicationDataJSONpath -split '/', 2
+
+    $ApplicationData_JSON_ContainerName = $parts[0]      
+    $ApplicationData_JSON_BlobName = $parts[1]
+
+
+
+    # main 
+
+    Write-Log "To begin, we need to prepare the resources required to set up an application deployment via Intune."
+    Write-Log ""
+
+    # User needs:
+        # If application IS in the public or private JSON...
+            # - Application Name (that's it!!)
+        # If application IS NOT in the public or private JSON...
+            # - Application Name
+            # - Install Method
+                # if Winget:
+                    # - Winget ID
+                # if MSI-Online
+                    # - URL
+                    # - MSI name
+                # if Custom_Script
+                    # - Script Path from Repo Root
+                    # - Custom Script Args (if any)
+            # - PreRequisites (if any)
+
+    Write-Log "If application IS in the public or private JSON..."
+    Write-Log "    1 - Application Name (that's it!!)"
+    Write-Log ""
+    Write-Log "If application IS NOT in the public or private JSON..."
+    Write-Log "    1 - Application Name"
+    Write-Log "    2 - Install Method"
+    Write-Log "        if Winget:"
+    Write-Log "            - Winget ID"
+    Write-Log "        if MSI-Online"
+    Write-Log "            - URL"
+    Write-Log "            - MSI name"
+    Write-Log "        if Custom_Script"
+    Write-Log "            - Script Path from Repo Root"
+    Write-Log "            - Custom Script Args (if any)"
+    Write-Log "    3 - PreRequisites (if any)"
+    Write-Log ""
+    Write-Log "Save these details, as you will need them shortly."
+    Write-Log ""
+
+    Pause
+
+    $TargetApp = Select-ApplicationFromJSON
+
+    if ($TargetApp -eq $null) {
+        
+        Write-Log "No pre-existing application was selected. We will move forward with doing a new custom application entry in the private JSON."
+        
+        Write-Log ""
+
+        Pause
+
+        Write-Log ""
+
+        Write-Log "Next we will navigate to our Azure Blob Storage container to edit the private JSON."
+        Write-Log ""
+        Write-Log "Instructions for navigating to your Azure Blob Storage container as follows:"
+        Write-Log ""
+        Write-Log " 1 - Go to https://portal.azure.com/#view/Microsoft_Azure_StorageHub/StorageHub.MenuView/~/StorageAccountsBrowse"
+        Write-Log ""
+        Write-Log " 2 - Select this storage account: $StorageAccountName"
+        Write-Log ""
+        Write-Log " 3 - Select 'Data Storage' > 'Containers' from the left menu"
+        Write-Log ""
+        Write-Log " 4 - Select this container: $ApplicationData_JSON_ContainerName"
+        Write-Log ""
+        Pause
+
+
+        Write-Log "Next we need to edit the public JSON file (ApplicationData.json) which contains the details of all custom applications available for deployment."
+        Write-Log ""    
+        Write-Log "From within the container, the path to the application JSON should be: $ApplicationDataJSONpath"
+        Write-Log ""
+        Write-Log "Click on the JSON and select to ""edit"""
+        Write-Log ""
+        Write-Log "Here is an example of what the JSON should look like:"
+        Write-Log ""
+        Write-Host $ExampleApplicationJSON
+        Write-Log ""
+        Write-Log "Add your new application details to the JSON now, following the existing format within."
+        Write-Log ""
+
+        Pause
+
+        # Suggest testing the JSON with the local install script
+        Write-Log "After updating the Application Data JSON, it is highly recommended to test the installation of the new application on a local machine before proceeding with Intune deployment."
+        Write-Log "This will help ensure that all details are correct and the installation process works as expected."
+        Write-Log ""
+        Write-Log "Would you like this script to test this application installation from the JSON on this local machine? (y/n)" "WARNING"
+        $Answer = Read-Host "y/n"
+        Write-Log ""
+
+
+            if ($answer -eq "y"){
+
+                Write-Log "Before proceeding, please make sure this application is not already installed locally on this machine. If it is, please uninstall it first." "WARNING"
+                Pause
+                Write-Log "Proceeding with local installation test..."
+
+                & Install--Local-Application -ApplicationName $ApplicationName
+                if($LASTEXITCODE -ne 0){
+                    Write-Log "Local application installation test failed with exit code: $LASTEXITCODE" "ERROR"
+                    Write-Log "Please resolve any issues before proceeding with Intune deployment."
+                    Exit $LASTEXITCODE
+                } else {
+                    Write-Log "Local application installation test succeeded! This configuration for the JSON works!" "SUCCESS"
+                }   
+
+            } else {
+
+                Write-Log "Skipping local installation test. Proceeding with Intune deployment setup."
+
+            }
+
+        Write-Log ""
+        Pause
+        Write-Log ""
+    
+    }
+
+    
+
+
+
+
+    Write-Log ""
 
 
 }
@@ -815,6 +967,12 @@ Function Install--Local-Printer{
 
 Function Install--Local-Application{
 
+    param(
+
+        $ApplicationName=$null
+
+    )
+
 
     Function ParseJSON {
 
@@ -858,7 +1016,41 @@ Function Install--Local-Application{
     Write-Log ""
 
     Pause
+
+    $TargetApp = Select-ApplicationFromJSON
+
+    if ($TargetApp -eq $null) {
+        Write-Log "No application selected. Exiting." "ERROR"
+        Exit 1
+    } else {
+        $AppNameToFind = $TargetApp
+        Write-Log "Application selected for installation: $AppNameToFind"
+    }
     
+    Write-Log "Installation of requested application will now commence..."
+    Write-Log "" 
+
+    Pause
+
+    & $JSONAppInstaller_ScriptPath -TargetAppName $AppNameToFind
+
+    Write-Log "" 
+
+    if($LASTEXITCODE -ne 0){
+        Write-Log "Install app script failed with exit code: $LASTEXITCODE" "ERROR"
+        Exit $LASTEXITCODE
+    } else {
+        Write-Log "Application '$AppNameToFind' installed successfully!" "SUCCESS"
+    }   
+
+    
+
+
+}
+
+function Select-ApplicationFromJSON {
+
+
     Write-Log "Parsing Public JSON" "INFO2"
 
     $PublicJSONdata = ParseJSON -JSONpath $PublicJSONpath
@@ -950,12 +1142,17 @@ Function Install--Local-Application{
         Write-Log "" 
         Write-Log "----------------------------------------------------------------"
         Write-Log ""
-        Write-Log "Please enter the name of the application you wish to install from the above lists:" "WARNING"
+        Write-Log "Please enter the name of the application you wish to select for installation from the above lists:" "WARNING"
         $AppNameToFind = Read-Host "Application Name"
 
         While ([string]::IsNullOrWhiteSpace($AppNameToFind)) {
-            Write-Log "No application name provided. Please enter an application name from the list above:" "ERROR"
+            Write-Log "No application name provided. Please enter an application name from the list above. If you wish to exit this selection, type 'exit'." "ERROR"
             $AppNameToFind = Read-Host "Application Name"
+
+            if ($AppNameToFind -eq 'exit') {
+                Return $null
+            }
+
         }
         
         ### Search for the target application in the private JSON data
@@ -965,34 +1162,20 @@ Function Install--Local-Application{
 
             Write-Log "Confirmed valid application name: $AppNameToFind"
 
-            Write-Log "Installation of requested application will now commence..."
-            Write-Log "" 
-
-            Pause
-
-            & $JSONAppInstaller_ScriptPath -TargetAppName $AppNameToFind
+            Return $AppNameToFind
 
             # Write-Log "Found $AppNameToFind in private JSON data."
             # $AppData = $PrivateJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
 
             # Write-log "Application data for $AppNameToFind retrieved from private JSON:"
             # Write-Log ($AppData | ConvertTo-Json -Depth 10)
+
         } else {
+
             Write-Log "Application $AppNameToFind not found in either public or private JSON data." "ERROR"
-            Exit 1
+            Return $null
+
         }
-
-        Write-Log "" 
-
-        if($LASTEXITCODE -ne 0){
-            Write-Log "Install app script failed with exit code: $LASTEXITCODE" "ERROR"
-            Exit $LASTEXITCODE
-        } else {
-            Write-Log "Application '$AppNameToFind' installed successfully!" "SUCCESS"
-        }   
-
-    
-
 
 }
 

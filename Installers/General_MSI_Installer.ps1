@@ -102,6 +102,8 @@ $LogRoot = "$WorkingDirectory\Logs\Installer_Logs"
 $SafeAppName = $AppName -replace '[^\w]', '_'
 $LogPath = "$LogRoot\$SafeAppName.MSI_Installer_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
+$DetectionScript = "$RepoRoot\Templates\Detection-Script-Application_TEMPLATE.ps1"
+
 $InstallSuccess = $false
 
 #################
@@ -267,59 +269,59 @@ function Test-MSIFile {
     return $true
 }
 
-function Test-ApplicationInstalled {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$DisplayName
-    )
+# function Test-ApplicationInstalled {
+#     param(
+#         [Parameter(Mandatory=$true)]
+#         [string]$DisplayName
+#     )
     
-    Write-Log "-----------------------------------------"
-    Write-Log "Function: Test-ApplicationInstalled | Begin"
-    Write-Log "Searching for application: $DisplayName"
+#     Write-Log "-----------------------------------------"
+#     Write-Log "Function: Test-ApplicationInstalled | Begin"
+#     Write-Log "Searching for application: $DisplayName"
     
-    try {
-        # Check both 32-bit and 64-bit registry locations
-        $registryPaths = @(
-            'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
-            'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
-        )
+#     try {
+#         # Check both 32-bit and 64-bit registry locations
+#         $registryPaths = @(
+#             'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+#             'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+#         )
         
-        Write-Log "Checking registry uninstall keys..."
+#         Write-Log "Checking registry uninstall keys..."
         
-        $installedApp = Get-ItemProperty -Path $registryPaths -ErrorAction SilentlyContinue | 
-                        Where-Object { $_.DisplayName -like "*$DisplayName*" } | 
-                        Select-Object -Property DisplayName, DisplayVersion, Publisher, InstallDate, UninstallString -First 1
+#         $installedApp = Get-ItemProperty -Path $registryPaths -ErrorAction SilentlyContinue | 
+#                         Where-Object { $_.DisplayName -like "*$DisplayName*" } | 
+#                         Select-Object -Property DisplayName, DisplayVersion, Publisher, InstallDate, UninstallString -First 1
         
-        if ($installedApp) {
-            Write-Log "Application found in registry!" "SUCCESS"
-            Write-Log "  Display Name: $($installedApp.DisplayName)"
-            if ($installedApp.DisplayVersion) {
-                Write-Log "  Version: $($installedApp.DisplayVersion)"
-            }
-            if ($installedApp.Publisher) {
-                Write-Log "  Publisher: $($installedApp.Publisher)"
-            }
-            if ($installedApp.InstallDate) {
-                Write-Log "  Install Date: $($installedApp.InstallDate)"
-            }
+#         if ($installedApp) {
+#             Write-Log "Application found in registry!" "SUCCESS"
+#             Write-Log "  Display Name: $($installedApp.DisplayName)"
+#             if ($installedApp.DisplayVersion) {
+#                 Write-Log "  Version: $($installedApp.DisplayVersion)"
+#             }
+#             if ($installedApp.Publisher) {
+#                 Write-Log "  Publisher: $($installedApp.Publisher)"
+#             }
+#             if ($installedApp.InstallDate) {
+#                 Write-Log "  Install Date: $($installedApp.InstallDate)"
+#             }
             
-            Write-Log "Function: Test-ApplicationInstalled | End | Application detected" "SUCCESS"
-            Write-Log "-----------------------------------------"
-            return $true
-        } else {
-            Write-Log "Application not found in registry" "WARNING"
-            Write-Log "Function: Test-ApplicationInstalled | End | Application not detected"
-            Write-Log "-----------------------------------------"
-            return $false
-        }
+#             Write-Log "Function: Test-ApplicationInstalled | End | Application detected" "SUCCESS"
+#             Write-Log "-----------------------------------------"
+#             return $true
+#         } else {
+#             Write-Log "Application not found in registry" "WARNING"
+#             Write-Log "Function: Test-ApplicationInstalled | End | Application not detected"
+#             Write-Log "-----------------------------------------"
+#             return $false
+#         }
         
-    } catch {
-        Write-Log "Function: Test-ApplicationInstalled | Error checking registry: $_" "ERROR"
-        Write-Log "Function: Test-ApplicationInstalled | End"
-        Write-Log "-----------------------------------------"
-        return $false
-    }
-}
+#     } catch {
+#         Write-Log "Function: Test-ApplicationInstalled | Error checking registry: $_" "ERROR"
+#         Write-Log "Function: Test-ApplicationInstalled | End"
+#         Write-Log "-----------------------------------------"
+#         return $false
+#     }
+# }
 
 function Install-MSIPackage {
     param(
@@ -497,8 +499,25 @@ Write-Log "==========================================="
 ## Check for pre-existing installation
 if ($DisplayName -and -not $SkipVerification) {
     Write-Log "Checking for pre-existing installation..."
-    $preInstallCheck = Test-ApplicationInstalled -DisplayName $DisplayName
-    
+    #$preInstallCheck = Test-ApplicationInstalled -DisplayName $DisplayName
+
+    Try {
+
+        $preInstallCheck = $false
+        & $DetectionScript -DisplayName $DisplayName -DetectMethod "MSI_Registry" -WorkingDirectory $WorkingDirectory
+        if ($LASTEXITCODE -eq 0) {
+            $preInstallCheck = $true
+        } else {
+            $preInstallCheck = $false
+        }
+
+    } catch {
+
+        Write-Log "Error during verification script execution: $_" "ERROR"
+        $preInstallCheck = $false
+        
+    }
+
     if ($preInstallCheck) {
         Write-Log "Application '$DisplayName' is already installed!" "SUCCESS"
         Write-Log "SCRIPT: $ThisFileName | END | Application already present, no installation needed" "SUCCESS"
@@ -536,8 +555,25 @@ if ($DisplayName -and -not $SkipVerification) {
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         Write-Log "Verification attempt $attempt of $maxAttempts"
         
-        $verified = Test-ApplicationInstalled -DisplayName $DisplayName
+        #$verified = Test-ApplicationInstalled -DisplayName $DisplayName
         
+        Try {
+
+            & $DetectionScript -DisplayName $DisplayName -DetectMethod "MSI_Registry" -WorkingDirectory $WorkingDirectory
+            if ($LASTEXITCODE -eq 0) {
+                $verified = $true
+            } else {
+                $verified = $false
+            }
+
+        } catch {
+
+            Write-Log "Error during verification script execution: $_" "ERROR"
+            $verified = $false
+
+        }
+
+
         if ($verified) {
             Write-Log "Post-install verification successful!" "SUCCESS"
             $InstallSuccess = $True
