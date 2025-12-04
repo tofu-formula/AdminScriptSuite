@@ -2,7 +2,8 @@
 
 Param(
 
-    $TargetAppName="PreRequisite_Tester"
+    #[Parameter(Mandatory=$true)]
+    [string]$TargetAppName
 
 )
 
@@ -10,6 +11,10 @@ Param(
 ## VARS ##
 ##########
 
+if($TargetAppName -eq "" -or $TargetAppName -eq $null){
+    Write-Log "No TargetAppName specified. Exiting." -ForegroundColor Red
+    Exit 1
+}
 
 
 $RepoRoot = (Split-Path -Path $PSScriptRoot -Parent)
@@ -297,10 +302,11 @@ Function InstallSomethingMain{
         $ApplicationData_JSON_ContainerName = $parts[0]      
         $ApplicationData_JSON_BlobName = $parts[1]
 
-        $ApplicationContainerSASkey
-                $SasToken = $ApplicationContainerSASkey
-        $SasToken
-        pause
+        #$ApplicationContainerSASkey
+        $SasToken = $ApplicationContainerSASkey
+        #$SasToken
+
+        #pause
 
         Write-Log "Final values to be used to build ApplicationData.json URI:"
         Write-Log "StorageAccountName: $StorageAccountName"
@@ -319,21 +325,18 @@ Function InstallSomethingMain{
             & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $ApplicationData_JSON_BlobName -StorageAccountName $StorageAccountName -ContainerName $ApplicationData_JSON_ContainerName -SasToken $SasToken
             if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
 
-
             ### Ingest the private JSON data
 
-            Write-Log "Parsing JSON"
-            #$LocalJSONpath = "$WorkingDirectory\TEMP\$ApplicationData_JSON_BlobName"
-            $JSONpath = $LocalJSONpath
+            Write-Log "Parsing Private JSON"
+            $PrivateJSONpath = "$WorkingDirectory\TEMP\Downloads\$ApplicationData_JSON_BlobName"
+            $JSONpath = $PrivateJSONpath
 
             $PrivateJSONdata = ParseJSON -JSONpath $JSONpath
             $list = $PrivateJSONdata.applications.ApplicationName 
 
-
-
         }catch{
 
-            Write-Log "Accessing JSON from private share failed. Exit code returned: $_"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END | Accessing JSON from private share failed. Exit code returned: $_" "ERROR"
             Exit 1
             
         }
@@ -435,9 +438,16 @@ Function InstallRunner {
 Write-Log "SCRIPT: $ThisFileName | START"
 Write-Log ""
 
+if($TargetAppName -eq "" -or $TargetAppName -eq $null){
+    Write-Log "No TargetAppName specified. Exiting." "ERROR"
+    Exit 1
+}
+
 Write-Log "Target Application to install: $TargetAppName"
 
 Write-Log "================================="
+
+
 
 Try{
 # Grab organization custom registry values
