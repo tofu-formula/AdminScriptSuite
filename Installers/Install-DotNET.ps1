@@ -283,7 +283,7 @@ if ($Version -eq "3.5" -or $Version -eq "3" -or $Version -eq "2") {
         Write-Log "Calling Configure-WindowsOptionalFeatures.ps1 for .NET Framework 3.5"
         
         try {
-            & $WindowsFeaturesPath -FeatureName "NetFx3" -Enable $true -WorkingDirectory $WorkingDirectory
+            & $WindowsFeaturesPath -FeatureName "NetFx3" -Action "Enable" -WorkingDirectory $WorkingDirectory
             
             if ($LASTEXITCODE -eq 0) {
                 Write-Log "SCRIPT: $ThisFileName | END | .NET Framework 3.5 installation completed successfully" "SUCCESS"

@@ -30,6 +30,11 @@ $GenerateInstallCommand_ScriptPath = "$RepoRoot\Other_Tools\Generate_Install-Com
 $DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
 # Path to the printer install script
 $InstallPrinterIP_ScriptPath = "$RepoRoot\Installers\General_IP-Printer_Installer.ps1"
+# Path to JSON app install script
+$JSONAppInstaller_ScriptPath = "$RepoRoot\Installers\General_JSON-App_Installer.ps1"
+
+
+$PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 
 
 $ExamplePrinterJSON = @"
@@ -705,14 +710,15 @@ Function Install--Local-Printer{
         if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
 
         Write-Log "Parsing JSON" "INFO2"
-        $LocalJSONpath = "$WorkingDirectory\TEMP\$PrinterData_JSON_BlobName"
+        $LocalJSONpath = "$WorkingDirectory\TEMP\Downloads\$PrinterData_JSON_BlobName"
         if (Test-Path $LocalJSONpath) {Write-Log "Local JSON found. Attempting to get content." "INFO2"} else { Write-Log "Local JSON not found" "ERROR"; throw "Local JSON not found" }
         #$jsonData = Get-Content -Raw $LocalJSONpath | ConvertFrom-Json
         try {
             $jsonText = Get-Content -LiteralPath $LocalJSONpath -Raw -Encoding UTF8
             $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
         } catch {
-            throw "ConvertFrom-Json failed: $($_.Exception.Message)"
+            Write-Log "ConvertFrom-Json failed: $($_.Exception.Message)" "ERROR"
+            throw $_
         }
 
         # "Printers count: {0}" -f ($jsonData.printers.Count)
@@ -809,12 +815,184 @@ Function Install--Local-Printer{
 
 Function Install--Local-Application{
 
-    # vars
 
-    # main 
+    Function ParseJSON {
 
-    Write-Log "This function is under construction." "ERROR"
-    Exit 1
+        param(
+            [string]$JSONpath
+        )
+
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" "INFO2"
+        
+        if (Test-Path $JSONpath) {Write-Log "Local JSON found. Attempting to get content." "INFO2"} else { Write-Log "Local JSON not found" "ERROR" "INFO2"; throw "Local JSON not found" }
+
+        try {
+            $jsonText = Get-Content -LiteralPath $JSONpath -Raw -Encoding UTF8
+            $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            Write-Log "ConvertFrom-Json failed: $($_.Exception.Message)" "ERROR"
+            Throw $_
+        }
+
+
+        Write-Log ""
+
+        # Can comment out
+        # Write-Log "Here are all the applications we found from the JSON:"
+        # Write-Log ""
+        # $list = $jsonData.applications.ApplicationName 
+        # Foreach ($item in $list) {
+        #     Write-Log "$item"
+        # }
+        # Write-Log "" 
+
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END" "INFO2"
+        Write-Log "" "INFO2"
+
+        return $jsonData
+
+    }
+
+
+    Write-Log "To begin we will access the ApplicationData.json files, both public (local repo) and private (Azure Blob) to show you the available applications."
+    Write-Log ""
+
+    Pause
+    
+    Write-Log "Parsing Public JSON" "INFO2"
+
+    $PublicJSONdata = ParseJSON -JSONpath $PublicJSONpath
+    $list1 = $PublicJSONdata.applications.ApplicationName
+
+
+    # if ($list -contains $AppNameToFind) {
+
+    #     Write-Log "Found $AppNameToFind in public JSON data." "INFO2"
+    #     $AppData = $PublicJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
+
+    #     Write-log "Application data for $AppNameToFind retrieved from JSON:" "INFO2"
+    #     Write-Log ($AppData | ConvertTo-Json -Depth 10) "INFO2"
+
+    # } else {
+
+        ### If nothing found, attempt to search the  JSON...
+
+        #Write-Log "Application $AppNameToFind not found in public JSON data." "INFO2"
+
+        ### Download the private JSON file from Azure Blob Storage
+
+        Write-Log "Now constructing URI for accessing private json..." "INFO2"
+        
+
+        $parts = $ApplicationDataJSONpath -split '/', 2
+
+        $ApplicationData_JSON_ContainerName = $parts[0]      
+        $ApplicationData_JSON_BlobName = $parts[1]
+
+        #$ApplicationContainerSASkey
+        $SasToken = $ApplicationContainerSASkey
+        #$SasToken
+
+        #pause
+
+        Write-Log "Final values to be used to build ApplicationData.json URI:" "INFO2"
+        Write-Log "StorageAccountName: $StorageAccountName" "INFO2"
+        Write-Log "SasToken: $SasToken" "INFO2"
+        Write-Log "ApplicationData_JSON_ContainerName: $ApplicationData_JSON_ContainerName" "INFO2"
+        Write-Log "ApplicationData_JSON_BlobName: $ApplicationData_JSON_BlobName" "INFO2"
+        $applicationJSONUri = "https://$StorageAccountName.blob.core.windows.net/$ApplicationData_JSON_ContainerName/$ApplicationData_JSON_BlobName"+"?"+"$SasToken"
+
+
+        Write-Log "Attempting to access ApplicationData.json with this URI: $applicationJSONUri" "INFO2"
+
+        Try{
+
+
+            Write-Log "Beginning download..." "INFO2"
+            & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $ApplicationData_JSON_BlobName -StorageAccountName $StorageAccountName -ContainerName $ApplicationData_JSON_ContainerName -SasToken $SasToken
+            if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+
+            ### Ingest the private JSON data
+
+            Write-Log "Parsing Private JSON" "INFO2"
+            $PrivateJSONpath = "$WorkingDirectory\TEMP\Downloads\$ApplicationData_JSON_BlobName"
+            $JSONpath = $PrivateJSONpath
+
+            $PrivateJSONdata = ParseJSON -JSONpath $JSONpath
+            $list2 = $PrivateJSONdata.applications.ApplicationName 
+
+        }catch{
+
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END | Accessing JSON from private share failed. Exit code returned: $_" "ERROR"
+            Exit 1
+            
+        }
+
+        ### Show everything that was found
+        Write-Log ""
+        Write-Log "----------------------------------------------------------------"
+        Write-Log "" 
+        Write-Log "Applications found from the public JSON:"
+        Write-Log ""
+        #$list = $jsonData.applications.ApplicationName 
+        Foreach ($item in $list1) {
+            Write-Log "$item"
+        }
+        Write-Log "" 
+        Write-Log "----------------------------------------------------------------"
+        Write-Log "" 
+        Write-Log "Applications found from the private JSON:"
+        Write-Log ""
+        #$list = $jsonData.applications.ApplicationName 
+        Foreach ($item in $list2) {
+            Write-Log "$item"
+        }
+        Write-Log "" 
+        Write-Log "----------------------------------------------------------------"
+        Write-Log ""
+        Write-Log "Please enter the name of the application you wish to install from the above lists:" "WARNING"
+        $AppNameToFind = Read-Host "Application Name"
+
+        While ([string]::IsNullOrWhiteSpace($AppNameToFind)) {
+            Write-Log "No application name provided. Please enter an application name from the list above:" "ERROR"
+            $AppNameToFind = Read-Host "Application Name"
+        }
+        
+        ### Search for the target application in the private JSON data
+        Write-Log "" 
+
+        if ($list1 -contains $AppNameToFind -or $list2 -contains $AppNameToFind) {
+
+            Write-Log "Confirmed valid application name: $AppNameToFind"
+
+            Write-Log "Installation of requested application will now commence..."
+            Write-Log "" 
+
+            Pause
+
+            & $JSONAppInstaller_ScriptPath -TargetAppName $AppNameToFind
+
+            # Write-Log "Found $AppNameToFind in private JSON data."
+            # $AppData = $PrivateJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
+
+            # Write-log "Application data for $AppNameToFind retrieved from private JSON:"
+            # Write-Log ($AppData | ConvertTo-Json -Depth 10)
+        } else {
+            Write-Log "Application $AppNameToFind not found in either public or private JSON data." "ERROR"
+            Exit 1
+        }
+
+        Write-Log "" 
+
+        if($LASTEXITCODE -ne 0){
+            Write-Log "Install app script failed with exit code: $LASTEXITCODE" "ERROR"
+            Exit $LASTEXITCODE
+        } else {
+            Write-Log "Application '$AppNameToFind' installed successfully!" "SUCCESS"
+        }   
+
+    
+
 
 }
 

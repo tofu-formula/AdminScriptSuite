@@ -299,14 +299,15 @@ if($GetJSON -eq $True) {
         if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
 
         Write-Log "Parsing JSON"
-        $LocalJSONpath = "$WorkingDirectory\TEMP\$PrinterData_JSON_BlobName"
+        $LocalJSONpath = "$WorkingDirectory\TEMP\Downloads\$PrinterData_JSON_BlobName"
         if (Test-Path $LocalJSONpath) {Write-Log "Local JSON found"} else { Write-Log "Local JSON not found"}
         #$jsonData = Get-Content -Raw $LocalJSONpath | ConvertFrom-Json
         try {
             $jsonText = Get-Content -LiteralPath $LocalJSONpath -Raw -Encoding UTF8
             $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
         } catch {
-            throw "ConvertFrom-Json failed: $($_.Exception.Message)"
+            Write-Log "ConvertFrom-Json failed: $($_.Exception.Message)" "ERROR"
+            Throw $_
         }
 
         # "Printers count: {0}" -f ($jsonData.printers.Count)
@@ -400,7 +401,7 @@ Try {
     & $DownloadAzureBlobSAS_ScriptPath -WorkingDirectory $WorkingDirectory -BlobName $DriverZip_BlobName -StorageAccountName $StorageAccountName -ContainerName $DriverZip_ContainerName -SasToken $SasToken
     if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
 
-    $LocalDriverZipPath = "$WorkingDirectory\TEMP\$DriverZip_BlobName"
+    $LocalDriverZipPath = "$WorkingDirectory\TEMP\Downloads\$DriverZip_BlobName"
     $EXTRACTED_LocalDriverZipPath = "$LocalDriverZipPath-EXTRACTED"
 
     # Extract the zip
