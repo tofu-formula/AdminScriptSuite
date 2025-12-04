@@ -41,15 +41,15 @@ $ThisWorkingDirectory = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $LogRoot = "$ThisWorkingDirectory\Logs\Other_Logs"
 $LogPath = "$LogRoot\$ThisFileName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
-$DestinationPath = "$ThisWorkingDirectory\TEMP\Custom_Scripts"
+$DestinationPath = "$ThisWorkingDirectory\TEMP\Custom_Scripts_Output"
 
-$GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+$GitRunnerScript = "$RepoRoot\Templates\Git-Runner_TEMPLATE.ps1"
 $PrinterDetectionScript = "$RepoRoot\Templates\Detection-Script-Printer_TEMPLATE.ps1"
 $WinGetDetectionScript = "$RepoRoot\Templates\Detection-Script-WinGetApp_TEMPLATE.ps1"
 
 if ($TemplateScript -eq "GitRunnerScript"){
     
-    #$GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+    #$GitRunnerScript = "$RepoRoot\Templates\Git-Runner_TEMPLATE.ps1"
     $EndScriptNameTemplate = "Git-Runner_Custom"
     $TargetScript = $GitRunnerScript   # original script
     # ---

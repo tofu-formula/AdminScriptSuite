@@ -74,7 +74,7 @@ $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 
 $DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
 
-$OrgRegReader_ScriptPath = "$RepoRoot\Templates\Organization_CustomRegistryValues-Reader_TEMPLATE.ps1"
+$OrgRegReader_ScriptPath = "$RepoRoot\Templates\OrganizationCustomRegistryValues-Reader_TEMPLATE.ps1"
 
 
 $PrinterData_JSON_BlobName = "PrinterData.json"

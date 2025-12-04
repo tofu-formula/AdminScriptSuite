@@ -1,30 +1,19 @@
 # This is a modified version of the Check/Install WinGet script and is to be used for running detections on InTune.
 
-# Param(
-
-
-#     [Parameter(Mandatory=$true)]
-#     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\COMPANY_NAME"
-
-#     [Boolean]$forcemachinecontext=$false,
-
-#     [Boolean]$ReturnWinGetPath=$False # This returns the path WinGet at the end of the script instead of Exit 0. Return is needed if being ran as a component of another scirpt.
-
-
-
-
-# )
+# TODO: Have this script use local repo WinGet functions?
 
 ## Vars
 
-$AppToDetect = "Adobe.CreativeCloud" # ENTER THE EXACT WINGET APP ID HERE
+Param(
+
+    [string]$AppToDetect = "Dell.CommandUpdate", # ENTER THE EXACT WINGET APP ID HERE
+    [string]$WorkingDirectory= "C:\ProgramData\AdminScriptSuite" # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
+
+)
 
 
-$WorkingDirectory= "C:\ProgramData\AdminScriptSuite"
 $forcemachinecontext=$false
 $ReturnWinGetPath=$False
-
-
 
 
 $LocalRepoPath = "$WorkingDirectory\$RepoNickName"

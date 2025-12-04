@@ -5,10 +5,10 @@ ECHO ===== Local Repo Updater =====
 
 setlocal enabledelayedexpansion
 
-if exist "%~dp0Templates\Git_Runner_TEMPLATE.ps1" (
-    Echo Verified Git_Runner exists: /Templates/Git_Runner_TEMPLATE.ps1 
+if exist "%~dp0Templates\Git-Runner_TEMPLATE.ps1" (
+    Echo Verified Git-Runner exists: /Templates/Git-Runner_TEMPLATE.ps1 
 ) else (
-    Echo ERROR: Could not verify exists: \Templates\Git_Runner_TEMPLATE.ps1 
+    Echo ERROR: Could not verify exists: \Templates\Git-Runner_TEMPLATE.ps1 
     Echo Now exiting script.
     Pause
     Exit 1
@@ -70,6 +70,6 @@ if /I "%CORRECT%"=="N" (
     )
 )
 
-Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
 PAUSE
