@@ -474,11 +474,23 @@ function Setup--Azure-Printer{
             Write-Log "No data returned!" "ERROR"
             Exit 1
         }
+
         Write-Log "Values retrieved:" "INFO2"
+
         foreach ($key in $ReturnHash2.Keys) {
+
             $value = $ReturnHash2[$key]
             Write-Log "   $key : $value" "INFO2"
+
         }    
+
+        $result = $ReturnHash2
+        foreach ($key in $result.Keys) {
+
+            Write-Host "   $key : $($result[$key])"
+
+        }
+
 
         # Turn the returned hashtable into variables
         Write-Log "Setting values as local variables..." "INFO2"
@@ -488,7 +500,9 @@ function Setup--Azure-Printer{
             $targetValue = Get-Variable -Name $key -Scope Local
             Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
 
+
         }
+        
     Write-Log ""
     Write-Log "Install command and detection script created."
     Write-Log ""
@@ -802,6 +816,10 @@ Function Setup--Azure-WindowsApp{
 
     Write-Log "" "INFO2"
 
+
+
+
+    <#
     # Run the automation script to generate the install command and detection script
     $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallAppWithJSON" -FunctionParams $FunctionParams
     #$ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -FunctionParams $FunctionParams
@@ -811,7 +829,10 @@ Function Setup--Azure-WindowsApp{
         Write-Log "No data returned!" "ERROR"
         Exit 1
     }
+    
     Write-Log "Values retrieved:" "INFO2"
+
+    #$ReturnHash2
     foreach ($key in $ReturnHash2.Keys) {
         $value = $ReturnHash2[$key]
         Write-Log "   $key : $value" "INFO2"
@@ -820,12 +841,49 @@ Function Setup--Azure-WindowsApp{
     # Turn the returned hashtable into variables
     Write-Log "Setting values as local variables..." "INFO2"
     foreach ($key in $ReturnHash2.Keys) {
-        Set-Variable -Name $key -Value $ReturnHash2[$key] -Scope Local
+
+        $value = $ReturnHash2[$key]
+        Write-Log "   $key : $value" "INFO2"
+
+
+        Set-Variable -Name $key -Value $value -Scope Local
+
         # Write-Log "Should be: $key = $($ReturnHash[$key])"
         $targetValue = Get-Variable -Name $key -Scope Local
         Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
 
     }
+    #>
+
+    # Call the generator; this now returns the hashtable we want
+    $installResult = @{}
+    $installResult = & $GenerateInstallCommand_ScriptPath `
+        -DesiredFunction "InstallAppWithJSON" `
+        -FunctionParams $FunctionParams
+
+    # Sanity check
+    if (($installResult -eq $null) -or ($installResult.Count -eq 0)) {
+        Write-Log "No data returned from Generate_Install-Command.ps1!" "ERROR"
+        exit 1
+    }
+
+    Write-Log "Values retrieved:" "INFO2"
+    foreach ($key in $installResult.Keys) {
+        Write-Log "   $key : $($installResult[$key])" "INFO2"
+    }
+
+    Write-Log "Setting values as local variables..." "INFO2"
+    foreach ($key in $installResult.Keys) {
+        $value = $installResult[$key]
+        Write-Log "   $key : $value" "INFO2"
+
+        Set-Variable -Name $key -Value $value -Scope Local
+
+        $targetValue = Get-Variable -Name $key -Scope Local
+        Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
+    }
+
+    
 
     Write-Log ""
     Write-Log "Install command and detection script created."
@@ -860,7 +918,7 @@ Function Setup--Azure-WindowsApp{
     Write-Log "     - Device restart behavior: No specific action"
     Write-Log ""    
     Write-Log " 5 - REQUIREMENTS:"
-    Write-Log "     - Architecture: x64 unless you know otherwise."
+    Write-Log "     - Architecture: Unnecessary unless you know the app is specific to x86 or x64. WinGet apps will handle this automatically."
     Write-Log "     - Minimum operating system: Minimum available version unless you know otherwise."
     Write-Log ""
     Write-Log " 6 - DETECTION:"
