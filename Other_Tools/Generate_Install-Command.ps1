@@ -102,10 +102,12 @@ function ExportTXT {
 
     Write-Host "Final install command:"
     Write-Host $installCommand #-ForegroundColor Green
+    Write-Host ""
 
 
     $installCommand | Set-Content -Encoding utf8 $InstallCommandTXT
     Write-Host "Install command saved here: $InstallCommandTXT"
+    Write-Host ""
 
     $installCommand | Set-Clipboard 
     Write-Host "Install command saved to your clip board!"
@@ -140,6 +142,8 @@ Write-Host ""
 ### Example: Create Detect/Remediation Script for InTune ###
 ############################################################
 Function RemediationScript {
+
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" -ForegroundColor Yellow
 
     Write-Host "Generating Detect/Remediation scripts for Registry changes..." -ForegroundColor Yellow
     # Choose the registry changes.
@@ -317,10 +321,11 @@ function InstallPrinterByIP {
 
     Param(
 
-        [hashtable]$FunctionParams,
-        [String]$PrinterName="zz"
+        [hashtable]$FunctionParams, # NOTE: This works for my intended use case but this with the param received snippet below are NOT done according to intent...
+        [String]$PrinterName="zz" # I don't remember why I had to do this...
 
     )
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" -ForegroundColor Yellow
 
     Write-Host "Generating Install script for Printer by IP..." -ForegroundColor Yellow
 
@@ -353,6 +358,12 @@ function InstallPrinterByIP {
 
         }
 
+    }
+
+
+    If ($PrinterName -eq "zz"){
+        Write-Host "PrinterName is still the default 'zz'. Please specify a valid PrinterName. Exiting!" #"ERROR"
+        Exit 1
     }
 
 
@@ -419,50 +430,67 @@ function InstallAppWithJSON {
 
     Param(
 
-        [hashtable]$FunctionParams,
-        [String]$AppName
+        [String]$ApplicationName="zz", # I don't remember why I had to do this...
+        $DetectMethod,
+        $DisplayName,
+        $AppID
+        # [Parameter(ValueFromRemainingArguments=$true)] # NOTE: Can't get this working the way I want, just gonna hardcode below.
+        # $FunctionParams
+
 
     )
-
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" -ForegroundColor Yellow
     Write-Host "Generating Install script for App with JSON..." -ForegroundColor Yellow
     Write-Host "Function parameters received:"
     # Check the returned hashtable
-    if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
-        Write-Host "No data returned! Checking if an app was explicitly specified..." #"ERROR"
-        if(-not $AppName){
-            Write-Host "No app specified. Exiting!" #"ERROR"
-            Exit 1
+    #if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
+    # if(($FunctionParams -eq $null)){
+    #     Write-Host "No data returned! Checking if an app was explicitly specified..." #"ERROR"
+    #     if(-not $ApplicationName){
+    #         Write-Host "No app specified. Exiting!" #"ERROR"
+    #         Exit 1
 
-        } else {
-            Write-Host "App specified as: $AppName"
-        }
-    } else {
+    #     } else {
+            
+    #         Write-Host "App specified as: $ApplicationName"
 
-        Write-Host "Values retrieved:"
-        foreach ($key in $FunctionParams.Keys) {
-            $value = $FunctionParams[$key]
-            Write-Host "   $key : $value"
-        }    
+    #     }
+    # } else {
 
-        # Turn the returned hashtable into variables
-        Write-Host "Setting values as local variables..."
-        foreach ($key in $FunctionParams.Keys) {
-            Set-Variable -Name $key -Value $FunctionParams[$key] -Scope Local
-            # Write-Log "Should be: $key = $($ReturnHash[$key])"
-            $targetValue = Get-Variable -Name $key -Scope Local
-            Write-Host "Ended up as: $key = $($targetValue.Value)"
+    #     Write-Host "Values retrieved:"
+    #     foreach ($key in $FunctionParams.Keys) {
+    #         $value = $FunctionParams[$key]
+    #         Write-Host "   $key : $value"
+    #     }    
 
-        }
+    #     # Turn the returned hashtable into variables
+    #     Write-Host "Setting values as local variables..."
+    #     foreach ($key in $FunctionParams.Keys) {
+    #         Set-Variable -Name $key -Value $FunctionParams[$key] -Scope Local
+    #         # Write-Log "Should be: $key = $($ReturnHash[$key])"
+    #         $targetValue = Get-Variable -Name $key -Scope Local
+    #         Write-Host "Ended up as: $key = $($targetValue.Value)"
 
+    #     }
+
+    # }
+    
+    Write-Host "App specified as: $ApplicationName"
+    Write-Host "DetectMethod specified as: $DetectMethod"
+    Write-Host "DisplayName specified as: $DisplayName"
+    Write-Host "AppID specified as: $AppID"
+
+
+    If ($ApplicationName -eq "zz"){
+        Write-Host "AppName is still the default 'zz'. Please specify a valid AppName. Exiting!" #"ERROR"
+        Exit 1
     }
-
-
 
 
     # Main install command:
     Write-Host ""
     Write-Host "INSTALL COMMAND" -ForegroundColor Yellow
-    $CustomNameModifier = "Install-JSON-App.$AppName"
+    $CustomNameModifier = "Install-JSON-App.$ApplicationName"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "AdminScriptSuite-Repo" `
         -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
@@ -470,7 +498,7 @@ function InstallAppWithJSON {
         -ScriptPath "Installers\General_JSON-App_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
-            TargetAppName = "$AppName"
+            TargetAppName = "$ApplicationName"
             WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
         }
 
@@ -486,19 +514,47 @@ function InstallAppWithJSON {
 
     If ($DetectMethod -eq "WinGet"){
 
-        $CustomNameModifier = "Detect-App.Winget.$AppName"
+        Write-Host "Using WinGet detection method."
+
+        if (-not $AppID){
+            Write-Error "AppID must be specified for WinGet detection method."
+            Exit 1
+        }
+
+        $CustomNameModifier = "Detect-App.Winget.$ApplicationName"
         $detectCommand = New-IntuneGitRunnerCommand `
             -RepoNickName "AdminScriptSuite-Repo" `
             -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
             -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
-            -ScriptPath "Templates\Detection-Script-Printer_TEMPLATE.ps1" `
+            -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
             -CustomNameModifier "$CustomNameModifier" `
             -ScriptParams @{
                 WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
-                $AppToDetect = $AppID
+                AppToDetect = $ApplicationName
+                AppID = $AppID
             }
 
-    } else {
+    } elseif ( $DetectMethod -eq "MSI_Registry" ) {
+
+        Write-Host "Using MSI Registry detection method."
+
+ 
+        $CustomNameModifier = "Detect-App.MSIRegistry.$ApplicationName"
+        $detectCommand = New-IntuneGitRunnerCommand `
+            -RepoNickName "AdminScriptSuite-Repo" `
+            -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+            -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+            -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
+            -CustomNameModifier "$CustomNameModifier" `
+            -ScriptParams @{
+                WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+                DisplayName = $DisplayName
+                AppToDetect = $ApplicationName
+
+            }
+
+
+    } {
 
         Write-Error "Unsupported DetectMethod specified: $DetectMethod"
         Exit 1
@@ -535,8 +591,13 @@ function InstallAppWithJSON {
 #Write-Host "Generating Intune Install Commands from function: $DesiredFunction..."
 #Write-Host ""
 
-$ReturnHash = & $DesiredFunction @FunctionParams
+Write-Host "SCRIPT: $ThisFileName | DESIRED FUNCTION: $DesiredFunction | PARAMS: $FunctionParams | START"
 
+# Write-Host "Function Parameters:"
+# @FunctionParams
+
+$ReturnHash = & $DesiredFunction @FunctionParams
+Write-Host "SCRIPT: $ThisFileNameName | DESIRED FUNCTION: $DesiredFunction | PARAMS: $FunctionParams | END"
 Return $ReturnHash
 
 #Write-Host "End of script."
