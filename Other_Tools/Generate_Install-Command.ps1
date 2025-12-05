@@ -410,6 +410,7 @@ function InstallPrinterByIP {
     # Export the txt file
     $DetectCommandTXT = ExportTXT
 
+    <#
     $ReturnHash = @{
         MainInstallCommand = $installCommand
         MainInstallCommandTXT = $InstallCommandTXT
@@ -422,6 +423,34 @@ function InstallPrinterByIP {
     Write-host "Return values prepared."
     $ReturnHash.Keys | ForEach-Object { Write-Host "   $_ : $($ReturnHash[$_])" }   
     Return $ReturnHash
+
+    #>
+
+    # Store results in script-scoped variables so the main script can package them up
+    $script:GI_MainInstallCommand    = $installCommand
+    $script:GI_MainInstallCommandTXT = $InstallCommandTXT
+    $script:GI_MainDetectCommand     = $detectCommand
+    $script:GI_MainDetectCommandTXT  = $DetectCommandTXT
+    $script:GI_InstallPrinterScript      = $InstallPrinterScript
+    $script:GI_DetectPrinterScript       = $DetectPrinterScript
+
+    # Just for visibility, still log what we *think* we produced
+    Write-Host "Return values prepared."
+    Write-Host "   MainInstallCommand     : $script:GI_MainInstallCommand"
+    Write-Host "   MainInstallCommandTXT  : $script:GI_MainInstallCommandTXT"
+    Write-Host "   MainDetectCommand      : $script:GI_MainDetectCommand"
+    Write-Host "   MainDetectCommandTXT   : $script:GI_MainDetectCommandTXT"
+    Write-Host "   InstallPrinterScript       : $script:GI_InstallPrinterScript"
+    Write-Host "   DetectPrinterScript        : $script:GI_DetectPrinterScript"
+
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
+    Write-host ""
+
+    $Script:HashPattern = "InstallPrinterByIP"
+
+    return "BuildMe"
+
+
 }
 
 
@@ -572,7 +601,7 @@ function InstallAppWithJSON {
     $DetectCommandTXT = ExportTXT
 
 
-    <#
+    <# # For some reason this doesn't work here even though it works for the printer function...
     $ReturnHash = @{
         MainInstallCommand = $installCommand
         MainInstallCommandTXT = $InstallCommandTXT
@@ -587,6 +616,8 @@ function InstallAppWithJSON {
     Return $ReturnHash
 
     #>
+
+    # ...So instead we are doing this:
 
     # Store results in script-scoped variables so the main script can package them up
     $script:GI_MainInstallCommand    = $installCommand
@@ -607,6 +638,8 @@ function InstallAppWithJSON {
 
     Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
     Write-host ""
+
+    $Script:HashPattern = "InstallAppWithJSON"
 
     return "BuildMe"
 
@@ -655,13 +688,39 @@ Write-host ""
 # If the function indicates that we need to build the final hashtable, do so
 if ($result -eq "BuildMe") {
 
-    $result = @{
-        MainInstallCommand     = $script:GI_MainInstallCommand
-        MainInstallCommandTXT  = $script:GI_MainInstallCommandTXT
-        MainDetectCommand      = $script:GI_MainDetectCommand
-        MainDetectCommandTXT   = $script:GI_MainDetectCommandTXT
-        InstallAppScript       = $script:GI_InstallAppScript
-        DetectAppScript        = $script:GI_DetectAppScript
+    if ($Script:HashPattern -eq "InstallAppWithJSON") {
+        Write-Host "Building return hashtable for InstallAppWithJSON..."
+
+        $result = @{
+            MainInstallCommand     = $script:GI_MainInstallCommand
+            MainInstallCommandTXT  = $script:GI_MainInstallCommandTXT
+            MainDetectCommand      = $script:GI_MainDetectCommand
+            MainDetectCommandTXT   = $script:GI_MainDetectCommandTXT
+            InstallAppScript       = $script:GI_InstallAppScript
+            DetectAppScript        = $script:GI_DetectAppScript
+        }
+
+
+    } elseif($Script:HashPattern -eq "InstallPrinterByIP") {
+
+        Write-Host "Building return hashtable for InstallPrinterByIP..."
+
+        $result = @{
+            MainInstallCommand     = $script:GI_MainInstallCommand
+            MainInstallCommandTXT  = $script:GI_MainInstallCommandTXT
+            MainDetectCommand      = $script:GI_MainDetectCommand
+            MainDetectCommandTXT   = $script:GI_MainDetectCommandTXT
+            InstallPrinterScript   = $script:GI_InstallPrinterScript
+            DetectPrinterScript    = $script:GI_DetectPrinterScript
+        }
+
+
+
+    }else {
+
+        Write-Host "Unknown HashPattern: $($Script:HashPattern). Cannot build return hashtable!" -ForegroundColor Red
+        Exit 1
+
     }
 
     #Write-Host "SCRIPT: $ThisFileName | | START" -ForegroundColor Yellow
@@ -675,8 +734,9 @@ if ($result -eq "BuildMe") {
     }
 
     #Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END | Returning hashtable above to caller."
+    Write-Host "SCRIPT: $ThisFileName | DESIRED FUNCTION: $DesiredFunction | PARAMS: $FunctionParams | END"
 
-        return $result
+    return $result
 
 }
 

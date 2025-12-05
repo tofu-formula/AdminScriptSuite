@@ -484,12 +484,12 @@ function Setup--Azure-Printer{
 
         }    
 
-        $result = $ReturnHash2
-        foreach ($key in $result.Keys) {
+        # $result = $ReturnHash2
+        # foreach ($key in $result.Keys) {
 
-            Write-Host "   $key : $($result[$key])"
+        #     Write-Host "   $key : $($result[$key])"
 
-        }
+        # }
 
 
         # Turn the returned hashtable into variables
