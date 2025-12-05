@@ -6,8 +6,11 @@
 
 Param(
 
-    [string]$AppToDetect = "Dell.CommandUpdate", # ENTER THE EXACT WINGET APP ID HERE
-    [string]$WorkingDirectory= "C:\ProgramData\AdminScriptSuite" # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
+    [string]$AppToDetect,# = "Dell Command Update", # ENTER THE NICK NAME OF THE APPLICATION TO DETECT HERE    
+    [string]$WorkingDirectory= "C:\ProgramData\AdminScriptSuite", # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
+    [string]$AppID,# = "Dell.CommandUpdate", # ENTER THE EXACT WINGET APP ID HERE
+    [String]$DisplayName,# = "Dell Command Update", # ENTER THE DISPLAY NAME TO SEARCH FOR IN REGISTRY HERE
+    [String]$DetectMethod# = "WinGet" # Possible values: "WinGet", "MSI_Registry"
 
 )
 
@@ -614,7 +617,7 @@ Function Install-WinGet {
             $progressPreference = 'silentlyContinue'
             $latestWingetMsixBundleUri = $(Invoke-RestMethod https://api.github.com/repos/microsoft/winget-cli/releases/latest).assets.browser_download_url | Where-Object {$_.EndsWith(".msixbundle")}
             $latestWingetMsixBundle = $latestWingetMsixBundleUri.Split("/")[-1]
-            Write-Information "Downloading winget to artifacts directory..."
+            Write-Log "Downloading winget to artifacts directory..."
             Invoke-WebRequest -Uri $latestWingetMsixBundleUri -OutFile "./$latestWingetMsixBundle"
             Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
             Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
@@ -734,6 +737,126 @@ Function Install-WinGet {
 
 }
 
+function Detect-MSI-ApplicationInstalled {
+
+    if ($DisplayName -eq $null -or $DisplayName -eq ""){
+
+        Write-Log "SCRIPT: $ThisFileName | No DisplayName supplied for MSI_Registry detection. Exiting." "ERROR"
+        Exit 1
+
+    }
+    
+    Write-Log "SCRIPT: $ThisFileName | Searching for application as MSI in registry: $DisplayName"
+    
+    try {
+        # Check both 32-bit and 64-bit registry locations
+        $registryPaths = @(
+            'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        )
+        
+        Write-Log "Checking registry uninstall keys..."
+        
+        $installedApp = Get-ItemProperty -Path $registryPaths -ErrorAction SilentlyContinue | 
+                        Where-Object { $_.DisplayName -like "*$DisplayName*" } | 
+                        Select-Object -Property DisplayName, DisplayVersion, Publisher, InstallDate, UninstallString -First 1
+        
+        if ($installedApp) {
+            Write-Log "Application found in registry!" "SUCCESS"
+            Write-Log "  Display Name: $($installedApp.DisplayName)"
+            if ($installedApp.DisplayVersion) {
+                Write-Log "  Version: $($installedApp.DisplayVersion)"
+            }
+            if ($installedApp.Publisher) {
+                Write-Log "  Publisher: $($installedApp.Publisher)"
+            }
+            if ($installedApp.InstallDate) {
+                Write-Log "  Install Date: $($installedApp.InstallDate)"
+            }
+            
+            Write-Log "SCRIPT: $ThisFileName | End | Application ""$DisplayName"" detected in registry" "SUCCESS"
+            Write-Log "-----------------------------------------"
+            Exit 0
+        } else {
+            #Write-Log "Application not found in registry" "WARNING"
+            Write-Log "SCRIPT: $ThisFileName | End | Application ""$DisplayName"" not detected in registry" "WARNING"
+            Write-Log "-----------------------------------------"
+            Exit 1
+        }
+        
+    } catch {
+        Write-Log "SCRIPT: $ThisFileName | End | Error checking registry: $_" "ERROR"
+        #Write-Log "SCRIPT: $ThisFileName | End"
+        Write-Log "-----------------------------------------"
+        Exit 1
+    }
+}
+
+Function Detect-WinGetApplicationInstalled {
+
+    if($appID -eq $null -or $AppID -eq ""){
+
+        Write-Log "SCRIPT: $ThisFileName | No AppID supplied for WinGet detection. Exiting." "ERROR"
+        Exit 1
+
+    }
+
+    # Check if WinGet is installed
+    Write-Log "SCRIPT: $ThisFileName | Checking if WinGet is installed..."
+
+    $WinGet = Check-WinGet
+
+    # If check failed...
+    if ($WinGet -eq "Failure"){
+        
+        # ...Attempt to install WinGet...
+        Write-Log "Failed to confirm WinGet is installed and working. Now proceeding to attempt installing WinGet." "WARNING"
+        
+        Install-WinGet
+        
+        $WinGet = Check-WinGet
+        if ($WinGet -eq "Failure"){
+
+            Write-Log "SCRIPT: $ThisFileName | END | Failed to confirm WinGet is working after installation. Please investigate." "ERROR"
+            Exit 1
+
+        }
+
+    }
+
+    Write-Log "WinGet check/install success!! Final location: $WinGet" "SUCCESS"
+    Write-Log "--------------------------------------"
+
+    Write-Log "Now attempting to use WinGet to detect app: $AppID"
+
+    Try {
+
+        $Result = & $Winget list $AppID -e
+
+        Foreach ($line in $result){Write-Log "WinGet List: $line"}
+
+        if($result -eq $null){
+            Throw "No returned valued when running: $WinGet List $AppID -e"
+        }
+        
+        if(!($Result -like "No installed package found matching input criteria.")){
+            Write-Log "SCRIPT: $ThisFileName | END | Application $AppID detected!" "SUCCESS"
+            Exit 0
+        }else{
+            Write-Log "SCRIPT: $ThisFileName | END | Application $AppID NOT detected!" "ERROR"
+            Exit 1
+        }
+
+    } Catch {
+
+        Write-Log "Error encountered when running search: $_" "ERROR"
+        Exit 1
+
+    }
+
+
+}
+
 ##########
 ## Main ##
 ##########
@@ -746,7 +869,7 @@ Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX NOTE: PRE-CHECK is not logged"
 Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXX Checking if supplied paths are valid"
 # Test the paths
 
-if ($UpdateLocalRepoOnly -eq $True){
+if ($UpdateLocalRepoOnly -eq $True){ # I don't remember why I had this condition...
 
     $pathsToValidate = @{
         'WorkingDirectory' = $WorkingDirectory
@@ -786,19 +909,25 @@ Write-Host "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Begin main body ##
 #####################
 
+Write-Log "++++++++++++++++++++++++++++"
 
-Write-Log "+++++ Detection Script for InTune App installs - WinGet +++++"
+Write-Log "SCRIPT: $ThisFileName | START"
+Write-Log "++++++++++++++++++++++++++++"
 
+Write-Log "App to detect: $AppName"
 Write-Log "WorkingDirectory: $WorkingDirectory"
 Write-Log "Force Machine Install Context: $forcemachinecontext"
 Write-Log "Return WinGet Path: $ReturnWinGetPath"
 Write-Log "Script User: $scriptUser"
 Write-Log "Windows User: $loggedInUser"
+Write-Log "Detect Method: $DetectMethod"
+Write-Log "WinGet AppID to detect: $AppID"
+Write-Log "MSI Registry DisplayName to detect: $DisplayName"
 
 Write-Log "++++++++++++++++++++++++++++"
 
 ##  Figure out use case situation ##
-Write-Log "----- Determining script context -----"
+Write-Log "SCRIPT: $ThisFileName | Determining script context "
 # Am I running as the same account as the Windows session?
 if ($scriptUser -eq $loggedInUser) {
     Write-Log "Script is running as the logged-in user: $scriptUser"
@@ -824,61 +953,29 @@ if ($scriptUser -eq $loggedInUser) {
 }
 Write-Log "--------------------------------------"
 
+# Determine the detect method
 
-## 
+if ($DetectMethod -eq "WinGet") {
 
-# Check if WinGet is installed
-Write-Log "Checking if WinGet is installed..."
+    Write-Log "SCRIPT: $ThisFileName | Using WinGet detection method."
 
-$WinGet = Check-WinGet
+    Detect-WinGetApplicationInstalled
 
-# If check failed...
-if ($WinGet -eq "Failure"){
-    
-    # ...Attempt to install WinGet...
-    Write-Log "Failed to confirm WinGet is installed and working. Now proceeding to attempt installing WinGet." "WARNING"
-    
-    Install-WinGet
-    
-    $WinGet = Check-WinGet
-    if ($WinGet -eq "Failure"){
+} elseif ($DetectMethod -eq "MSI_Registry") {
 
-        Write-Log "SCRIPT: $ThisFileName | END | Failed to confirm WinGet is working after installation. Please investigate." "ERROR"
-        Exit 1
+    Write-Log "SCRIPT: $ThisFileName | Using MSI Registry detection method."
 
-    }
+    Detect-MSI-ApplicationInstalled #-DisplayName $DisplayName
 
-}
+} else {
 
-Write-Log "WinGet check/install success!! Final location: $WinGet" "SUCCESS"
-Write-Log "--------------------------------------"
-
-Write-Log "Now attempting to use WinGet to detect app: $AppToDetect"
-
-Try {
-
-    $Result = & $Winget list $AppToDetect -e
-
-    Foreach ($line in $result){Write-Log "WinGet List: $line"}
-
-    if($result -eq $null){
-        Throw "No returned valued when running: $WinGet List $AppToDetect -e"
-    }
-    
-    if(!($Result -like "No installed package found matching input criteria.")){
-        Write-Log "SCRIPT: $ThisFileName | END | Application $AppToDetect detected!" "SUCCESS"
-        Exit 0
-    }else{
-        Write-Log "SCRIPT: $ThisFileName | END | Application $AppToDetect NOT detected!" "ERROR"
-        Exit 1
-    }
-
-} Catch {
-
-    Write-Log "Error encountered when running search: $_" "ERROR"
+    Write-Log "Unsupported detect method: $DetectMethod" "ERROR"
+    Write-Log "SCRIPT: $ThisFileName | END | Exiting script." "ERROR"
     Exit 1
 
 }
+
+
 
 
 

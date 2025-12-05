@@ -48,7 +48,14 @@
     "WinGetID":"Google.Chrome"
   }, 
   {
-    "ApplicationName": "PreRequisite_Tester",
+    "ApplicationName": "MSI-Private-AzureBlob_Example",
+    "InstallMethod": "MSI-Private-AzureBlob",
+    "MSIPathFromContainerRoot":"Adobe_Creative_Cloud/install.msi",
+    "DisplayName":"Adobe Creative Cloud",
+    "PreRequisites":".NET_3.5"
+  },
+  {
+    "ApplicationName": "PreRequisite_Example",
     "InstallMethod": "WinGet",
     "WinGetID":"Flameshot.Flameshot",
     "PreRequisites":"Google_Chrome,7zip,Dell_CommandUpdate"

@@ -197,30 +197,30 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
-function WinGet-Detect{
+function WinGet-Detect{ # TODO: I may replace this function. I have a whole script that can do this, but this is simpler and cleaner for now. The other script is intended to be used from InTune.
     Param(
     $ID
     )
 
-    Write-Log "Checking if app $ID is installed"
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) Checking if app $ID is installed"
 
     # May want to remove the --exact if it causes issues
     $result = & $winget list --id "$ID" --exact --disable-interactivity --accept-source-agreements --source winget 2>&1#| Out-String
     ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
     if ($result -match "$ID") {
-        Write-Log "Function: WinGet-Detect | Installation detected of $ID"
+        Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Installation detected of $ID"
 
         if ($Version -ne $null){
 
-            Write-Log "Now checking if local install is version: $Version"
+            Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Now checking if local install is version: $Version"
 
             if ($result -match $Version) {
-                Write-Log "Function: WinGet-Detect | Specific version $Version detected"
+                Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Specific version $Version detected"
                 return $true
             } else {
-                Write-Log "Function: WinGet-Detect | Requested version $Version NOT detected"
-                Write-Log "NOTE: WinGet does not play nice with installing versions lower than your current install version. You must uninstall first if that is your intended purpose." "WARNING"
+                Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Requested version $Version NOT detected"
+                Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | NOTE: WinGet does not play nice with installing versions lower than your current install version. You must uninstall first if that is your intended purpose." "WARNING"
                 return $false
             }
 
@@ -230,7 +230,7 @@ function WinGet-Detect{
 
         return $true
     } else {
-        Write-Log "Function: WinGet-Detect | Installation not detected of $ID"
+        Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Installation not detected of $ID"
         return $false
     }
 
