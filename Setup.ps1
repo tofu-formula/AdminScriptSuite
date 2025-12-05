@@ -194,7 +194,14 @@ function Write-Log {
         [string]$Level = "INFO"
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "[$timestamp] [$Level] $Message"
+    
+    if ($Level -eq "INFO2") {
+        $logEntry = "[$timestamp] [INFO] $Message"
+    } else {
+        $logEntry = "[$timestamp] [$Level] $Message"
+    }
+
+    
     
     switch ($Level) {
         "ERROR"   { Write-Host $logEntry -ForegroundColor Red }
@@ -406,7 +413,7 @@ function Setup--Azure-Printer{
     Write-Log ""
     Write-Host $ExamplePrinterJSON
     Write-Log ""
-    Write-Log "Add your new printer details to the JSON now, following the existing format within. Save when you are finished."
+    Write-Log "Add your new printer details to the JSON now, following the existing format within. Save when you are finished." "WARNING"
     Write-Log ""
 
     Pause
@@ -414,6 +421,7 @@ function Setup--Azure-Printer{
 
     # Suggest testing the JSON with the local install script
     Write-Log "After updating the Printer Data JSON, it is highly recommended to test the installation of the new printer on a local machine before proceeding with Intune deployment."
+    Write-Log ""
     Write-Log "This will help ensure that all details are correct and the installation process works as expected."
     Write-Log ""
     Write-Log "Would you like this script to test this printer installation from the JSON on this local machine? (y/n)" "WARNING"
@@ -444,6 +452,8 @@ function Setup--Azure-Printer{
         }
 
     Write-Log ""
+    Write-Log "Next we will automatically create the Intune Win32 app package for deploying the printer."
+    Write-Log ""
     Pause
     Write-Log ""
 
@@ -452,13 +462,11 @@ function Setup--Azure-Printer{
         # Tell the user where it is and how to import it into InTune
         # Create the detection script
         # Tell the user where it is and how to import it into InTune
-    Write-Log "Now we will create the Intune Win32 app package for deploying the printer."
     Make-InTuneWin -SourceFile "$GitRunnerScript" 
     $PrinterIntuneWinPath = $Global:intunewinpath
     Write-Log ""    
     Write-Log "The Intune Win32 app package has been created at: $PrinterIntuneWinPath"
     Write-Log ""    
-
     Write-Log "Next we will automatically create the install commands/scripts"
 
     Write-Log "" "INFO2"
@@ -504,11 +512,14 @@ function Setup--Azure-Printer{
         }
         
     Write-Log ""
-    Write-Log "Install command and detection script created."
+    Write-Log "Install command and detection script created!"
     Write-Log ""
+    Write-Log "Next we will manually create a Win32 application in InTune for this printer using the new .intunewin file, script, and install command."
+    Write-Log ""
+
     Pause
+    Write-Log "InTune Win32 Application creation instructions:" "WARNING"
     Write-Log ""           
-    Write-Log "We will next create a Win32 application in InTune for this printer using the new .intunewin file. Here are your instructions:"
     Write-Log ""    
     Write-Log " 1 - Navigate to Microsoft Endpoint Manager admin center > Devices > Windows > Windows apps"
     Write-Log "     - Alt url: https://intune.microsoft.com/#view/Microsoft_Intune_DeviceSettings/AppsWindowsMenu/~/windowsApps"
@@ -570,11 +581,16 @@ Function Setup--Azure-WindowsApp{
 
     # main 
 
-    Write-Log "To begin, we need to prepare the resources required to set up an application deployment via Intune."
+    Write-Log "To begin, we will prepare the data required to set up an app deployment via Intune."
     Write-Log ""
-    Write-Log "Application data is stored in one of two JSON files:"
-    Write-Log " - Public JSON: $PublicJSONpath"
-    Write-Log " - Private JSON: Accessible via your Azure Blob Storage container. We can determine this location later."
+    Write-Log "App data is stored in one of two JSON files:"
+    Write-Log ""
+    Write-Log " - Public JSON: "
+    Write-Log "     - Location:GitHub repository where this script is hosted."
+    Write-Log "     - Updates: Maintained by the community and updated periodically."
+    Write-Log " - Private JSON: "
+    Write-Log "     - Location: Your organization's Azure Blob Storage."
+    Write-Log "     - Updates: Managed by your organization for custom or proprietary apps."
 
     # User needs:
         # If application IS in the public or private JSON...
@@ -594,65 +610,98 @@ Function Setup--Azure-WindowsApp{
 
 
     Write-Log ""
-    Write-Log "REQUIRED RESOURCES:"
-    Write-Log ""
-    Write-Log "If application IS ALREADY in the public or private JSON..."
-    Write-Log "    1 - Application Name (that's it!!)"
-    Write-Log ""
-    Write-Log "If application IS NOT in the public or private JSON..."
-    Write-Log "    1 - Application Name"
-    Write-Log "    2 - Install Method"
-    Write-Log "        if Winget:"
-    Write-Log "            - Winget ID"
-    Write-Log "        if MSI-Online"
-    Write-Log "            - URL"
-    Write-Log "            - MSI name"
-    Write-Log "        if Custom_Script"
-    Write-Log "            - Script Path from Repo Root"
-    Write-Log "            - Custom Script Args (if any)"
-    Write-Log "    3 - PreRequisites (if any)"
-    Write-Log ""
-    Write-Log "Save these details, as you will need them shortly."
-    Write-Log ""
+    # Write-Log "REQUIRED RESOURCES:"
+    # Write-Log ""
+    # Write-Log "If application IS ALREADY in the public or private JSON..."
+    # Write-Log "    1 - Application Name (that's it!!)"
+    # Write-Log ""
+    # Write-Log "If application IS NOT in the public or private JSON..."
+    # Write-Log "    1 - Application Name"
+    # Write-Log "    2 - Install Method"
+    # Write-Log "        if Winget:"
+    # Write-Log "            - Winget ID"
+    # Write-Log "        if MSI-Online"
+    # Write-Log "            - URL"
+    # Write-Log "            - MSI name"
+    # Write-Log "        if Custom_Script"
+    # Write-Log "            - Script Path from Repo Root"
+    # Write-Log "            - Custom Script Args (if any)"
+    # Write-Log "    3 - PreRequisites (if any)"
+    # Write-Log ""
+    # Write-Log "Save these details, as you will need them shortly."
+    # Write-Log ""
 
-    Pause
+    # Pause
     Write-Log ""
-    Write-Log "Next we will see what applications are already available in the public and private JSON files."
+    # Write-Log "Next we will see what applications are already available for us to put into InTune." 
+    Write-Log "We can first see what apps are already available in the public and private JSON files." 
     Write-Log ""
-
-    Pause
+    Write-Log "Choose an app from the selection or you can add your own!"
+    Write-Log ""
+    Write-Log "We will then make the InTune entry based off of the selected data in the JSON."
+    Write-Log ""
+    Write-Log "Would you like to select an existing application from the JSON files? (y/n)" "WARNING"
+    $Answer = Read-Host "y/n"
+    Write-Log ""
     $TargetApp = $null
-    $TargetApp = Select-ApplicationFromJSON
+    if ($Answer -ne "n") {
 
-    Write-Log "" 
 
-    If ($AppNameToFind -eq "" -or $AppNameToFind -eq $null) {
-        Write-Log "Please enter the name of the application (as you want it to appear in the JSON) to set up for Intune deployment:" "WARNING"
+        $DialogueSelection = "B"
+        $TargetApp = Select-ApplicationFromJSON
+        $DialogueSelection = "A" # reset for next use
+
+        Write-Log "" 
+
+        # If ($AppNameToFind -eq "" -or $AppNameToFind -eq $null) {
+        #     Write-Log "Please enter the name of the application (as you want it to appear in the JSON) to set up for Intune deployment:" "WARNING"
+        #     $AppNameToFind = Read-Host "Application Name"
+
+        #     While ([string]::IsNullOrWhiteSpace($AppNameToFind) -or $AppNameToFind -eq "exit") {
+        #         Write-Log "No application name provided. Please enter an application name." "ERROR"
+        #         $AppNameToFind = Read-Host "Application Name"
+        #     }
+        # }
+
+
+    }
+    # Write-Log "If you see the app you want already there we will make the InTune entry based off of the data in the JSON." 
+    # Write-Log ""
+    # Write-Log "Otherwise if you do not see the app you want in the selection for the JSONs, you can exit the provided the selection to add it yourself."
+    # Write-Log ""
+    # Pause
+
+
+    #     $TargetApp = Select-ApplicationFromJSON -AppNameToFind $AppNameToFind
+    #     Write-Log ""
+
+    #     #Write-Log "Application Name set to: $AppNameToFind"
+    # } else {
+    #     Write-Log "Using provided application name: $AppNameToFind"
+    # }
+
+    # Write-Log "" 
+
+
+    if ($TargetApp -eq $null) {
+        
+
+        
+        # Write-Log "No pre-existing application entry for $AppNameToFind was selected from the JSON files. We will move forward with doing a new custom application entry in the private JSON."
+        
+        Write-Log "No pre-existing app selected."
+        Write-Log ""
+        Write-Log "We will now set up a new custom application entry in the private JSON."
+        Write-Log ""
+        Write-Log "Please enter the name of the application (as it will appear in the JSON):" "WARNING"
         $AppNameToFind = Read-Host "Application Name"
+
         While ([string]::IsNullOrWhiteSpace($AppNameToFind) -or $AppNameToFind -eq "exit") {
             Write-Log "No application name provided. Please enter an application name." "ERROR"
             $AppNameToFind = Read-Host "Application Name"
         }
 
-        $TargetApp = Select-ApplicationFromJSON -AppNameToFind $AppNameToFind
-        Write-Log ""
-
-        #Write-Log "Application Name set to: $AppNameToFind"
-    } else {
-        Write-Log "Using provided application name: $AppNameToFind"
-    }
-
-    Write-Log "" 
-
-
-    if ($TargetApp -eq $null) {
-        
-        
-        Write-Log "No pre-existing application entry for $AppNameToFind was selected from the JSON files. We will move forward with doing a new custom application entry in the private JSON."
-        
-        Write-Log ""
-
-        Pause
+        # Pause
 
         Write-Log ""
 
@@ -677,53 +726,32 @@ Function Setup--Azure-WindowsApp{
         Write-Log ""
         Write-Log "Click on the JSON and select to ""edit"""
         Write-Log ""
-        Write-Log "Here is an example of what the JSON should look like:"
+
+        Write-Log "REQUIRED RESOURCES:"
+
+        Write-Log "    1 - Application Name"
+        Write-Log "    2 - Install Method"
+        Write-Log "        if Winget:"
+        Write-Log "            - Winget ID"
+        Write-Log "        if MSI-Online"
+        Write-Log "            - URL"
+        Write-Log "            - MSI name"
+        Write-Log "        if Custom_Script"
+        Write-Log "            - Script Path from Repo Root"
+        Write-Log "            - Custom Script Args (if any)"
+        Write-Log "    3 - PreRequisites (if any)"
+        Write-Log ""
+        Write-Log "Here is an example of what the format of the JSON:"
         Write-Log ""
         Write-Host $ExampleAppJSON
         Write-Log ""
-        Write-Log "Add your new application details to the JSON now, following the existing format within. Save when you are finished."
+        Write-Log "Add your new application details to the JSON now, following the above format. Save when you are finished." "WARNING"
         Write-Log ""
-
-        Pause
-
-        # Suggest testing the JSON with the local install script
-        Write-Log "After updating the Application Data JSON, it is highly recommended to test the installation of the new application on a local machine before proceeding with Intune deployment."
-        Write-Log "This will help ensure that all details are correct and the installation process works as expected."
-        Write-Log ""
-        Write-Log "Would you like this script to test this application installation from the JSON on this local machine? (y/n)" "WARNING"
-        $Answer = Read-Host "y/n"
-        Write-Log ""
-
-
-            if ($answer -eq "y"){
-
-                Write-Log "Before proceeding, please make sure this application is not already installed locally on this machine. If it is, please uninstall it first." "WARNING"
-                Pause
-                Write-Log "Proceeding with local installation test..."
-
-                & Install--Local-Application -ApplicationName $ApplicationName
-                if($LASTEXITCODE -ne 0){
-                    Write-Log "Local application installation test failed with exit code: $LASTEXITCODE" "ERROR"
-                    Write-Log "Please resolve any issues before proceeding with Intune deployment."
-                    Exit $LASTEXITCODE
-                } else {
-                    Write-Log "Local application installation test succeeded! This configuration for the JSON works!" "SUCCESS"
-                }   
-
-            } else {
-
-                Write-Log "Skipping local installation test. Proceeding with Intune deployment setup."
-
-            }
-
+        Write-Log "When you are ready we will check if you updated either JSON with the new application..."
         Write-Log ""
         Pause
-        Write-Log ""
+        Write-Log "" "INFO2"
 
-        Write-Log "Checking if you updated either JSON with the new application..."
-        Write-Log ""
-
-        Pause
         $TargetApp = Select-ApplicationFromJSON -AppNameToFind $AppNameToFind
 
         if ($TargetApp -eq $null){
@@ -731,22 +759,72 @@ Function Setup--Azure-WindowsApp{
             Write-Log "The application '$AppNameToFind' was still not found in either JSON. Please ensure you have added it correctly and re-run this setup process." "ERROR"
             Exit 1
 
+        } else {
+            Write-Log "The application '$AppNameToFind' was successfully found in the JSON after your update!" "SUCCESS"
         }
-        Pause
-    
+
+        Write-Log ""
+
+        # Suggest testing the JSON with the local install script
+        Write-Log "After updating the Application Data JSON, it is highly recommended to test the installation of the new application on a local machine before proceeding with Intune deployment."
+        Write-Log ""
+        Write-Log "This will help ensure that all details are correct and the installation process works as expected."
+        Write-Log ""
+
+        #Pause
+
+
     }
 
+    Write-Log "Application confirmed: $ApplicationName"
+    Write-Log ""
 
-    Write-Log "Now we will create the Intune Win32 app package for deploying the application."
+
+
+    Write-Log "Would you like this script to test this application installation from the JSON on this local machine? (y/n)" "WARNING"
+    $Answer = Read-Host "y/n"
+    Write-Log ""
+
+
+        if ($answer -eq "y"){
+
+            Write-Log "Before proceeding, please make sure this application is not already installed locally on this machine. If it is, please uninstall it first." "WARNING"
+            Pause
+            Write-Log "Proceeding with local installation test for $AppNameToFind..."
+
+            & Install--Local-Application -ApplicationName $AppNameToFind
+
+            if($LASTEXITCODE -ne 0){
+                Write-Log "Local application installation test failed with exit code: $LASTEXITCODE" "ERROR"
+                Write-Log "Please resolve any issues before proceeding with Intune deployment."
+                Exit $LASTEXITCODE
+            } else {
+                Write-Log "Local application installation test succeeded! This configuration for the JSON works!" "SUCCESS"
+            }   
+
+        } else {
+
+            Write-Log "Skipping local installation test. Proceeding with Intune deployment setup."
+
+        }
+
+    Write-Log ""
+    Write-Log "Next we will automatically create the Win32 package for deploying the app from InTune."
+    Write-Log ""
+
+    Pause
+
     Make-InTuneWin -SourceFile "$GitRunnerScript" 
     $ApplicationIntuneWinPath = $Global:intunewinpath
     Write-Log ""    
     Write-Log "The Intune Win32 app package has been created at: $ApplicationIntuneWinPath"
     Write-Log ""    
 
-    Write-Log "Next we will automatically create the install commands/scripts"
+    Write-Log "Next we will automatically create the install commands/scripts."
 
     Write-Log ""    
+    Pause
+    Write-Log ""   
 
 
 
@@ -787,7 +865,7 @@ Function Setup--Azure-WindowsApp{
             DetectMethod = "WinGet"
         }
 
-        Write-log "Detect method set as WinGet"
+        Write-log "Detect method set as WinGet" "INFO2"
 
     } elseif ($InstallMethod -eq "MSI-Private-AzureBlob" -or $DetectMethod -eq "MSI_Registry") {
 
@@ -802,7 +880,7 @@ Function Setup--Azure-WindowsApp{
             DetectMethod = "MSI_Registry"
         }
 
-        Write-Log "Detect method set as MSI_Registry"
+        Write-Log "Detect method set as MSI_Registry" "INFO2"
 
     } else {
 
@@ -886,17 +964,19 @@ Function Setup--Azure-WindowsApp{
     
 
     Write-Log ""
-    Write-Log "Install command and detection script created."
+    Write-Log "Install command and detection script created!"
     Write-Log ""
+    Write-Log "Next, we will manually create a Win32 app in InTune using the new .intunewin file, command, and script."
+    Write-Log ""
+
     Pause
 
-
-
+    Write-Log ""
+    Write-Log "InTune Win32 Application creation instructions:" "WARNING"
     Write-Log ""           
-    Write-Log "We will next create a Win32 application in InTune for this app using the new .intunewin file. Here are your instructions:"
     Write-Log ""    
     Write-Log " 1 - Navigate to Microsoft Endpoint Manager admin center > Devices > Windows > Windows apps"
-    Write-Log "     - Alt url: https://intune.microsoft.com/#view/Microsoft_Intune_DeviceSettings/AppsWindowsMenu/~/windowsApps"
+    Write-Log "     - Direct url: https://intune.microsoft.com/#view/Microsoft_Intune_DeviceSettings/AppsWindowsMenu/~/windowsApps"
     Write-Log "     - + Create > App type: Windows app (Win32)"
     Write-Log ""   
     Write-Log " 2 - Upload the .intunewin file located here: $ApplicationIntuneWinPath"
@@ -1198,63 +1278,36 @@ Function Install--Local-Application{
     )
 
 
-    Function ParseJSON {
+    if ($ApplicationName -ne $null -or $ApplicationName -ne ""){
 
-        param(
-            [string]$JSONpath
-        )
+        Write-Log "Application name provided as parameter: $ApplicationName" "INFO2"
 
-        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" "INFO2"
-        
-        if (Test-Path $JSONpath) {Write-Log "Local JSON found. Attempting to get content." "INFO2"} else { Write-Log "Local JSON not found" "ERROR" "INFO2"; throw "Local JSON not found" }
-
-        try {
-            $jsonText = Get-Content -LiteralPath $JSONpath -Raw -Encoding UTF8
-            $jsonData = $jsonText | ConvertFrom-Json -ErrorAction Stop
-        } catch {
-            Write-Log "ConvertFrom-Json failed: $($_.Exception.Message)" "ERROR"
-            Throw $_
-        }
+        $TargetApp = Select-ApplicationFromJSON -AppNameToFind $ApplicationName
 
 
+    }else{
+
+        Write-Log "To begin we will access the ApplicationData.json files, both public (local repo) and private (Azure Blob) to show you the available applications."
         Write-Log ""
 
-        # Can comment out
-        # Write-Log "Here are all the applications we found from the JSON:"
-        # Write-Log ""
-        # $list = $jsonData.applications.ApplicationName 
-        # Foreach ($item in $list) {
-        #     Write-Log "$item"
-        # }
-        # Write-Log "" 
+        Pause
 
-        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END" "INFO2"
-        Write-Log "" "INFO2"
 
-        return $jsonData
-
+        $TargetApp = Select-ApplicationFromJSON
     }
-
-
-    Write-Log "To begin we will access the ApplicationData.json files, both public (local repo) and private (Azure Blob) to show you the available applications."
-    Write-Log ""
-
-    Pause
-
-    $TargetApp = Select-ApplicationFromJSON
 
     if ($TargetApp -eq $null) {
         Write-Log "No application selected. Exiting." "ERROR"
         Exit 1
     } else {
         $AppNameToFind = $TargetApp
-        Write-Log "Application selected for installation: $AppNameToFind"
+        Write-Log "Valid application selected for installation: $AppNameToFind"
     }
     
     Write-Log "Installation of requested application will now commence..."
     Write-Log "" 
 
-    Pause
+    #Pause
 
     & $JSONAppInstaller_ScriptPath -TargetAppName $AppNameToFind
 
@@ -1373,11 +1426,26 @@ function Select-ApplicationFromJSON {
         if ($AppNameToFind -ne $null) {
 
             Write-Log "Application name provided as parameter: $AppNameToFind"
+
         } else {
-            Write-Log "Please enter the name of the application you wish to select for installation from the above lists. If you wish to exit this selection, type 'exit'." "WARNING"
+
+            if ($DialogueSelection -eq "B"){
+
+                Write-Log "Enter the name of an app from the above list to add to InTune." "WARNING"
+                Write-Log " - NOTE: If you DO NOT SEE the app you want, type 'exit' and you can add your own." "WARNING"
+            
+            } else {
+
+                Write-Log "Enter the name of an app from the list above for installation." "WARNING"
+
+            }
+            
+            
             $AppNameToFind = Read-Host "Application Name"
             if ($AppNameToFind -eq 'exit') {
-            Return $null
+
+                Return $null
+
             }
         }
 
@@ -1395,18 +1463,20 @@ function Select-ApplicationFromJSON {
         $Global:AppNameToFind = $AppNameToFind
 
         ### Search for the target application in the private JSON data
-        Write-Log "" 
+        Write-Log "" "INFO2"
 
         if ($list1 -contains $AppNameToFind) {
 
-            Write-Log "Confirmed valid application name: $AppNameToFind"
+            Write-Log "Confirmed valid application name: $AppNameToFind" "INFO2"
 
 
-            Write-Log "Found $AppNameToFind in public JSON data."
+            Write-Log "Found $AppNameToFind in public JSON data." "INFO2"
             $AppData = $PublicJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
 
             Write-log "Application data for $AppNameToFind retrieved from public JSON:" "INFO2"
-            Write-Log ($AppData | ConvertTo-Json -Depth 10)
+            $Output = ($AppData | ConvertTo-Json -Depth 10)
+            
+            Write-Log $Output "INFO2"
 
             # Record the needed data as variables for use in other functions
             # Convert the JSON values into local variables for access later
@@ -1489,7 +1559,11 @@ Function ParseJSON {
 
     Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" "INFO2"
     
-    if (Test-Path $JSONpath) {Write-Log "Local JSON found. Attempting to get content." "INFO2"} else { Write-Log "Local JSON not found" "ERROR" "INFO2"; throw "Local JSON not found" }
+    if (Test-Path $JSONpath) {
+        Write-Log "Local JSON found. Attempting to get content." "INFO2"
+    } else { 
+        Write-Log "Local JSON not found" "ERROR" "INFO2"; throw "Local JSON not found" 
+    }
 
     try {
         $jsonText = Get-Content -LiteralPath $JSONpath -Raw -Encoding UTF8
@@ -1522,20 +1596,25 @@ Function ParseJSON {
 ########## 
 
 # Setup 
-
-
-Write-Log "SCRIPT: $ThisFileName | START"
+# Write-Log "SCRIPT: $ThisFileName | START" "INFO2"
+# Write-Log "NOTE: Progess feed and non required info will be in white. Feel free to ignore these lines." "INFO2"
+# Write-Log "NOTE: Instructions and required info will be in Cyan. Please note these lines."
+# Write-Log ""
 Write-Log ""
 Write-Log "========================"
 Write-Log "===== Set Up Asset ====="
 Write-Log "========================"
 Write-Log ""
-Write-Log "Welcome! This script can:"
+Write-Log "Welcome! This script can be used to:"
 Write-Log " - Install a printer/app on your local machine"
-Write-Log " - Guide and help automate the process of making a printer/app available for deployment via Azure/Intune."
+Write-Log " - Make a printer/app available for deployment via Azure/Intune."
+Write-Log ""
 Write-Log ""
 Write-Log "When you are ready we will begin by checking pre-requisites..."
 Write-Log ""
+# Write-Log "NOTE: Instructions and required info will be in Cyan. Please note these lines."
+# Write-Log "NOTE: Progess feed and non required info will be in white. Feel free to ignore these lines." "INFO2"
+
 Pause
 Write-Log "" "INFO2"
 
