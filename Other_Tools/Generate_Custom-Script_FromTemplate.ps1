@@ -1,8 +1,16 @@
-# Custom script maker
+<#
 
-# Run Generate_Install-Command.ps1 to call this script
+.SYNOPSIS
+Custom script maker, makes scripts from templates
 
-# It can technically create custom scripts from any template script, but it's primarily designed to create custom Git-Runner scripts. Almost every command can be passed as a parameter to the Git-Runner script.
+
+.DESCRIPTION
+Run Generate_Install-Command.ps1 to call this script
+It can technically create custom scripts from any template script, but it's primarily designed to create custom Git-Runner scripts. Almost every command can be passed as a parameter to the Git-Runner script.
+
+#>
+
+
 
 param(
     [string]$RepoNickName,
@@ -75,7 +83,7 @@ $NewCode      = @"
 # --- injected code end ---
 "@
 
-} elseif( $TemplateScript -eq "PrinterDetectionScript"){
+} elseif( $TemplateScript -eq "PrinterDetectionScript"){ # If you want to add more templates, copy this block and modify accordingly
 
     $EndScriptNameTemplate = "Detect-Printer_Custom"
     Write-Log "this functionality is not yet implemented" "ERROR"

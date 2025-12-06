@@ -1,21 +1,68 @@
 <#
 
-Based on a script by Ben Whitmore
+.Synopsis
+    Installs an IP Printer using supplied parameters or by retrieving printer data from a JSON file stored in Azure Blob Storage.
 
-NOTES: 
-# Download methods
-# Install methods
+.DESCRIPTION
+    This script installs an IP Printer on a Windows machine. It can either use parameters supplied directly to the script or retrieve printer configuration data from a JSON file stored in Azure Blob Storage. The script handles downloading the necessary driver files, staging the driver, creating the printer port, and installing the printer driver.
 
-supply just the name would be best
+    This script is called by the Setup.ps1 script when setting up a local printer or a new printer deployment for InTune.
 
-then the JSON tells the script what files are needed
+    .PARAMETER PrinterName
+    The name of the printer to be installed.
 
-OR
+    The only mandatory parameter is PrinterName. 
+    If other parameters are not supplied, the script will attempt to retrieve them from the JSON file.
 
-yes to the JSON
-BUT
-the script will download everything as a last resort instead of just individual files, perhaps as a lost resort
+    Otherwise sufficient parameters must be supplied to successfully install the printer.
 
+    If the registry is not set up to supply the needed Azure Blob Storage information, the following parameters must be supplied:
+
+        .PARAMETER PrinterData_JSON_BlobName
+            The name of the JSON blob containing printer data.
+        .PARAMETER PrinterData_JSON_ContainerName
+            The name of the container where the JSON blob is stored.
+
+    Then either:
+
+        Scenario A:
+        .PARAMETER BlobSASurl
+        The full SAS URL for accessing the JSON blob.
+
+        or
+
+        Scenario B:
+        .PARAMETER StorageAccountName
+        The name of the Azure Storage account.
+        .PARAMETER SasToken
+        The SAS token for accessing the Azure Blob Storage.
+
+
+
+    However, if you want to not use Azure Blob to provide all necessary printer information directly, you must supply the following parameters:
+
+        .PARAMETER PortName
+            The name of the printer port to be created.
+        .PARAMETER PrinterIP
+            The IP address of the printer.
+        .PARAMETER DriverName
+            The name of the printer driver to be used.
+        .PARAMETER INFFile  
+            The INF file name for the printer driver.
+        .PARAMETER DriverZip    
+            The full path to the driver zip file in Azure Blob Storage.
+        .PARAMETER WorkingDirectory
+            The working directory for files and logs.
+
+.EXAMPLE
+    .\General_IP-Printer_Installer.ps1 -PrinterName "OfficePrinter01" -WorkingDirectory "C:\ProgramData\COMPANY_NAME"
+
+        Installs the printer named "OfficePrinter01" using printer data retrieved from the JSON file in Azure Blob Storage. The working directory for files and logs is set to "C:\ProgramData\COMPANY_NAME".
+
+    .\General_IP-Printer_Installer.ps1 -PrinterName "OfficePrinter01" -WorkingDirectory "C:\ProgramData\COMPANY_NAME" `
+    -PortName "IP_192.168.1.100" -PrinterIP "192.168.1.100" -DriverName "HP Universal Printing PCL 6" -INFFile "hpcu345u.inf -DriverZip "drivers/hp/hp_universal_printing_pcl6.zip"
+
+        Installs the printer named "OfficePrinter01" using the supplied parameters for port name, printer IP, driver name, INF file, and driver zip file. The working directory for files and logs is set to "C:\ProgramData\COMPANY_NAME".
 
 #>
 
@@ -520,6 +567,8 @@ $INFFilePath = $LocalDestinationPath
 #############################
 
 # Everything above here is working as intended in my limited test scenario
+
+# Install and print driver staging logic below originally based on a script by Ben Whitmore
 
 #############################
 

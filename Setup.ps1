@@ -1,6 +1,29 @@
-# The Master Helper
+<#
 
-# Write remediation / detection
+.SYNOPSIS
+    Setup script for Admin Script Suite. 
+
+.DESCRIPTION
+    This script is the main point of contact for the technician users of AdminScriptSuite. 
+    Uses Azure Blob Storage based JSON files to set up printer and application deployments via Intune.
+    It can:
+    - Set up printer/app deployments via Intune (from Azure Blob Storage JSON)
+    - Install a local printer/app (from Azure Blob Storage JSON)
+    - Add printers and applications to the Azure Blob Storage JSON files
+
+    PRE-REQUISITES:
+    - Ensure you have the required Azure Blob Storage infrastructure set up:
+        Documentation URL: will add soon
+    - Ensure you have the required registry values set up for accessing the Azure Blob Storage. Recommend using Remediation Scripts for this.
+        Documentation URL: will add soon
+    
+    DIRECTIONS FOR USE:
+    - Run this script in an elevated PowerShell session (Run as Administrator) or run Setup_RUNNER.bat as admin
+    - Follow the on-screen prompts to perform the desired setup tasks.
+
+
+
+#>
 
 
 
