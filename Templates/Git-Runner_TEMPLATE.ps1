@@ -158,6 +158,7 @@ $LogRoot = "$WorkingDirectory\Logs\Git_Logs"
 #$LogPath = "$LogRoot\$RepoNickName._Git_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $ThisFileName = $MyInvocation.MyCommand.Name
 
+
 # Evaluate vars based on whether this run is just an update only
 if(!($UpdateLocalRepoOnly -eq $true)) {
     
@@ -172,8 +173,11 @@ if(!($UpdateLocalRepoOnly -eq $true)) {
 
 }
 
+# Security Manager script path
+$SecurityManagerScriptPath = "$WorkingDirectory\$RepoNickName\Other_Tools\Security_Manager.ps1"
 
-
+# Registry change script path
+$RegistryChangeScriptPath = "$WorkingDirectory\$RepoNickName\Configurators\Configure-Registry.ps1"
 
 ###############
 ## Functions ##
@@ -420,6 +424,7 @@ if ($UpdateLocalRepoOnly -eq $True){
         'LogRoot' = $LogRoot
         'LogPath' = $LogPath
         'LocalRepoPath' = $LocalRepoPath
+        'SecurityManagerScriptPath' = $SecurityManagerScriptPath
     }
 
 } else {
@@ -430,6 +435,7 @@ if ($UpdateLocalRepoOnly -eq $True){
         'LogPath' = $LogPath
         'ScriptPath' = $ScriptPath
         'LocalRepoPath' = $LocalRepoPath
+        'SecurityManagerScriptPath' = $SecurityManagerScriptPath
     }
 
 }
@@ -452,6 +458,7 @@ Write-Log "ScriptParams: $ScriptParams"
 Write-Log "UpdateLocalRepoOnly: $UpdateLocalRepoOnly"
 Write-Log "++++++++++++++++++++++"
 
+<# ## GET RID OF THIS NEXT WEEKEND AFTER TESTING
 # Check if git is installed
 Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
@@ -544,6 +551,42 @@ if ($DoClone -eq $true){
     
     #Exit 1
 }
+#> ## GET RID OF THIS NEXT WEEKEND AFTER TESTING
+
+# Create the temp directory if it doesn't exist
+if (!(Test-Path "$WorkingDirectory\TEMP")){
+    Write-Log "Creating directory: $WorkingDirectory\TEMP"
+    New-Item -Path "$WorkingDirectory\TEMP" -ItemType "Directory" -Force
+}
+
+# Create the working registry path if it doesn't exist
+try{
+
+    Write-Log "Ensuring working registry path exists: HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite"
+    & $RegistryChangeScriptPath -WorkingDirectory $WorkingDirectory -KeyOnly $true -KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite"
+    if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+} catch {
+
+    Write-Log "Failed to ensure working registry path exists: $_" "ERROR"
+    Exit 1
+
+}
+
+# Run the Security Manager to ensure strict ACLs on key folders
+try{
+
+    Write-Log "Running Security Manager to ensure strict ACLs on key folders..."
+    & $SecurityManagerScriptPath
+    if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
+
+} catch {
+
+    Write-Log "Failed to run Security Manager: $_" "ERROR"
+    Exit 1
+
+}
+
 
 # Exit script if this was update only
 if($UpdateLocalRepoOnly -eq $true) {

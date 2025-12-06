@@ -20,7 +20,9 @@ Param(
     [string]$Value, # Change to ValueData
     
     [Parameter(Mandatory=$true)]
-    [string]$WorkingDirectory
+    [string]$WorkingDirectory,
+
+    [boolean]$KeyOnly = $false # Used to create an empty key without setting a value
 
     # [ValidateSet('Auto','Reg32','Reg64')]
     # [string]$RegistryView = 'Auto'
@@ -317,18 +319,25 @@ function Reg-Modify {
             Write-Log "Key does not exist. Attempting to create."
             New-Item -Path $KeyPath -Force | Out-Null
             Write-Log "Key created."
+        } else {
+            Write-Log "Key already exists."
         }
         
-        # Set the value
-        Write-Log "Attempting to set the following:"
-        Write-Log "KeyPath: $KeyPath"
-        Write-Log "ValueName: $ValueName"
-        Write-Log "Value: $Value"       
-        Write-Log "Type: $ValueType"
+        if ($KeyOnly -eq $false) {
 
-        Set-ItemProperty -Path $KeyPath -Name $ValueName -Value $Value -Type $ValueType
+            # Set the value
+            Write-Log "Attempting to set the following:"
+            Write-Log "KeyPath: $KeyPath"
+            Write-Log "ValueName: $ValueName"
+            Write-Log "Value: $Value"       
+            Write-Log "Type: $ValueType"
 
-        Write-Log "Successfully set $ValueName in $KeyPath" "SUCCESS"
+            Set-ItemProperty -Path $KeyPath -Name $ValueName -Value $Value -Type $ValueType
+
+            Write-Log "Successfully set $ValueName in $KeyPath" "SUCCESS"
+
+        } 
+
         Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
         return $true
@@ -708,13 +717,13 @@ if ($function -ne "Read-All" -and [string]::IsNullOrWhiteSpace($KeyPath)) {
     Exit 1
 }
 
-if ($Function -eq "Modify") {
+if ($Function -eq "Modify" -and $KeyOnly -eq $false) {
     if ([string]::IsNullOrWhiteSpace($Value)) {
-        Write-Log "SCRIPT: $ThisFileName | END | Value parameter is required when Function is 'Modify'" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | Value parameter is required when Function is 'Modify' and KeyOnly is false" "ERROR"
         Exit 1
     }
     if ([string]::IsNullOrWhiteSpace($ValueType)) {
-        Write-Log "SCRIPT: $ThisFileName | END | ValueType parameter is required when Function is 'Modify'" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | ValueType parameter is required when Function is 'Modify' and KeyOnly is false" "ERROR"
         Exit 1
     }
 }
@@ -853,6 +862,11 @@ if ($function -eq "Modify" -or $function -eq "Backup"){
             if($FinalValue -eq $Value){
 
                 Write-Log "SCRIPT: $ThisFileName | END | Confirmed local registry value is now as desired." "SUCCESS"
+                Exit 0
+
+            }elseif ($FinalValue -eq "Path found only" -and $KeyOnly -eq $true){
+
+                Write-Log "SCRIPT: $ThisFileName | END | Confirmed local registry key path exists as desired." "SUCCESS"
                 Exit 0
 
             }else{

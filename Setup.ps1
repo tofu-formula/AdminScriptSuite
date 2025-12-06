@@ -22,7 +22,12 @@
     - Follow the on-screen prompts to perform the desired setup tasks.
 
 
+.NOTES
 
+
+    TODO: Add a warning if script user != logged in user and script/user is not elevated (WinGet does not like this scenario)
+
+    
 #>
 
 

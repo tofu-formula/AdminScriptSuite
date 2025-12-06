@@ -7,11 +7,11 @@
 # May want to consider logging turn off for performance reasons, otherwise this will eat up a lot of space on all of our end machines.
 
 # Security manager can be modified in the future to perform other actions, such as checking for specfic certs
-$WorkingDirectory = (Split-Path $PSScriptRoot -Parent)
+$WorkingDir = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $ThisFileName = $MyInvocation.MyCommand.Name
-$LogRoot = "$WorkingDirectory\Logs\Security_Logs"
+$LogRoot = "$WorkingDir\Logs\Security_Logs"
 $LogPath = "$LogRoot\$ThisFileName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-$RepoRoot = $PSScriptRoot
+$RepoRoot = (Split-Path $PSScriptRoot -Parent)
 
 # Folders to hit:
 # - Working Directory
@@ -22,9 +22,16 @@ $RepoRoot = $PSScriptRoot
 $Folders = @(
     "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs",
     "$RepoRoot",
-    "$WorkingDirectory\TEMP",
-    "$WorkingDirectory\LOGS",
+    "$WorkingDir\TEMP",
+    "$WorkingDir\LOGS"
 )
+
+# REGISTRY KEYS to check/fix
+$RegistryKeys = @(
+    'HKLM:\SOFTWARE\MyLockedKey',
+    'HKLM:\SYSTEM\CurrentControlSet\Services\MyService'
+)
+
 
 #################
 ### Functions ###
@@ -51,8 +58,8 @@ function Write-Log {
         "WARNING" { Write-Host $logEntry -ForegroundColor Yellow }
         "SUCCESS" { Write-Host $logEntry -ForegroundColor Green }
         "DRYRUN"  { Write-Host $logEntry -ForegroundColor Cyan }
-        "INFO"    { Write-Host $logEntry -ForegroundColor Cyan }
-        "INFO2"    { Write-Host $logEntry }
+        "INFO"    { Write-Host $logEntry -ForegroundColor White }
+
 
         default   { Write-Host $logEntry }
     }
@@ -76,7 +83,7 @@ function Set-StrictAcl {
     )
 
     if (-not (Test-Path -LiteralPath $Path)) {
-        Write-Warning "Path not found: $Path"
+        Write-Log "Path not found: $Path" "WARNING"
         return
     }
 
@@ -116,7 +123,7 @@ function Set-StrictAcl {
 
     # Apply ACL to folder
     Set-Acl -LiteralPath $Path -AclObject $acl
-    Write-Host "[$Path] permissions reset to SYSTEM + Administrators (FullControl only)."
+    Write-Log "[$Path] permissions reset to SYSTEM + Administrators (FullControl only)."
 }
 
 # --- Helper: check if ACL is already in the desired state ---
@@ -127,7 +134,7 @@ function Test-StrictAcl {
     )
 
     if (-not (Test-Path -LiteralPath $Path)) {
-        Write-Warning "Path not found: $Path"
+        Write-Log "Path not found: $Path" "WARNING"
         return $false
     }
 
@@ -171,19 +178,184 @@ function Test-StrictAcl {
 
     # Require at least one rule for SYSTEM and one for Administrators
     return ($hasSystem -and $hasAdmins)
+
 }
 
+function Test-StrictRegAcl {
+    param(
+        [Parameter(Mandatory)]
+        [string]$KeyPath
+    )
+
+    if (-not (Test-Path -LiteralPath $KeyPath)) {
+        Write-Log "Registry key not found: $KeyPath" "WARNING"
+        return $false
+    }
+
+    $acl = Get-Acl -LiteralPath $KeyPath
+
+    # require protected ACL (no inheritance from parent key)
+    if (-not $acl.AreAccessRulesProtected) {
+        return $false
+    }
+
+    $hasSystem = $false
+    $hasAdmins = $false
+
+    $fc = [System.Security.AccessControl.RegistryRights]::FullControl
+    $ci = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit
+
+    foreach ($rule in $acl.Access) {
+        $sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+        # Only SYSTEM or Administrators allowed
+        if ($sid -notin $allowedSids) { return $false }
+
+        # Must be Allow FullControl
+        if ($rule.AccessControlType -ne 'Allow') { return $false }
+        if (($rule.RegistryRights -band $fc) -ne $fc) { return $false }
+
+        # We set ContainerInherit for child keys; require it
+        if (($rule.InheritanceFlags -band $ci) -eq 0) {
+            return $false
+        }
+
+        if ($sid -eq $sidSystem.Value) { $hasSystem = $true }
+        if ($sid -eq $sidAdmins.Value) { $hasAdmins = $true }
+    }
+
+    return ($hasSystem -and $hasAdmins)
+}
+
+function Set-StrictRegAcl {
+    param(
+        [Parameter(Mandatory)]
+        [string]$KeyPath
+    )
+
+    if (-not (Test-Path -LiteralPath $KeyPath)) {
+        Write-Log "Registry key not found: $KeyPath" "WARNING"
+        return
+    }
+
+    $regSec = New-Object System.Security.AccessControl.RegistrySecurity
+
+    # disable inheritance and remove inherited rules
+    $regSec.SetAccessRuleProtection($true, $false)
+
+    $inheritFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit  # child keys
+    $propFlags    = [System.Security.AccessControl.PropagationFlags]::None
+    $accessType   = [System.Security.AccessControl.AccessControlType]::Allow
+    $fc           = [System.Security.AccessControl.RegistryRights]::FullControl
+
+    $ruleSystem = New-Object System.Security.AccessControl.RegistryAccessRule(
+        $sidSystem,
+        $fc,
+        $inheritFlags,
+        $propFlags,
+        $accessType
+    )
+    $regSec.AddAccessRule($ruleSystem) | Out-Null
+
+    $ruleAdmins = New-Object System.Security.AccessControl.RegistryAccessRule(
+        $sidAdmins,
+        $fc,
+        $inheritFlags,
+        $propFlags,
+        $accessType
+    )
+    $regSec.AddAccessRule($ruleAdmins) | Out-Null
+
+    $key = Get-Item -LiteralPath $KeyPath
+    $key.SetAccessControl($regSec)
+
+    Write-Log "[$KeyPath] registry ACL reset to SYSTEM + Administrators only."
+}
 
 
 ## MAIN ##
 
+Write-Log "SCRIPT: $ThisFileName | START | Security Manager initiated."
 
 foreach ($folder in $Folders) {
-    Write-Host "Checking $folder ..."
-    if (Test-StrictAcl -Path $folder) {
-        Write-Host "  ACL already correct. No change."
+    Write-Log "Checking folder: $folder ..."
+
+    if (-not (Test-Path -LiteralPath $folder)) {
+
+            Write-Log "Folder not found: $folder" "WARNING"
+
+            #Exit 1
+
     } else {
-        Write-Host "  ACL not strict. Fixing..."
-        Set-StrictAcl -Path $folder
+
+        Write-Log "Folder exists: $folder"
+
+        if (Test-StrictAcl -Path $folder) {
+
+            Write-Log "ACL already correct. No change."
+
+        } else {
+
+            Write-Log "ACL not strict. Fixing..."
+
+            Set-StrictAcl -Path $folder
+
+            if (Test-StrictAcl -Path $folder) {
+
+                Write-Log "ACL fixed successfully." "SUCCESS"
+
+            } else {
+
+                Write-Log "Failed to fix ACL!" "ERROR"
+
+                Exit 1
+
+            }
+
+        }
+
     }
+
 }
+
+foreach ($regKey in $RegistryKeys) {
+    Write-Log "Checking registry key $regKey ..."
+
+    if (-not (Test-Path -LiteralPath $regKey)) {
+
+            Write-Log "Registry key not found: $regKey" "WARNING"
+
+    } else {
+
+        Write-Log "Registry key exists: $regKey"
+
+        if (Test-StrictRegAcl -KeyPath $regKey) {
+
+            Write-Log "Registry ACL already correct."
+
+        } else {
+
+            Write-Log "Registry ACL not strict. Fixing..."
+            Set-StrictRegAcl -KeyPath $regKey
+
+            if (Test-StrictRegAcl -KeyPath $regKey) {
+
+                Write-Log "Registry ACL fixed successfully." "SUCCESS"
+
+            } else {
+
+                Write-Log "Failed to fix registry ACL!" "ERROR"
+
+                Exit 1
+
+            }
+
+        }
+
+    }
+
+}
+
+# Return success
+Write-Log "SCRIPT: $ThisFileName | END | Security Manager completed successfully." "SUCCESS"
+Exit 0
