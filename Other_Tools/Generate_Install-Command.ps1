@@ -1,24 +1,33 @@
-# Helper script to generate Intune commands and create custom Git Runners. 
-# This is the main script you will use to build your new infrastructure based on this suite.
-
-
 <#
 
-Instructions:
+.SYNOPSIS
+    Helper script to generate Intune commands and create custom Git Runners.
 
-Build your command
+.DESCRIPTION
+    This is the main script you will use to build your new infrastructure based on this suite.
+    This script is called from the Setup.ps1 script. For most scenarios you will not use this script outside of that context.
+    Currently the main exception is if you need to build Remedation scripts, but I will be adding that functionality to Setup.ps1 in the future.
 
-Open elevated cmd on the test machine
 
-navigate to the dir of git runner template (on mac you may need to do pushd)
+.NOTES
 
+    Some old notes:
 
+        Instructions:
+
+        Build your command
+
+        Open elevated cmd on the test machine
+
+        navigate to the dir of git runner template (on mac VM you may need to do pushd)
 
 #>
 
+
+
 Param(
 
-    [string]$DesiredFunction = "InstallPrinterByIP",
+    [string]$DesiredFunction,
     [hashtable]$FunctionParams
 
 )

@@ -12,11 +12,15 @@
         - will not be updated much so safe to keep and run. If used as a part of the github repo above, it can update itself.
 
     Why is it just a "template?"
+        - This script is used for different repos and different scripts within those repos.
+        - This script is used as a template for generating custom scripts from the various scripts within this repo
         - Using with tools like InTune, Datto, Crowdstrike... etc that don't have direct GitHub integration may need to have a script uploaded
             - These tools may not play nice or at all with the script natively, and you may need to modify this script to accept the needed variables in a specific way, such as by environment variables, config files, or directly written to the script
 
     Can this script be ran as it?
-        - Yes absolutely! It may not work for every scenario as explained above, but it can be ran with params to do whatever you want!
+        - Yes absolutely! It can be ran with params to do whatever you want!
+
+    For a full walkthrough of how to use this script, please see the README.md in the root of this repo.
 
 .PARAMETER RepoNickName
     Name to call the repo, for logging/local file path ($LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName")
@@ -37,6 +41,9 @@
     EXAMPLE
         Uninstallers\General_Uninstaller.ps1
 
+.PARAMETER forcemachinecontext
+    This isn't used yet 
+
 .PARAMETER WorkingDirectory
     Path to directory on the host machine that will be used to hold the repo and logs
     NOTE: Recommended path "C:\ProgramData\YourCompanyName"  - Useful because user does not have visibility to this unless they enable it
@@ -44,6 +51,8 @@
     NOTE: A seperate WorkingDirectory path will need to be provided in the params passed to the target script
     EXAMPLE
         C:\ProgramData\AdminScriptSuite
+
+
 
 .PARAMETER ScriptParams
     Params to pass to the target script
@@ -53,6 +62,11 @@
         for General_Uninstaller.ps1: 
             '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"'
 
+
+.PARAMETER ScriptParamsBase64
+    You can also pass base64 encoded params for better Intune compatibility using the ScriptParamsBase64 parameter. 
+    This parameter is automatically decoded into a parameter string for the target script.
+    How do you use this parameter? The Generate_Custom-Script_FromTemplate.ps1 will do it for you automatically! See that script for further instuctions.
 
 .EXAMPLE
     .\Git-Runner_TEMPLATE.ps1 -RepoNickName "Win-AdminScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\AdminScriptSuite" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"'
@@ -67,21 +81,7 @@
     SOURCE:
         https://github.com/tofu-formula/AdminScriptSuite
 
-    InTune:
-        Example of working items:
 
-            General deployment of the ScriptSuite to local machine:
-                IntuneWin contents:
-                    Git-Runner_TEMPLATE.ps1
-                Install command:
-                    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'Test7' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -UpdateLocalRepoOnly:1 -WorkingDirectory 'C:\ProgramData\Test7'"
-                Detect rule:
-                    Rule type: File
-                    Path: C:\ProgramData\Test7\Test7\Templates
-                    File: Git-Runner_TEMPLATE.ps1
-                    Detection method: File exists
-
-            Install 7-zip
                 
 
 #>
@@ -100,8 +100,6 @@ param(
 
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\AdminScriptSuite"
-
-    [Boolean]$forcemachinecontext,
 
     [Parameter(Mandatory=$false)]
     [string]$ScriptParamsBase64, # Base64 encoded params for better Intune compatibility,
