@@ -13,6 +13,9 @@ $LogRoot = "$WorkingDir\Logs\Security_Logs"
 $LogPath = "$LogRoot\$ThisFileName._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $RepoRoot = (Split-Path $PSScriptRoot -Parent)
 
+# Registry Modifcation script path
+$RegistryChangeScriptPath = "$RepoRoot\Configurators\Configure-Registry.ps1"
+
 # Folders to hit:
 # - Working Directory
 # - C:\ProgramData\Microsoft\IntuneManagementExtension\Logs
@@ -28,8 +31,7 @@ $Folders = @(
 
 # REGISTRY KEYS to check/fix
 $RegistryKeys = @(
-    'HKLM:\SOFTWARE\MyLockedKey',
-    'HKLM:\SYSTEM\CurrentControlSet\Services\MyService'
+    'HKLM:\SOFTWARE\AdminScriptSuite'
 )
 
 
@@ -73,10 +75,7 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
-
-
-# --- Helper: build the "correct" ACL for a folder ---
-function Set-StrictAcl {
+function Set-StrictAclOld {
     param(
         [Parameter(Mandatory)]
         [string]$Path
@@ -126,7 +125,111 @@ function Set-StrictAcl {
     Write-Log "[$Path] permissions reset to SYSTEM + Administrators (FullControl only)."
 }
 
-# --- Helper: check if ACL is already in the desired state ---
+function Set-StrictAclOld2 {
+
+    # Get current ACL
+    Write-Log "Getting current ACL"
+    $CurrentACL = Get-Acl -LiteralPath $folder
+
+    # Break inheritance and remove inherited rules
+    Write-Log "Breaking inheritance and removing inherited rules"
+    $CurrentACL.SetAccessRuleProtection($true, $false)
+
+    # Remove all existing access rules
+    Write-Log "Removing existing access rules"
+    $CurrentACL.Access | ForEach-Object {
+        $CurrentACL.RemoveAccessRuleAll($_) # | Out-Null
+    }
+
+    # Build new access rules
+
+    Write-Log "Building new access rules for Administrators and SYSTEM"
+
+    $admins = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "Administrators",
+        "FullControl",
+        "ContainerInherit, ObjectInherit",
+        "None",
+        "Allow"
+    )
+
+    $system = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "SYSTEM",
+        "FullControl",
+        "ContainerInherit, ObjectInherit",
+        "None",
+        "Allow"
+    )
+
+    # Add new rules to ACL
+    Write-Log "Adding new access rules to ACL"
+    $CurrentACL.AddAccessRule($admins)
+    $CurrentACL.AddAccessRule($system)
+
+    # Apply the ACL back to the folder
+    Write-Log "Applying updated ACL to folder"
+    Set-Acl -LiteralPath $folder -AclObject $CurrentACL
+
+}
+
+function Set-StrictAcl {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    try {
+        # Get current ACL
+        Write-Log "Getting current ACL for: $Path"
+        $CurrentACL = Get-Acl -LiteralPath $Path
+
+        # Break inheritance and remove inherited rules
+        Write-Log "Breaking inheritance and removing inherited rules"
+        $CurrentACL.SetAccessRuleProtection($true, $false)
+
+        # Remove all existing access rules (copy to array first to avoid collection modification issues)
+        Write-Log "Removing existing access rules"
+        $rulesToRemove = @($CurrentACL.Access)
+        foreach ($rule in $rulesToRemove) {
+            $CurrentACL.RemoveAccessRuleAll($rule)
+        }
+
+        # Build new access rules
+        Write-Log "Building new access rules for Administrators and SYSTEM"
+
+        $admins = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "BUILTIN\Administrators",
+            "FullControl",
+            "ContainerInherit, ObjectInherit",
+            "None",
+            "Allow"
+        )
+
+        $system = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "NT AUTHORITY\SYSTEM",
+            "FullControl",
+            "ContainerInherit, ObjectInherit",
+            "None",
+            "Allow"
+        )
+
+        # Add new rules to ACL
+        Write-Log "Adding new access rules to ACL"
+        $CurrentACL.AddAccessRule($admins)
+        $CurrentACL.AddAccessRule($system)
+
+        # Apply the ACL back to the folder
+        Write-Log "Applying updated ACL to folder: $Path"
+        Set-Acl -LiteralPath $Path -AclObject $CurrentACL -ErrorAction Stop
+        
+        Write-Log "ACL applied successfully" "SUCCESS"
+    }
+    catch {
+        Write-Log "Set-Acl failed: $($_.Exception.Message)" "ERROR"
+        throw
+    }
+}
+
 function Test-StrictAcl {
     param(
         [Parameter(Mandatory)]
@@ -181,42 +284,68 @@ function Test-StrictAcl {
 
 }
 
-function Test-StrictRegAcl {
+function Test-StrictAclTEST {
     param(
         [Parameter(Mandatory)]
-        [string]$KeyPath
+        [string]$Path
     )
 
-    if (-not (Test-Path -LiteralPath $KeyPath)) {
-        Write-Log "Registry key not found: $KeyPath" "WARNING"
+    if (-not (Test-Path -LiteralPath $Path)) {
+        Write-Log "Path not found: $Path" "WARNING"
         return $false
     }
 
-    $acl = Get-Acl -LiteralPath $KeyPath
+    $acl = Get-Acl -LiteralPath $Path
 
-    # require protected ACL (no inheritance from parent key)
+    $sidSystem = New-Object System.Security.Principal.SecurityIdentifier "S-1-5-18"
+    $sidAdmins = New-Object System.Security.Principal.SecurityIdentifier "S-1-5-32-544"
+    $allowedSids = @($sidSystem.Value, $sidAdmins.Value)
+
+    # Must have protected ACL (no inheritance)
     if (-not $acl.AreAccessRulesProtected) {
+        Write-Log "DIAG: ACL inheritance is NOT protected" "WARNING"
         return $false
     }
+    Write-Log "DIAG: ACL inheritance is protected" "INFO"
 
     $hasSystem = $false
     $hasAdmins = $false
 
-    $fc = [System.Security.AccessControl.RegistryRights]::FullControl
-    $ci = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit
+    Write-Log "DIAG: Found $($acl.Access.Count) access rules" "INFO"
 
     foreach ($rule in $acl.Access) {
-        $sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+        try {
+            $sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+        }
+        catch {
+            Write-Log "DIAG: Failed to translate SID for: $($rule.IdentityReference) - $($_.Exception.Message)" "WARNING"
+            return $false
+        }
+
+        Write-Log "DIAG: Rule - Identity: $($rule.IdentityReference), SID: $sid, Rights: $($rule.FileSystemRights), Type: $($rule.AccessControlType), Inherit: $($rule.InheritanceFlags)" "INFO"
 
         # Only SYSTEM or Administrators allowed
-        if ($sid -notin $allowedSids) { return $false }
+        if ($sid -notin $allowedSids) {
+            Write-Log "DIAG: Unexpected SID found: $sid (expected: $($allowedSids -join ', '))" "WARNING"
+            return $false
+        }
 
         # Must be Allow FullControl
-        if ($rule.AccessControlType -ne 'Allow') { return $false }
-        if (($rule.RegistryRights -band $fc) -ne $fc) { return $false }
+        if ($rule.AccessControlType -ne 'Allow') {
+            Write-Log "DIAG: Rule is not Allow type" "WARNING"
+            return $false
+        }
 
-        # We set ContainerInherit for child keys; require it
-        if (($rule.InheritanceFlags -band $ci) -eq 0) {
+        $fc = [System.Security.AccessControl.FileSystemRights]::FullControl
+        if (($rule.FileSystemRights -band $fc) -ne $fc) {
+            Write-Log "DIAG: Rights mismatch. Has: $($rule.FileSystemRights) ($([int]$rule.FileSystemRights)), Need: $fc ($([int]$fc))" "WARNING"
+            return $false
+        }
+
+        # Must inherit to children
+        if (($rule.InheritanceFlags -band ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit)) -eq 0 `
+         -or ($rule.InheritanceFlags -band ([System.Security.AccessControl.InheritanceFlags]::ObjectInherit)) -eq 0) {
+            Write-Log "DIAG: Inheritance flags not set correctly: $($rule.InheritanceFlags)" "WARNING"
             return $false
         }
 
@@ -224,52 +353,39 @@ function Test-StrictRegAcl {
         if ($sid -eq $sidAdmins.Value) { $hasAdmins = $true }
     }
 
+    Write-Log "DIAG: hasSystem=$hasSystem, hasAdmins=$hasAdmins" "INFO"
+
+    # Require at least one rule for SYSTEM and one for Administrators
     return ($hasSystem -and $hasAdmins)
 }
 
-function Set-StrictRegAcl {
-    param(
-        [Parameter(Mandatory)]
-        [string]$KeyPath
-    )
-
-    if (-not (Test-Path -LiteralPath $KeyPath)) {
-        Write-Log "Registry key not found: $KeyPath" "WARNING"
-        return
+function Test-SupportsAclProtection {
+    param([string]$Path)
+    
+    # Quick test: try to set protection and verify it sticks
+    try {
+        $testAcl = Get-Acl -LiteralPath $Path
+        $originalState = $testAcl.AreAccessRulesProtected
+        
+        # Try setting protection
+        $testAcl.SetAccessRuleProtection($true, $true)  # Keep existing rules
+        Set-Acl -LiteralPath $Path -AclObject $testAcl -ErrorAction Stop
+        
+        # Re-read and check
+        $verifyAcl = Get-Acl -LiteralPath $Path
+        $supported = $verifyAcl.AreAccessRulesProtected
+        
+        # Restore original state if we changed it
+        if (-not $originalState -and $supported) {
+            $testAcl.SetAccessRuleProtection($false, $false)
+            Set-Acl -LiteralPath $Path -AclObject $testAcl -ErrorAction SilentlyContinue
+        }
+        
+        return $supported
     }
-
-    $regSec = New-Object System.Security.AccessControl.RegistrySecurity
-
-    # disable inheritance and remove inherited rules
-    $regSec.SetAccessRuleProtection($true, $false)
-
-    $inheritFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit  # child keys
-    $propFlags    = [System.Security.AccessControl.PropagationFlags]::None
-    $accessType   = [System.Security.AccessControl.AccessControlType]::Allow
-    $fc           = [System.Security.AccessControl.RegistryRights]::FullControl
-
-    $ruleSystem = New-Object System.Security.AccessControl.RegistryAccessRule(
-        $sidSystem,
-        $fc,
-        $inheritFlags,
-        $propFlags,
-        $accessType
-    )
-    $regSec.AddAccessRule($ruleSystem) | Out-Null
-
-    $ruleAdmins = New-Object System.Security.AccessControl.RegistryAccessRule(
-        $sidAdmins,
-        $fc,
-        $inheritFlags,
-        $propFlags,
-        $accessType
-    )
-    $regSec.AddAccessRule($ruleAdmins) | Out-Null
-
-    $key = Get-Item -LiteralPath $KeyPath
-    $key.SetAccessControl($regSec)
-
-    Write-Log "[$KeyPath] registry ACL reset to SYSTEM + Administrators only."
+    catch {
+        return $false
+    }
 }
 
 
@@ -285,6 +401,12 @@ foreach ($folder in $Folders) {
             Write-Log "Folder not found: $folder" "WARNING"
 
             #Exit 1
+
+    } elseif(-not (Test-SupportsAclProtection -Path $folder)){
+
+        Write-Log "Folder does not support ACL protection (shared/virtual filesystem?): $folder" "WARNING"
+
+        #Exit 1
 
     } else {
 
@@ -327,28 +449,19 @@ foreach ($regKey in $RegistryKeys) {
 
     } else {
 
-        Write-Log "Registry key exists: $regKey"
+        Write-Log "Registry key exists: $regKey. Proceeding to check and set ACL..."
 
-        if (Test-StrictRegAcl -KeyPath $regKey) {
+        & $RegistryChangeScriptPath -KeyOnly $true -KeyPath $regKey -Function "Lockdown" -WorkingDirectory $WorkingDir
 
-            Write-Log "Registry ACL already correct."
+        if ($LASTEXITCODE -ne 0) {
+
+            Write-Log "Failed to set strict ACL on registry key: $regKey" "ERROR"
+
+            Exit 1
 
         } else {
 
-            Write-Log "Registry ACL not strict. Fixing..."
-            Set-StrictRegAcl -KeyPath $regKey
-
-            if (Test-StrictRegAcl -KeyPath $regKey) {
-
-                Write-Log "Registry ACL fixed successfully." "SUCCESS"
-
-            } else {
-
-                Write-Log "Failed to fix registry ACL!" "ERROR"
-
-                Exit 1
-
-            }
+            Write-Log "Registry key ACL set to strict successfully." "SUCCESS"
 
         }
 

@@ -458,7 +458,7 @@ Write-Log "ScriptParams: $ScriptParams"
 Write-Log "UpdateLocalRepoOnly: $UpdateLocalRepoOnly"
 Write-Log "++++++++++++++++++++++"
 
-<# ## GET RID OF THIS NEXT WEEKEND AFTER TESTING
+
 # Check if git is installed
 Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
@@ -551,7 +551,7 @@ if ($DoClone -eq $true){
     
     #Exit 1
 }
-#> ## GET RID OF THIS NEXT WEEKEND AFTER TESTING
+
 
 # Create the temp directory if it doesn't exist
 if (!(Test-Path "$WorkingDirectory\TEMP")){
@@ -563,7 +563,8 @@ if (!(Test-Path "$WorkingDirectory\TEMP")){
 try{
 
     Write-Log "Ensuring working registry path exists: HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite"
-    & $RegistryChangeScriptPath -WorkingDirectory $WorkingDirectory -KeyOnly $true -KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite"
+
+    & $RegistryChangeScriptPath -WorkingDirectory $WorkingDirectory -KeyOnly $true -KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite" -Function "Modify"
     if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
 
 } catch {
