@@ -22,6 +22,11 @@
     - Follow the on-screen prompts to perform the desired setup tasks.
 
 
+.NOTES
+
+
+    TODO: Add a warning if script user != logged in user and script/user is not elevated (WinGet does not like this scenario)
+
 
 #>
 
@@ -1669,6 +1674,59 @@ Try{
 } Catch {
     Write-Log "Error retrieving organization custom registry values: $_" "ERROR"
     Exit 1
+}
+
+# Warnings
+Write-Log ""
+
+# If this script is not being ran against C:ProgramData\AdminScriptSuite, it is going to lock down files in the root of the repo parent folder. Give a big fat warning. 
+if ($WorkingDirectory -ne "C:\ProgramData\AdminScriptSuite") {
+    Write-Log "You are running this script from a non-standard location: $WorkingDirectory" "WARNING"
+    Write-Log "This may cause permission issues with files created in the this folder. It is recommended to run this script from C:\ProgramData\AdminScriptSuite" "WARNING"
+    Write-Log ""
+    Write-Log "The following folders will be locked down:" "WARNING"
+    Write-Log " - $WorkingDirectory\Temp" "WARNING"
+    Write-Log " - $WorkingDirectory\Logs" "WARNING"
+    Write-Log " - $RepoRoot" "WARNING"
+    Write-Log ""
+    Write-Log "If that is acceptable, press enter to continue." "WARNING"
+    Pause
+    Write-Log ""
+
+}
+
+# If this script is not being ran as an admin that is also the logged in user, OR SYSTEM, then WinGet will not work properly. You must be running as the logged in user and also be admin. Otherwise set up the app in compay portal using this script. 
+If( (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -or `
+    -not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::User))`
+    -and !(([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -eq 'S-1-5-18'))){ # skip block if user is System
+
+    Write-Log "You are not running this script as an administrator or as the logged in user." "WARNING"
+    Write-Log ""
+    Write-Log "WinGet WILL NOT WORK PROPERLY." "WARNING"
+    Write-Log ""
+    Write-Log "WinGet requires you to be running as the logged in user who is also an administrator." "WARNING"
+    Write-Log ""
+    Write-Log "If this is not possible, you can still use this script to set up applications for deployment via InTune." "WARNING"
+    Write-Log ""
+    Write-Log "App installs from InTune/CompanyPortal do not require the user to be an admin." "WARNING"
+    Write-Log ""
+    Pause
+    Write-Log ""
+
+} 
+
+# Update this repo?
+Write-Log "Would you like to update this repo to the latest version?" "WARNING"
+$Answer = Read-Host "Please enter Y or N"
+If ($Answer -eq "y"){
+
+    $RepoNickName = Split-Path $RepoRoot -leaf
+
+    & $GitRunnerScript -WorkingDirectory $WorkingDirectory -RepoNickName $RepoNickName -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true
+
+    Write-Log ""
+
+    Write-Log "Repo updated to the latest version." "INFO2"
 }
 
 Write-Log ""

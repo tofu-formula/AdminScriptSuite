@@ -13,7 +13,7 @@ Param(
     $RegistryChanges,
     $WorkingDirectory,
     $RepoNickName,
-
+    $AlsoLockDown = $False,
     [ValidateSet("Detect", "Remediate")]
     [String]$function
 
@@ -361,7 +361,7 @@ if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
             Write-Log "SCRIPT: $ThisFileName | Now attempting to apply these values to the registry..."
 
             Try {
-                $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -ValueName $ValueName -ValueType $ValueType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify"
+                $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -ValueName $ValueName -ValueType $ValueType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify" -AlsoLockDown $AlsoLockDown
             } catch {
                 Write-Log "SCRIPT: $ThisFileName | END | Failed to write these values to the registry: $line" "ERROR"
                 Exit 1

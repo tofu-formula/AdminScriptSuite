@@ -278,6 +278,7 @@ Function RemediationScript {
             RepoNickName = "AdminScriptSuite-Repo"
             WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
             Function = "Remediate"
+            AlsoLockDown = $True
         }
 
     # Export the txt file

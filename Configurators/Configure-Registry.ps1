@@ -1,6 +1,6 @@
 # Windows Registry modifier
 
-# WARNING: All three functions are tested and working so far, but, I HIGHLY recommend testing your use-case before deploying to enterprise
+# TODO: Add AlsoLockDown + Read combo functionality - Read the function and verify if it has the desired ACLs
 
 
 Param(
@@ -20,7 +20,11 @@ Param(
     [string]$Value, # Change to ValueData
     
     [Parameter(Mandatory=$true)]
-    [string]$WorkingDirectory
+    [string]$WorkingDirectory,
+
+    [boolean]$KeyOnly = $false, # Used to create an empty key without setting a value
+
+    [boolean]$AlsoLockDown = $False # Used for doing lockdown during initial creation of a key
 
     # [ValidateSet('Auto','Reg32','Reg64')]
     # [string]$RegistryView = 'Auto'
@@ -317,18 +321,37 @@ function Reg-Modify {
             Write-Log "Key does not exist. Attempting to create."
             New-Item -Path $KeyPath -Force | Out-Null
             Write-Log "Key created."
+
+            if ($AlsoLockDown) {
+
+                Write-Log "Lockdown of key requested"
+
+                Reg-Lockdown
+
+                Write-Log "Lockdown of key complete."
+
+
+            }
+
+        } else {
+            Write-Log "Key already exists."
         }
         
-        # Set the value
-        Write-Log "Attempting to set the following:"
-        Write-Log "KeyPath: $KeyPath"
-        Write-Log "ValueName: $ValueName"
-        Write-Log "Value: $Value"       
-        Write-Log "Type: $ValueType"
+        if ($KeyOnly -eq $false) {
 
-        Set-ItemProperty -Path $KeyPath -Name $ValueName -Value $Value -Type $ValueType
+            # Set the value
+            Write-Log "Attempting to set the following:"
+            Write-Log "KeyPath: $KeyPath"
+            Write-Log "ValueName: $ValueName"
+            Write-Log "Value: $Value"       
+            Write-Log "Type: $ValueType"
 
-        Write-Log "Successfully set $ValueName in $KeyPath" "SUCCESS"
+            Set-ItemProperty -Path $KeyPath -Name $ValueName -Value $Value -Type $ValueType
+
+            Write-Log "Successfully set $ValueName in $KeyPath" "SUCCESS"
+
+        } 
+
         Write-Log "Function: $($MyInvocation.MyCommand.Name) | End"
 
         return $true
@@ -496,7 +519,7 @@ function Reg-Read-All {
 
 }
 
-function Reg-Lockdown{
+function Reg-LockdownOld{
 
     # NOTE: THIS IS UNTESTED
 
@@ -557,6 +580,206 @@ function Reg-Lockdown{
         Exit 1
 
     }
+}
+
+Function Reg-Lockdown{
+
+    function Get-RegistryKeyWithView {
+        # param(
+        #     [Parameter(Mandatory)]
+        #     [string]$KeyPath
+        # )
+        
+        # Parse the path - expects format like HKLM:\SOFTWARE\AdminScriptSuite # TODO: Replace this part with common function
+        if ($KeyPath -match '^(HKLM|HKEY_LOCAL_MACHINE):\\?(.+)$') { 
+            $hive = [Microsoft.Win32.RegistryHive]::LocalMachine
+            $subKeyPath = $Matches[2]
+        }
+        elseif ($KeyPath -match '^(HKCU|HKEY_CURRENT_USER):\\?(.+)$') {
+            $hive = [Microsoft.Win32.RegistryHive]::CurrentUser
+            $subKeyPath = $Matches[2]
+        }
+        else {
+            throw "Unsupported registry path format: $KeyPath"
+        }
+        
+        # Always use 64-bit registry view
+        $regView = [Microsoft.Win32.RegistryView]::Registry64
+        $baseKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey($hive, $regView)
+        
+        return @{
+            BaseKey = $baseKey
+            SubKeyPath = $subKeyPath
+        }
+
+    }
+
+    function Set-StrictRegAcl {
+
+    #     param(
+    #         [Parameter(Mandatory)]
+    #         [string]$KeyPath
+    #     )
+
+        # if (-not (Test-RegistryKeyExists -KeyPath $KeyPath)) {
+        #     Write-Log "Registry key not found: $KeyPath" "WARNING"
+        #     return
+        # }
+
+        try {
+
+            $parsed = Get-RegistryKeyWithView -KeyPath $KeyPath
+            $subKey = $parsed.BaseKey.OpenSubKey($parsed.SubKeyPath, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::ChangePermissions)
+            
+            $regSec = New-Object System.Security.AccessControl.RegistrySecurity
+            $regSec.SetAccessRuleProtection($true, $false)
+
+            $sidSystem = New-Object System.Security.Principal.SecurityIdentifier "S-1-5-18"
+            $sidAdmins = New-Object System.Security.Principal.SecurityIdentifier "S-1-5-32-544"
+
+            $inheritFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit
+            $propFlags    = [System.Security.AccessControl.PropagationFlags]::None
+            $accessType   = [System.Security.AccessControl.AccessControlType]::Allow
+            $fc           = [System.Security.AccessControl.RegistryRights]::FullControl
+
+            $ruleSystem = New-Object System.Security.AccessControl.RegistryAccessRule(
+                $sidSystem, $fc, $inheritFlags, $propFlags, $accessType
+            )
+            $regSec.AddAccessRule($ruleSystem)
+
+            $ruleAdmins = New-Object System.Security.AccessControl.RegistryAccessRule(
+                $sidAdmins, $fc, $inheritFlags, $propFlags, $accessType
+            )
+            $regSec.AddAccessRule($ruleAdmins)
+
+            $subKey.SetAccessControl($regSec)
+            
+            $subKey.Dispose()
+            $parsed.BaseKey.Dispose()
+            
+            Write-Log "[$KeyPath] registry ACL reset to SYSTEM + Administrators only." "SUCCESS"
+
+        }
+        catch {
+
+            Write-Log "Failed to set registry ACL: $($_.Exception.Message)" "ERROR"
+            throw
+
+        }
+    }
+
+    function Test-StrictRegAcl {
+
+        # param(
+        #     [Parameter(Mandatory)]
+        #     [string]$KeyPath
+        # )
+
+        # if (-not (Test-RegistryKeyExists -KeyPath $KeyPath)) {
+        #     Write-Log "Registry key not found: $KeyPath" "WARNING"
+        #     return $false
+        # }
+
+        try {
+            $parsed = Get-RegistryKeyWithView -KeyPath $KeyPath
+            $subKey = $parsed.BaseKey.OpenSubKey($parsed.SubKeyPath, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, [System.Security.AccessControl.RegistryRights]::ReadPermissions)
+            $acl = $subKey.GetAccessControl()
+            
+            $subKey.Dispose()
+            $parsed.BaseKey.Dispose()
+        }
+        catch {
+            Write-Log "Failed to get registry ACL: $($_.Exception.Message)" "ERROR"
+            return $false
+        }
+
+        $sidSystem = New-Object System.Security.Principal.SecurityIdentifier "S-1-5-18"
+        $sidAdmins = New-Object System.Security.Principal.SecurityIdentifier "S-1-5-32-544"
+        $allowedSids = @($sidSystem.Value, $sidAdmins.Value)
+
+        if (-not $acl.AreAccessRulesProtected) {
+            Write-Log "DIAG: Registry ACL inheritance is NOT protected" "WARNING"
+            return $false
+        }
+
+        $hasSystem = $false
+        $hasAdmins = $false
+
+        $fc = [System.Security.AccessControl.RegistryRights]::FullControl
+        $ci = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit
+
+        foreach ($rule in $acl.Access) {
+            try {
+                $sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+            }
+            catch {
+                Write-Log "DIAG: Failed to translate SID: $($rule.IdentityReference)" "WARNING"
+                return $false
+            }
+
+            if ($sid -notin $allowedSids) { 
+                Write-Log "DIAG: Unexpected SID in registry ACL: $sid" "WARNING"
+                return $false 
+            }
+
+            if ($rule.AccessControlType -ne 'Allow') { return $false }
+            if (($rule.RegistryRights -band $fc) -ne $fc) { return $false }
+
+            if (($rule.InheritanceFlags -band $ci) -eq 0) {
+                return $false
+            }
+
+            if ($sid -eq $sidSystem.Value) { $hasSystem = $true }
+            if ($sid -eq $sidAdmins.Value) { $hasAdmins = $true }
+        }
+
+        #return ($hasSystem -and $hasAdmins)
+
+        if ($hasSystem -and $hasAdmins) {
+            Write-Log "[$KeyPath] registry ACL verified as SYSTEM + Administrators only." "SUCCESS"
+            return $true
+        } else {
+            Write-Log "[$KeyPath] registry ACL verification failed: Missing SYSTEM or Administrators." "ERROR"
+            return $false
+        }
+
+    }
+
+    #############
+    # Mini Main # 
+    #############
+    
+    Write-Log "Function: $($MyInvocation.MyCommand.Name) | Begin"
+
+    if (Test-StrictRegAcl -KeyPath $KeyPath) {
+
+        Write-Log "Registry ACL already strict. No changes made."
+
+    } else {
+
+        Write-Log "Registry ACL not strict. Backing up before modification."
+
+        Reg-Backup
+
+        Write-Log "Applying strict ACL."
+
+        Set-StrictRegAcl
+
+        Write-Log "Re-testing registry ACL after modification."
+
+        if (Test-StrictRegAcl) {
+
+            Write-Log "Function: $($MyInvocation.MyCommand.Name) | End | Registry ACL successfully set to strict."
+
+        } else {
+
+            Write-Log "Function: $($MyInvocation.MyCommand.Name) | End | Failed to set registry ACL to strict." "ERROR"
+
+            Exit 1
+
+        }
+    }
+
 }
 
 function Convert-RegistryRootToAbbrev {
@@ -708,13 +931,13 @@ if ($function -ne "Read-All" -and [string]::IsNullOrWhiteSpace($KeyPath)) {
     Exit 1
 }
 
-if ($Function -eq "Modify") {
+if ($Function -eq "Modify" -and $KeyOnly -eq $false) {
     if ([string]::IsNullOrWhiteSpace($Value)) {
-        Write-Log "SCRIPT: $ThisFileName | END | Value parameter is required when Function is 'Modify'" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | Value parameter is required when Function is 'Modify' and KeyOnly is false" "ERROR"
         Exit 1
     }
     if ([string]::IsNullOrWhiteSpace($ValueType)) {
-        Write-Log "SCRIPT: $ThisFileName | END | ValueType parameter is required when Function is 'Modify'" "ERROR"
+        Write-Log "SCRIPT: $ThisFileName | END | ValueType parameter is required when Function is 'Modify' and KeyOnly is false" "ERROR"
         Exit 1
     }
 }
@@ -800,14 +1023,17 @@ if ($function -eq "Modify" -or $function -eq "Backup"){
     Write-Log "---------------------------------"
     Write-Log "SCRIPT: $ThisFileName | STEP 2: Backup Registry Key"
     Write-Log "---------------------------------"
-    if($NoFoundValue -eq $True){
+    if($function -eq "Backup" -and $NoFoundValue -eq $True){
 
-        Write-Log "There was no found local value, so backup is being skipped." "WARNING"
+        Write-Log "SCRIPT: $ThisFileName | There was no found local value, so backup is being skipped." "WARNING"
 
-    } else {
+    } elseif ($function -eq "Backup") {
 
         Reg-Backup
 
+    } else {
+
+        Write-Log "SCRIPT: $ThisFileName | Checking if backup is needed before modification..."
     }
 
     Write-Log "---------------------------------"
@@ -817,12 +1043,29 @@ if ($function -eq "Modify" -or $function -eq "Backup"){
 
         if($ReturnValue -eq $Value){
 
-            Write-Log "SCRIPT: $ThisFileName | END | Local registry key's value is already as desired." "SUCCESS"
+            Write-Log "SCRIPT: $ThisFileName | END | Local registry key's value is already as desired. Skipping backup too." "SUCCESS"
             Exit 0
 
-        } else {
+        } elseif($ReturnValue -eq "Path found only" -and $KeyOnly -eq $true){
 
-            Write-Log "SCRIPT: $ThisFileName | Local registry key's value is not as desired. Now attempting modification of registry"
+            Write-Log "SCRIPT: $ThisFileName | END | Local registry key's path already exists as desired." "SUCCESS"
+            Exit 0
+
+        }else {
+
+            Write-Log "SCRIPT: $ThisFileName | Local registry key's value is not as desired. Will backup first." 
+            
+            if($NoFoundValue -eq $True){
+
+                Write-Log "SCRIPT: $ThisFileName | There was no found local value, so backup is being skipped." "WARNING"
+
+            } else {
+
+                Reg-Backup
+
+            }
+
+            Write-Log "SCRIPT: $ThisFileName | Now attempting modification of registry"
 
             # Do a modification
             Write-Log "---------------------------------"
@@ -853,6 +1096,11 @@ if ($function -eq "Modify" -or $function -eq "Backup"){
             if($FinalValue -eq $Value){
 
                 Write-Log "SCRIPT: $ThisFileName | END | Confirmed local registry value is now as desired." "SUCCESS"
+                Exit 0
+
+            }elseif ($FinalValue -eq "Path found only" -and $KeyOnly -eq $true){
+
+                Write-Log "SCRIPT: $ThisFileName | END | Confirmed local registry key path exists as desired." "SUCCESS"
                 Exit 0
 
             }else{
