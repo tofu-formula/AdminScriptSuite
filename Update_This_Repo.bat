@@ -50,7 +50,7 @@ Echo Set to: !LOCAL_REPO_FOLDER_NAME!
 ECHO Info: Name of the local repo folder. Lives inside the folder above. Basically should be folder this script lives in.
 ECHO.
 
-set /p CORRECT="Is this acceptable? If not, you can enter your own paths. (Y/N): "
+REM set /p CORRECT="Is this acceptable? If not, you can enter your own paths. (Y/N): "
 ECHO.
 
 if /I "%CORRECT%"=="N" (

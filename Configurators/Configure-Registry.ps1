@@ -1,6 +1,6 @@
 # Windows Registry modifier
 
-# WARNING: All three functions are tested and working so far, but, I HIGHLY recommend testing your use-case before deploying to enterprise
+# TODO: Add AlsoLockDown + Read combo functionality - Read the function and verify if it has the desired ACLs
 
 
 Param(
@@ -22,7 +22,9 @@ Param(
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory,
 
-    [boolean]$KeyOnly = $false # Used to create an empty key without setting a value
+    [boolean]$KeyOnly = $false, # Used to create an empty key without setting a value
+
+    [boolean]$AlsoLockDown = $False # Used for doing lockdown during initial creation of a key
 
     # [ValidateSet('Auto','Reg32','Reg64')]
     # [string]$RegistryView = 'Auto'
@@ -319,6 +321,18 @@ function Reg-Modify {
             Write-Log "Key does not exist. Attempting to create."
             New-Item -Path $KeyPath -Force | Out-Null
             Write-Log "Key created."
+
+            if ($AlsoLockDown) {
+
+                Write-Log "Lockdown of key requested"
+
+                Reg-Lockdown
+
+                Write-Log "Lockdown of key complete."
+
+
+            }
+
         } else {
             Write-Log "Key already exists."
         }

@@ -388,8 +388,142 @@ function Test-SupportsAclProtection {
     }
 }
 
+# Detect if running inside a Parallels VM and skip ACL enforcement for filesystem. Will keep refining this over time.
+function Test-IsParallelsVM {
+    [CmdletBinding()]
+    param()
 
+    $indicators = New-Object System.Collections.Generic.List[string]
+
+    $cs     = $null
+    $bios   = $null
+    $csProd = $null
+
+    try {
+        $cs     = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop
+        $bios   = Get-CimInstance -ClassName Win32_BIOS -ErrorAction SilentlyContinue
+        $csProd = Get-CimInstance -ClassName Win32_ComputerSystemProduct -ErrorAction SilentlyContinue
+    } catch {
+        # If WMI fails, we'll just have fewer signals.
+    }
+
+    # --- Individual boolean flags for each strong signal ---
+
+    $mfParallels      = $false
+    $modelParallels   = $false
+    $vendorParallels  = $false
+    $nameParallels    = $false
+    $biosManParallels = $false
+    $biosSnParallels  = $false
+    $toolServiceFound = $false
+    $toolRegFound     = $false
+
+    # --- WMI / SMBIOS checks ---
+
+    if ($cs) {
+        if ($cs.Manufacturer -match 'Parallels') {
+            $mfParallels = $true
+            $indicators.Add("Win32_ComputerSystem.Manufacturer = '$($cs.Manufacturer)'")
+        }
+
+        if ($cs.Model -match 'Parallels') {
+            $modelParallels = $true
+            $indicators.Add("Win32_ComputerSystem.Model = '$($cs.Model)'")
+        }
+    }
+
+    if ($csProd) {
+        if ($csProd.Vendor -and $csProd.Vendor -match 'Parallels') {
+            $vendorParallels = $true
+            $indicators.Add("Win32_ComputerSystemProduct.Vendor = '$($csProd.Vendor)'")
+        }
+
+        if ($csProd.Name -and $csProd.Name -match 'Parallels') {
+            $nameParallels = $true
+            $indicators.Add("Win32_ComputerSystemProduct.Name = '$($csProd.Name)'")
+        }
+    }
+
+    if ($bios) {
+        if ($bios.Manufacturer -and $bios.Manufacturer -match 'Parallels') {
+            $biosManParallels = $true
+            $indicators.Add("Win32_BIOS.Manufacturer = '$($bios.Manufacturer)'")
+        }
+
+        if ($bios.SerialNumber -and $bios.SerialNumber -match 'Parallels') {
+            $biosSnParallels = $true
+            $indicators.Add("Win32_BIOS.SerialNumber = '$($bios.SerialNumber)'")
+        }
+    }
+
+    # --- Parallels Tools services ---
+
+    try {
+        $parallelsServices = Get-Service -ErrorAction SilentlyContinue | Where-Object {
+            $_.DisplayName -like 'Parallels Tools*' -or
+            $_.Name        -like 'prl_*'
+        }
+
+        if ($parallelsServices) {
+            $toolServiceFound = $true
+            $svcNames = $parallelsServices | ForEach-Object { $_.Name }
+            $indicators.Add("Parallels-related service(s) found: $($svcNames -join ', ')")
+        }
+    } catch {
+        # ignore
+    }
+
+    # --- Parallels Tools registry keys ---
+
+    $regPaths = @(
+        'HKLM:\SOFTWARE\Parallels\Parallels Tools',
+        'HKLM:\SOFTWARE\WOW6432Node\Parallels\Parallels Tools'
+    )
+
+    foreach ($path in $regPaths) {
+        try {
+            if (Test-Path $path) {
+                $toolRegFound = $true
+                $indicators.Add("Registry key exists: $path")
+            }
+        } catch {
+            # ignore
+        }
+    }
+
+    # --- Decision logic: require combinations, not single hits ---
+
+    $hasCanonicalCombo = ($mfParallels -and $modelParallels)
+
+    $signalCount = @(
+        $mfParallels,
+        $modelParallels,
+        $vendorParallels,
+        $nameParallels,
+        $biosManParallels,
+        $biosSnParallels,
+        $toolServiceFound,
+        $toolRegFound
+    ) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
+
+    # Treat as Parallels only if:
+    #  - Manufacturer AND Model both look like Parallels
+    #    OR
+    #  - We see at least 3 independent Parallels signals
+    $isParallels = $hasCanonicalCombo -or ($signalCount -ge 3)
+
+    [PSCustomObject]@{
+        IsParallelsVM     = $isParallels
+        StrongSignalCount = $signalCount
+        HasCanonicalCombo = $hasCanonicalCombo
+        Indicators        = $indicators
+    }
+}
+
+
+##########
 ## MAIN ##
+##########
 
 Write-Log "SCRIPT: $ThisFileName | START | Security Manager initiated."
 
@@ -402,11 +536,25 @@ foreach ($folder in $Folders) {
 
             #Exit 1
 
-    } elseif(-not (Test-SupportsAclProtection -Path $folder)){
+    } elseif(-not (Test-SupportsAclProtection -Path $folder)){ # Change this to be specific to identify if it is running on a Mac VM?
 
         Write-Log "Folder does not support ACL protection (shared/virtual filesystem?): $folder" "WARNING"
 
         #Exit 1
+
+        $result = Test-IsParallelsVM
+
+        if ($result.IsParallelsVM) {
+
+            Write-Log "Detected Parallels VM environment. Skipping ACL enforcement on shared/virtual folders." "WARNING"
+
+        } else {
+
+            Write-Log "Non-Parallels VM environment detected. ACL protection support is required. Exiting." "ERROR"
+
+            Exit 1
+
+        }
 
     } else {
 

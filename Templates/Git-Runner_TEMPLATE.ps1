@@ -458,7 +458,7 @@ Write-Log "ScriptParams: $ScriptParams"
 Write-Log "UpdateLocalRepoOnly: $UpdateLocalRepoOnly"
 Write-Log "++++++++++++++++++++++"
 
-
+##
 # Check if git is installed
 Write-Log "Checking if Git is installed..."
 CheckAndInstall-Git
@@ -551,7 +551,7 @@ if ($DoClone -eq $true){
     
     #Exit 1
 }
-
+##
 
 # Create the temp directory if it doesn't exist
 if (!(Test-Path "$WorkingDirectory\TEMP")){
@@ -611,7 +611,7 @@ if (-not (Test-Path $FullScriptPath)) {
 # Run the script with parameters
 Write-Log "Running script: $ScriptPath"
 Write-Log "With parameters: $ScriptParams"
-
+$RunFail = $False
 try {
     if ($ScriptParams) {
         $command = "& `"$FullScriptPath`" $ScriptParams"
@@ -625,57 +625,34 @@ try {
 
 }
 catch {
-    Write-Log "SCRIPT: $ThisFileName | END | Script failed: $FullScriptPath. Exit code: $_" "ERROR"
-    Exit 1
+    $RunFail = $True
+    Write-Log "SCRIPT: $ThisFileName | | ERROR: Script execution failed: $_" "ERROR"
 }
 
+# Run the Security Manager to ensure strict ACLs on key folders # TODO: This may be overkill, may remove in the future.
+try{
 
-Write-Log "++++++++++++++++++++++"
-Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
-Exit 0
-
-
-
-
-######
-
-# If you are using this template to run custom instructions like more complex installers, comment out the Exit 0 above and architect your command below!
-
-######
-
-# EXAMPLE: Download and install an MSI stored in Azure Blob
-
-<#
-$DownloadAzureBlobSAS_ScriptPath = "$LocalRepoPath\Downloaders\DownloadFrom-AzureBlob-SAS.ps1"
-$MSIinstaller_ScriptPath = "$LocalRepoPath\Installers\General_MSI_Installer.ps1"
-
-$StorageAccountName = ""
-$MSI_Blob_Name = ""
-$MSI_Container_Name = ""
-$LocalMSIpath = ""
-$AppName = ""
-$DisplayName = ""
-
-Write-Log "++++++++++++++++++++++"
-Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Target app: $AppName"
-Try{
-
-    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Beginning download of MSI"
-    Powershell.exe -executionpolicy bypass -File $DownloadAzureBlobSAS_ScriptPath -BlobName $MSI_Blob_Name -StorageAccountName $StorageAccountName -ContainerName $MSI_Container_Name -SasToken $SasToken
-    if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
-
-    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob | Beginning install of MSI"
-    Powershell.exe -executionpolicy bypass -File $MSIinstaller_ScriptPath -WorkingDirectory $WorkingDirectory -MSIPath $LocalMSIpath -AppName $AppName -DisplayName $DisplayName
-    if($LASTEXITCODE -ne 0){Throw $LASTEXITCODE }
+    Write-Log "Re-running Security Manager to ensure strict ACLs on key folders after script execution..."
+    #Write-Log "Running Security Manager to ensure strict ACLs on key folders..."
+    & $SecurityManagerScriptPath
+    if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
 
 } catch {
-    Write-Log "++++++++++++++++++++++"
-    Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob |Install of $AppName has failed. Exit code: $_" "ERROR"
-    
+
+    Write-Log "Failed to run Security Manager: $_" "ERROR"
     Exit 1
+
 }
 
-Write-Log "++++++++++++++++++++++"
-Write-Log "SCRIPT: $ThisFileName | MSI Install from Azure Blob |Install of $AppName has succeeded!" "SUCCESS"
-Exit 0
-#>
+if ($RunFail -eq $False){
+
+    Write-Log "++++++++++++++++++++++"
+    Write-Log "SCRIPT: $ThisFileName | END | Repo: $RepoNickName | Script: $ScriptPath | Execution completed." "SUCCESS"
+    Exit 0
+
+} else {
+
+    Write-Log "SCRIPT: $ThisFileName | END | Script failed: $FullScriptPath." "ERROR"
+    Exit 1
+
+}
