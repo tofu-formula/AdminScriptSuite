@@ -729,6 +729,58 @@ Function Setup--Azure-WindowsApp{
             $AppNameToFind = Read-Host "Application Name"
         }
 
+        Write-Log "Application Name set to: $AppNameToFind"
+        Write-Log ""
+
+        # TODO: Add a function that searches WinGet for the app name and suggests the correct ID.
+
+        Write-Log "Would you like assistance in finding the Winget ID for this application? (y/n)" "WARNING"
+        $Answer = Read-Host "y/n"
+        Write-Log ""
+        if ($answer -eq "y"){
+
+            Write-Log "Launching Winget search for application name: $AppNameToFind" "INFO2"
+            Write-Log "" "INFO2"
+            try{
+                
+                Write-Host ""
+                Write-Host "================ Winget Search Results ===================="
+                Write-Host ""
+                winget search $AppNameToFind | Format-Table -AutoSize | Out-Host
+                Write-Host ""
+                Write-Host "==========================================================="
+                Write-Host ""
+
+
+                Write-Log "" "INFO2"
+                Write-Log "Winget search complete." "INFO2"
+                Write-Log ""
+
+                Write-Log "Please review the above search results to find the appropriate Winget ID for your application."
+                Write-Log ""
+
+                Write-Log "Test out the Winget ID locally first to ensure it installs the correct application before adding it to the JSON." #"WARNING"
+                Write-Log ""
+                Write-Log "Example command to test locally: winget install <WingetID>"
+                Write-Log ""
+
+                Write-Log "If you do not see a suitable match, you may need to research further to find the correct Winget ID or consider alternative installation methods."
+                Write-Log ""
+                Write-Log "When you are ready we will move on to updating the private JSON with your new application/ID."
+
+
+            } catch {
+                Write-Log "An error occurred while attempting to search Winget. Please ensure Winget is installed and accessible from this script. Error: $_" "ERROR"
+            }
+
+            Pause
+
+
+        } else {
+
+            Write-Log "Skipping Winget search assistance."
+
+        }
         # Pause
 
         Write-Log ""
@@ -1716,9 +1768,9 @@ If( (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdent
 } 
 
 # Update this repo?
-Write-Log "Would you like to update this repo to the latest version?" "WARNING"
-$Answer = Read-Host "Please enter Y to update, or anything else to skip"
-If ($Answer -eq "y"){
+Write-Log "Would you like skip updating this repo to the latest version?" "WARNING"
+$Answer = Read-Host "Please enter y/n"
+If ($Answer -eq "n"){
 
     $RepoNickName = Split-Path $RepoRoot -leaf
 
