@@ -1717,7 +1717,7 @@ If( (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdent
 
 # Update this repo?
 Write-Log "Would you like to update this repo to the latest version?" "WARNING"
-$Answer = Read-Host "Please enter Y or N"
+$Answer = Read-Host "Please enter Y to update, or anything else to skip"
 If ($Answer -eq "y"){
 
     $RepoNickName = Split-Path $RepoRoot -leaf
