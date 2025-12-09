@@ -55,7 +55,7 @@ Param(
     $Version = $null,
     
     #[String]$VerboseLogs = $True,
-    [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
+    [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes) # THIS IS NOT BEING USED CURRENTLY
 
 )
 
@@ -407,61 +407,74 @@ if($detectPreviousInstallation -eq $true){
         Write-Log "Installation Error log for $AppID located at: $InstallationErrorLog"
         
 
-        $proc = Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+        #$proc = Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+        
         #$proc = Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -Wait -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
-        #Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+        # Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
 
+        #$proc = 
         
-        # Start the process and wait for the process with timeout
-        $startTime = Get-Date
-        while (-not $proc.HasExited) {
-            Start-Sleep -Seconds 10
-            $elapsed = (Get-Date) - $startTime
-            Write-Log "Time elapsed: $elapsed / $TimeoutSeconds seconds"
-            if ($elapsed.TotalSeconds -ge $timeoutSeconds) {
-                Write-Log "Timeout reached ($timeoutSeconds seconds) for $AppID. Killing process..." "WARNING"
-                try {
-                    $proc.Kill()
-                    Write-Log "Process killed due to timeout for $AppID" "ERROR"
-                } catch {
-                    Write-Log "Failed to kill process for $AppID : $_" "ERROR"
-                }
-                break
-            }
-        }
-        
-        
-        # If the process exited and had a success code...
-        if ($proc.HasExited -and $proc.ExitCode -eq 0) {
-
-            Write-Log "Installation return success exit code, now detecting local installation..."
-            $detectInstallation = WinGet-Detect $AppID
-
-            if($detectInstallation -eq $true){
-
-                Write-Log "Local installation detected. Installation successful for $AppID" "SUCCESS"
-                $InstallSuccess = $true
-
-            # If process did not exit...
-            } elseif(-not $proc.HasExited) {
-
-                Write-Log "Process still running after timeout, unexpected behavior." "WARNING"
-                #$InstallSuccess = $false
+        try { 
             
-            # If the detect was unsuccessful AND the process did not exit...
-            } else {
+            Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog" 
 
-                $InstallSuccess = $false
-                Write-Log "No local installation detected. Install failure of $AppID." "ERROR"
+        } catch { 
+
+            Throw $_ 
+        
+        }   
+
+        
+        # # Start the process and wait for the process with timeout
+        # $startTime = Get-Date
+        # while (-not $proc.HasExited) {
+        #     Start-Sleep -Seconds 10
+        #     $elapsed = (Get-Date) - $startTime
+        #     Write-Log "Time elapsed: $elapsed / $TimeoutSeconds seconds"
+        #     if ($elapsed.TotalSeconds -ge $timeoutSeconds) {
+        #         Write-Log "Timeout reached ($timeoutSeconds seconds) for $AppID. Killing process..." "WARNING"
+        #         try {
+        #             $proc.Kill()
+        #             Write-Log "Process killed due to timeout for $AppID" "ERROR"
+        #         } catch {
+        #             Write-Log "Failed to kill process for $AppID : $_" "ERROR"
+        #         }
+        #         break
+        #     }
+        # }
+        
+        
+        # # If the process exited and had a success code...
+        # if ($proc.HasExited -and $proc.ExitCode -eq 0) {
+
+        #     Write-Log "Installation return success exit code, now detecting local installation..."
+        #     $detectInstallation = WinGet-Detect $AppID
+
+        #     if($detectInstallation -eq $true){
+
+        #         Write-Log "Local installation detected. Installation successful for $AppID" "SUCCESS"
+        #         $InstallSuccess = $true
+
+        #     # If process did not exit...
+        #     } elseif(-not $proc.HasExited) {
+
+        #         Write-Log "Process still running after timeout, unexpected behavior." "WARNING"
+        #         #$InstallSuccess = $false
             
-            }
+        #     # If the detect was unsuccessful AND the process did not exit...
+        #     } else {
+
+        #         $InstallSuccess = $false
+        #         Write-Log "No local installation detected. Install failure of $AppID." "ERROR"
+            
+        #     }
 
 
         
-        } else {
-            Write-Log "Install process returned non-zero exit code ($($proc.ExitCode)) for $AppID" "WARNING"
-            $InstallSuccess = $false
-        }           
+        # } else {
+        #     Write-Log "Install process returned non-zero exit code ($($proc.ExitCode)) for $AppID" "WARNING"
+        #     $InstallSuccess = $false
+        # }           
         
 
         
@@ -572,15 +585,12 @@ if($detectPreviousInstallation -eq $true){
 
 
 
-
-
-
     if ($InstallSuccess -eq $false){
 
 
-        Write-Log "Running a final check to see if target app installed anyways despite errors: $AppID $Version "
+        Write-Log "Running a final check to see if target app installed: $AppID $Version "
 
-        Start-Sleep -Seconds 5
+        Start-Sleep -Seconds 10 # brief pause before re-checking
 
         $detectInstallation2 = WinGet-Detect $AppID
 
