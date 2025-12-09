@@ -324,7 +324,15 @@ if ($AppName -eq $null -or $AppID -eq $null){
 
 Write-Log "Checking/Installing WinGet"
 $WinGet = & $InstallWinGetScript -ReturnWinGetPath:$True -WorkingDirectory $WorkingDirectory
-if ($LASTEXITCODE -ne 0) { Write-Log "Could not verify or install WinGet. Check the Install WinGet log. Last exit code: $LASTEXITCODE" "ERROR"; Exit 1}
+if ($LASTEXITCODE -eq 1 -or $WinGet -eq $null -or $WinGet -eq "" -or $WinGet -eq "Failure") { 
+    
+    Write-Log "Could not verify or install WinGet. Check the Install WinGet log." "ERROR"
+    Write-Log "Last exit code: $LASTEXITCODE" "ERROR"
+    Write-Log "Received WinGet Path Value: $WinGet" "ERROR"
+    
+    Exit 1
+
+}
 
 Write-Log "Checking if AppID $AppID is valid"
 Validate-WinGet-Search
