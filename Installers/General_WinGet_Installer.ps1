@@ -68,6 +68,8 @@ $LogPath = "$LogRoot\$AppName.$SafeAppID._WinGet_Installer_Log_$(Get-Date -Forma
 $RepoRoot = Split-Path -Path $PSScriptRoot -Parent
 $InstallWinGetScript = "$RepoRoot\Installers\Install-WinGet.ps1"
 
+$InstallSuccess = $False
+
 #################
 ### Functions ###
 #################
@@ -407,7 +409,9 @@ if($detectPreviousInstallation -eq $true){
 
         $proc = Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
         #$proc = Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -Wait -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+        #Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
 
+        
         # Start the process and wait for the process with timeout
         $startTime = Get-Date
         while (-not $proc.HasExited) {
@@ -458,19 +462,33 @@ if($detectPreviousInstallation -eq $true){
             Write-Log "Install process returned non-zero exit code ($($proc.ExitCode)) for $AppID" "WARNING"
             $InstallSuccess = $false
         }           
+        
+
+        
+        # Spit out each line of the process for logging
 
 
+        Write-Log "Logging captured WinGet process output for process:"
+        ForEach ($line in $proc) { Write-Log "WINGET PROCESS: $line" }
+
+        
     # If installation returns a catchable error...
-    } catch {
 
+    } catch {
             
 
             Write-Log "Install failure of $AppID." "ERROR"
             $InstallSuccess = $false
 
     }
-
+    
     # Final Check (sometimes it installs anyways despite returning an error above)
+
+
+
+
+
+
     if ($InstallSuccess -eq $false){
 
 

@@ -37,7 +37,7 @@ if ($WorkingDirectory -eq "" -or $WorkingDirectory -eq $null -or $RepoNickName -
 
 
 $LogRoot = "$WorkingDirectory\Logs\Detection_Logs"
-$LogPath = "$LogRoot\DetectionScript-General_Remediation_._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LogPath = "$LogRoot\General_Remediation_.$function._Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $ThisFileName = $MyInvocation.MyCommand.Name
 
 $RegEditScriptPath = "$LocalRepoPath\Configurators\Configure-Registry.ps1"

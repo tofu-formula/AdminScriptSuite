@@ -161,6 +161,9 @@ Function TestWinGet {
         Write-Log "Current WinGet command: $WinGet"
         $whoami = [Environment]::UserName
         Write-Log "Current user: $whoami"
+
+        PrepWinGetSources
+
         Write-Log "Running test..."
         #& $WinGet --info --accept-source-agreements| out-null
         & $winget search "7zip.7zip" --accept-source-agreements | out-null # this function will force accept of source agreements
@@ -725,16 +728,26 @@ Function Install-WinGet {
 
     # Post-Install
 
+    PrepWinGetSources
+
+    Write-Log "Install success"
+    Return $WinGet
+
+}
+
+Function PrepWinGetSources{
+
+    Try {
         # Prep sources (first-run) and install packages
         Write-Log "Prepping WinGet source"
         $result = & $winget source reset --force | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
         $result = & $winget source update | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
-
-    Write-Log "Install success"
-    Return $WinGet
-
+    } Catch {
+        Write-Log "Could not prep WinGet sources. Error: $_" "ERROR"
+        # throw "$_"
+    }
 }
 
 ##########
@@ -843,7 +856,7 @@ if ($WinGet -eq "Failure"){
     Install-WinGet
     
     $WinGet = Check-WinGet
-    
+
     # Final check
     if ($WinGet -eq "Failure"){
 

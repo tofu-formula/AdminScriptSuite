@@ -485,8 +485,10 @@ Write-Log "================================="
 
 
 # Check if the target application exists in either JSON and if it has prerequisites
+Write-Log "Checking for application $TargetAppName and its prerequisites..."
 InstallSomethingMain -AppNameToFind $TargetAppName -InstallIt $false
 
+Write-Log "================================="
 
 ## If there are prerequisites, install them first
 if ($Prerequisites) {  
@@ -521,11 +523,15 @@ if ($Prerequisites) {
     Write-Log "SCRIPT: $ThisFileName | No prerequisites specified for $TargetAppName. Proceeding to main installation."
 }
 
+Write-Log "================================="
+
 ## Install main requested application
 
 Write-Log "SCRIPT: $ThisFileName | Beginning installation of main application: $TargetAppName"
 
 InstallSomethingMain -AppNameToFind $TargetAppName -InstallIt $true
+
+Write-Log "================================="
 
 # Check for success/fail
 if($LASTEXITCODE -ne 0){
