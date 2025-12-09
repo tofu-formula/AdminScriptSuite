@@ -477,10 +477,95 @@ if($detectPreviousInstallation -eq $true){
     } catch {
             
 
-            Write-Log "Install failure of $AppID: $_" "ERROR"
-            $InstallSuccess = $false
+        Write-Log "Install failure of $AppID : $_" "ERROR"
+        $InstallSuccess = $false
 
-            
+        # Check for specific error code that indicates a corrupted WinGet install
+        # This logic branch is mostly untested.
+        if ($_ -match "-1073741701"){
+
+            # try clearing the WinGet cache and uninstall
+            remove-item -path  "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json" -ErrorAction SilentlyContinue
+            remove-item -path  "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\source" -ErrorAction SilentlyContinue
+
+            get-appxpackage *AppInstaller* | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 5
+
+            # Reintstall WinGet
+            # TODO: Make this into a function later
+            Write-Log "Checking/Installing WinGet"
+            $WinGet = & $InstallWinGetScript -ReturnWinGetPath:$True -WorkingDirectory $WorkingDirectory
+            if ($LASTEXITCODE -eq 1 -or $WinGet -eq $null -or $WinGet -eq "" -or $WinGet -eq "Failure") { 
+                
+                Write-Log "Could not verify or install WinGet. Check the Install WinGet log." "ERROR"
+                Write-Log "Last exit code: $LASTEXITCODE" "ERROR"
+                Write-Log "Received WinGet Path Value: $WinGet" "ERROR"
+                
+                Exit 1
+
+            }
+
+            Write-Log "Retrying installation of $AppID after WinGet reset..."
+
+            # Try installation of target ID again
+            # TODO: make this into a function later
+            try {
+
+                $proc = Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+
+                        # Start the process and wait for the process with timeout
+                $startTime = Get-Date
+                while (-not $proc.HasExited) {
+                    Start-Sleep -Seconds 10
+                    $elapsed = (Get-Date) - $startTime
+                    Write-Log "Time elapsed: $elapsed / $TimeoutSeconds seconds"
+                    if ($elapsed.TotalSeconds -ge $timeoutSeconds) {
+                        Write-Log "Timeout reached ($timeoutSeconds seconds) for $AppID. Killing process..." "WARNING"
+                        try {
+                            $proc.Kill()
+                            Write-Log "Process killed due to timeout for $AppID" "ERROR"
+                        } catch {
+                            Write-Log "Failed to kill process for $AppID : $_" "ERROR"
+                        }
+                        break
+                    }
+                }
+                
+                
+                # If the process exited and had a success code...
+                if ($proc.HasExited -and $proc.ExitCode -eq 0) {
+
+                    Write-Log "Installation return success exit code, now detecting local installation..."
+                    $detectInstallation = WinGet-Detect $AppID
+
+                    if($detectInstallation -eq $true){
+
+                        Write-Log "Local installation detected. Installation successful for $AppID" "SUCCESS"
+                        $InstallSuccess = $true
+
+                    # If process did not exit...
+                    } elseif(-not $proc.HasExited) {
+
+                        Write-Log "Process still running after timeout, unexpected behavior." "WARNING"
+                        #$InstallSuccess = $false
+                    
+                    # If the detect was unsuccessful AND the process did not exit...
+                    } else {
+
+                        $InstallSuccess = $false
+                        Write-Log "No local installation detected. Install failure of $AppID." "ERROR"
+                    
+                    }
+
+                } 
+
+            } catch {
+                Write-Log "Retry install failure of $AppID : $_" "ERROR" 
+                $InstallSuccess = $false
+            }
+
+        }
+
     }
     
     # Final Check (sometimes it installs anyways despite returning an error above)

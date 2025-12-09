@@ -72,16 +72,26 @@ function Write-Log {
 Function InstallApp-via-WinGet {
 
     Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START | Calling General_WinGet_Installer script to install $TargetAppName via WinGet..."
+    
+    Try {
 
-    if ($Version){
+        if ($Version){
 
-        & $General_WinGet_Installer_ScriptPath -AppName $TargetAppName -AppID $WinGetID -WorkingDirectory $WorkingDirectory -Version $Version
+            & $General_WinGet_Installer_ScriptPath -AppName $TargetAppName -AppID $WinGetID -WorkingDirectory $WorkingDirectory -Version $Version
 
-    } else {
+        } else {
 
-        & $General_WinGet_Installer_ScriptPath -AppName $TargetAppName -AppID $WinGetID -WorkingDirectory $WorkingDirectory
+            & $General_WinGet_Installer_ScriptPath -AppName $TargetAppName -AppID $WinGetID -WorkingDirectory $WorkingDirectory
+
+        }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END |WinGet installation failed: $_" "ERROR"
+        Exit 1
 
     }
+
 
     Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
 }
