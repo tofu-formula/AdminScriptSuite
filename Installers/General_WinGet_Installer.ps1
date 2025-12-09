@@ -424,6 +424,25 @@ if($detectPreviousInstallation -eq $true){
         
         }   
 
+
+        Write-Log "Installation process completed, now detecting local installation..."
+        Start-Sleep -Seconds 10 
+        $detectInstallation = WinGet-Detect $AppID
+
+        if($detectInstallation -eq $true){
+
+            Write-Log "Local installation detected. Installation successful for $AppID" "SUCCESS"
+            $InstallSuccess = $true
+
+        } else { 
+
+            Write-Log "No local installation detected. Install failure of $AppID." "ERROR"
+            $InstallSuccess = $false
+            
+            Throw "Installation command ran, but installation check failed for $AppID"
+
+        }
+
         
         # # Start the process and wait for the process with timeout
         # $startTime = Get-Date
@@ -495,14 +514,19 @@ if($detectPreviousInstallation -eq $true){
 
         # Check for specific error code that indicates a corrupted WinGet install
         # This logic branch is mostly untested.
-        if ($_ -match "-1073741701"){
+        # if ($_ -match "-1073741701"){
+        try {
 
             # try clearing the WinGet cache and uninstall
             remove-item -path  "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json" -ErrorAction SilentlyContinue
             remove-item -path  "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\source" -ErrorAction SilentlyContinue
+            
+            Start-Sleep -Seconds 10 
 
-            get-appxpackage *AppInstaller* | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 5
+            # Uninstall WinGet/App Installer
+            # NOTE: This doesn't work. Returns the following error: error 0x80070032: AppX Deployment Remove operation on package Microsoft.DesktopAppInstaller_1.27.350.0_arm64__8wekyb3d8bbwe from: C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.27.350.0_arm64__8wekyb3d8bbwe failed. This app is part of Windows and cannot be uninstalled on a per-user basis. An administrator can attempt to remove the app from the computer using Turn Windows Features on or off. However, it may not be possible to uninstall the app
+            # get-appxpackage *AppInstaller* | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+            # Start-Sleep -Seconds 10 
 
             # Reintstall WinGet
             # TODO: Make this into a function later
@@ -522,62 +546,96 @@ if($detectPreviousInstallation -eq $true){
 
             # Try installation of target ID again
             # TODO: make this into a function later
-            try {
+            
+                try { 
+            
+                    Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog" 
 
-                $proc = Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+                } catch { 
 
-                        # Start the process and wait for the process with timeout
-                $startTime = Get-Date
-                while (-not $proc.HasExited) {
-                    Start-Sleep -Seconds 10
-                    $elapsed = (Get-Date) - $startTime
-                    Write-Log "Time elapsed: $elapsed / $TimeoutSeconds seconds"
-                    if ($elapsed.TotalSeconds -ge $timeoutSeconds) {
-                        Write-Log "Timeout reached ($timeoutSeconds seconds) for $AppID. Killing process..." "WARNING"
-                        try {
-                            $proc.Kill()
-                            Write-Log "Process killed due to timeout for $AppID" "ERROR"
-                        } catch {
-                            Write-Log "Failed to kill process for $AppID : $_" "ERROR"
-                        }
-                        break
-                    }
+                    Throw $_ 
+                
+                }   
+
+                Write-Log "Installation process completed, now detecting local installation..."
+                Start-Sleep -Seconds 10 
+                $detectInstallation2 = WinGet-Detect $AppID
+
+                if($detectInstallation2 -eq $true){
+
+                    Write-Log "Local installation detected. Installation successful for $AppID" "SUCCESS"
+                    $InstallSuccess = $true
+
+                } else { 
+
+                    Write-Log "No local installation detected. Install failure of $AppID." "ERROR"
+                    $InstallSuccess = $false
+                    
+                    Throw "Installation command ran, but installation check failed for $AppID"
+
                 }
+
+
+
+
+                # $proc = Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+
+                #         # Start the process and wait for the process with timeout
+                # $startTime = Get-Date
+                # while (-not $proc.HasExited) {
+                #     Start-Sleep -Seconds 10
+                #     $elapsed = (Get-Date) - $startTime
+                #     Write-Log "Time elapsed: $elapsed / $TimeoutSeconds seconds"
+                #     if ($elapsed.TotalSeconds -ge $timeoutSeconds) {
+                #         Write-Log "Timeout reached ($timeoutSeconds seconds) for $AppID. Killing process..." "WARNING"
+                #         try {
+                #             $proc.Kill()
+                #             Write-Log "Process killed due to timeout for $AppID" "ERROR"
+                #         } catch {
+                #             Write-Log "Failed to kill process for $AppID : $_" "ERROR"
+                #         }
+                #         break
+                #     }
+                # }
                 
                 
-                # If the process exited and had a success code...
-                if ($proc.HasExited -and $proc.ExitCode -eq 0) {
+                # # If the process exited and had a success code...
+                # if ($proc.HasExited -and $proc.ExitCode -eq 0) {
 
-                    Write-Log "Installation return success exit code, now detecting local installation..."
-                    $detectInstallation = WinGet-Detect $AppID
+                #     Write-Log "Installation return success exit code, now detecting local installation..."
+                #     $detectInstallation = WinGet-Detect $AppID
 
-                    if($detectInstallation -eq $true){
+                #     if($detectInstallation -eq $true){
 
-                        Write-Log "Local installation detected. Installation successful for $AppID" "SUCCESS"
-                        $InstallSuccess = $true
+                #         Write-Log "Local installation detected. Installation successful for $AppID" "SUCCESS"
+                #         $InstallSuccess = $true
 
-                    # If process did not exit...
-                    } elseif(-not $proc.HasExited) {
+                #     # If process did not exit...
+                #     } elseif(-not $proc.HasExited) {
 
-                        Write-Log "Process still running after timeout, unexpected behavior." "WARNING"
-                        #$InstallSuccess = $false
+                #         Write-Log "Process still running after timeout, unexpected behavior." "WARNING"
+                #         #$InstallSuccess = $false
                     
-                    # If the detect was unsuccessful AND the process did not exit...
-                    } else {
+                #     # If the detect was unsuccessful AND the process did not exit...
+                #     } else {
 
-                        $InstallSuccess = $false
-                        Write-Log "No local installation detected. Install failure of $AppID." "ERROR"
+                #         $InstallSuccess = $false
+                #         Write-Log "No local installation detected. Install failure of $AppID." "ERROR"
                     
-                    }
+                #     }
 
-                } 
+                # } 
 
             } catch {
+
+
                 Write-Log "Retry install failure of $AppID : $_" "ERROR" 
                 $InstallSuccess = $false
+
+                
             }
 
-        }
+        # }
 
     }
     
