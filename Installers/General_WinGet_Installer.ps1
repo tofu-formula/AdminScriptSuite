@@ -407,7 +407,7 @@ if($detectPreviousInstallation -eq $true){
         Write-Log "Installation Error log for $AppID located at: $InstallationErrorLog"
         
 
-        $proc = Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
+        $proc = Start-Process -FilePath "$cmd" -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
         #$proc = Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -Wait -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
         #Start-Process -FilePath $cmd -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$InstallationOutputLog" -RedirectStandardError "$InstallationErrorLog"
 
@@ -468,8 +468,8 @@ if($detectPreviousInstallation -eq $true){
         # Spit out each line of the process for logging
 
 
-        Write-Log "Logging captured WinGet process output for process:"
-        ForEach ($line in $proc) { Write-Log "WINGET PROCESS: $line" }
+        # Write-Log "Logging captured WinGet process output for process:"
+        # ForEach ($line in $proc) { Write-Log "WINGET PROCESS: $line" }
 
         
     # If installation returns a catchable error...
