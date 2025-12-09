@@ -20,7 +20,7 @@ Param(
 ##########
 
 $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
-$LogRoot = "$WorkingDirectory\Logs\Git_Logs"
+$LogRoot = "$WorkingDirectory\Logs\Installer_Logs"
 $LogPath = "$LogRoot\Install-WinGet_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $ThisFileName = $MyInvocation.MyCommand.Name
 
@@ -843,6 +843,8 @@ if ($WinGet -eq "Failure"){
     Install-WinGet
     
     $WinGet = Check-WinGet
+    
+    # Final check
     if ($WinGet -eq "Failure"){
 
         Write-Log "SCRIPT: $ThisFileName | END | Failed to confirm WinGet is working after installation. Please investigate." "ERROR"

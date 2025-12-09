@@ -11,6 +11,8 @@
 
 .NOTES
 
+    This specific script doesn't do logging, previously out of a desire to keep SAS keys out of logs. Now that log folders are locked down, this is less of a concern.
+
     Some old notes:
 
         Instructions:
@@ -686,6 +688,12 @@ Return $ReturnHash
 # Return something
 
 #>
+
+if ($DesiredFunction -eq $null -or $DesiredFunction -eq ""){
+
+$DesiredFunction = Read-Host "Please enter the name of your desired function (InstallAppWithJSON, InstallPrinterByIP, RemediationScript)"
+
+}
 
 # Invoke the selected function and capture its result
 $result = & $DesiredFunction @FunctionParams
