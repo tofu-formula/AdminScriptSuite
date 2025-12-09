@@ -477,9 +477,10 @@ if($detectPreviousInstallation -eq $true){
     } catch {
             
 
-            Write-Log "Install failure of $AppID." "ERROR"
+            Write-Log "Install failure of $AppID: $_" "ERROR"
             $InstallSuccess = $false
 
+            
     }
     
     # Final Check (sometimes it installs anyways despite returning an error above)
