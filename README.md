@@ -16,7 +16,6 @@ AdminScriptSuite is specifically architected for deployment through enterprise t
 - **Windows Features** — Enable/disable Windows Optional Features programmatically
 - **Registry Management** — Secure registry operations with ACL management and 32/64-bit redirection handling
 - **Git-Based Deployment** — Pull latest scripts from repositories and execute on target machines
-- **Enterprise Security** — Certificate-based encryption, DPAPI support, and sensitive data protection
 
 ## Why AdminScriptSuite?
 
@@ -133,11 +132,11 @@ AdminScriptSuite/
 │   ├── Git-Runner_TEMPLATE.ps1         # Git-based script runner
 │   ├── General_RemediationScript-Registry_TEMPLATE.ps1
 │   └── OrganizationCustomRegistryValues-Reader_TEMPLATE.ps1
-├── Other_Tools/
-│   ├── Generate_Install-Command.ps1    # Intune command generator
-│   ├── Generate_Custom-Script_FromTemplate.ps1
-│   └── Security_Manager.ps1            # Security and ACL management
-└── Logs/                               # Generated log files
+└── Other_Tools/
+    ├── Generate_Install-Command.ps1    # Intune command generator
+    ├── Generate_Custom-Script_FromTemplate.ps1
+    └── Security_Manager.ps1            # Security and ACL management
+
 ```
 
 ## Core Scripts
