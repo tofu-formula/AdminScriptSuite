@@ -27,6 +27,18 @@
 
     TODO: Add a warning if script user != logged in user and script/user is not elevated (WinGet does not like this scenario)
 
+    TODO: If app to add to InTune is a winget install, attempt to pull the desc from the ms store and dump into a txt for the user to copy and paste
+
+    TODO: add this functionality:
+
+      {
+            "ApplicationName": "7zip.MSI",
+            "InstallMethod": "MSI-Online",
+            "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
+            "MSI_name":"7z2201-x64.msi"
+        },
+
+
 
 #>
 
@@ -737,12 +749,13 @@ Function Setup--Azure-WindowsApp{
         Write-Log "Would you like assistance in finding the Winget ID for this application? (y/n)" "WARNING"
         $Answer = Read-Host "y/n"
         Write-Log ""
+        
         if ($answer -eq "y"){
 
             Write-Log "Launching Winget search for application name: $AppNameToFind" "INFO2"
             Write-Log "" "INFO2"
             try{
-                
+
                 Write-Host ""
                 Write-Host "================ Winget Search Results ===================="
                 Write-Host ""
@@ -861,7 +874,7 @@ Function Setup--Azure-WindowsApp{
 
 
 
-    Write-Log "Would you like this script to test this application installation from the JSON on this local machine? (y/n)" "WARNING"
+    Write-Log "Would you like to test by having this script install the app based on the JSON configuration? (y/n)" "WARNING"
     $Answer = Read-Host "y/n"
     Write-Log ""
 
@@ -1696,41 +1709,9 @@ Write-Log ""
 # Write-Log "NOTE: Progess feed and non required info will be in white. Feel free to ignore these lines." "INFO2"
 
 Pause
-Write-Log "" "INFO2"
-
-Try{
-# Grab organization custom registry values
-    Write-Log "Retrieving organization custom registry values..." "INFO2"
-    $ReturnHash = & $OrgRegReader_ScriptPath #| Out-Null
-
-    # Check the returned hashtable
-    if(($ReturnHash -eq $null) -or ($ReturnHash.Count -eq 0)){
-        Write-Log "No data returned from Organization Registry Reader script!" "ERROR"
-        Exit 1
-    }
-    #Write-Log "Organization custom registry values retrieved:"
-    foreach ($key in $ReturnHash.Keys) {
-        $value = $ReturnHash[$key]
-        Write-Log "   $key : $value" "INFO2"
-    }    
-
-    # Turn the returned hashtable into variables
-    Write-Log "Setting organization custom registry values as local variables..." "INFO2"
-    foreach ($key in $ReturnHash.Keys) {
-        Set-Variable -Name $key -Value $ReturnHash[$key] -Scope Local
-        Write-Log "Should be: $key = $($ReturnHash[$key])" "INFO2"
-        $targetValue = Get-Variable -Name $key -Scope Local
-        Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
-
-    }
-} Catch {
-    Write-Log "Error retrieving organization custom registry values: $_" "ERROR"
-    Exit 1
-}
 
 # Warnings
 Write-Log ""
-
 # If this script is not being ran against C:ProgramData\AdminScriptSuite, it is going to lock down files in the root of the repo parent folder. Give a big fat warning. 
 if ($WorkingDirectory -ne "C:\ProgramData\AdminScriptSuite") {
     Write-Log "You are running this script from a non-standard location: $WorkingDirectory" "WARNING"
@@ -1768,18 +1749,60 @@ If( (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdent
 } 
 
 # Update this repo?
-Write-Log "Would you like skip updating this repo to the latest version?" "WARNING"
-$Answer = Read-Host "Please enter y/n"
-If ($Answer -eq "n"){
+Write-Log "Would you like to update the repo to the latest version? (y/n)" "WARNING"
+$Answer = Read-Host "y/n"
+if ($Answer -ne "y" -and $Answer -ne "n") {
+    Write-Log "Invalid input. Please type 'y' to update or 'n' to skip." "ERROR"
+    $Answer = Read-Host "y/n"
+}
+
+If ($Answer -eq "y"){
 
     $RepoNickName = Split-Path $RepoRoot -leaf
 
     & $GitRunnerScript -WorkingDirectory $WorkingDirectory -RepoNickName $RepoNickName -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true
 
-    Write-Log ""
-
+    Write-Log "" "INFO2"
+ 
     Write-Log "Repo updated to the latest version." "INFO2"
+     
+} 
+
+Write-Log "" "INFO2"
+
+Try{
+# Grab organization custom registry values
+    Write-Log "Retrieving organization custom registry values..." "INFO2"
+    $ReturnHash = & $OrgRegReader_ScriptPath #| Out-Null
+
+    # Check the returned hashtable
+    if(($ReturnHash -eq $null) -or ($ReturnHash.Count -eq 0)){
+        Write-Log "No data returned from Organization Registry Reader script!" "ERROR"
+        Exit 1
+    }
+    #Write-Log "Organization custom registry values retrieved:"
+    foreach ($key in $ReturnHash.Keys) {
+        $value = $ReturnHash[$key]
+        Write-Log "   $key : $value" "INFO2"
+    }    
+
+    # Turn the returned hashtable into variables
+    Write-Log "Setting organization custom registry values as local variables..." "INFO2"
+    foreach ($key in $ReturnHash.Keys) {
+        Set-Variable -Name $key -Value $ReturnHash[$key] -Scope Local
+        Write-Log "Should be: $key = $($ReturnHash[$key])" "INFO2"
+        $targetValue = Get-Variable -Name $key -Scope Local
+        Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
+
+    }
+} Catch {
+    Write-Log "Error retrieving organization custom registry values: $_" "ERROR"
+    Exit 1
 }
+
+
+
+Write-Log "" "INFO2"
 
 Write-Log ""
 Write-Log "Pre-reqs check complete."
@@ -1788,6 +1811,7 @@ Pause
 Write-Log ""
 Write-Log "================================="
 Write-Log ""
+
 
 Write-Log "These are the functions currently available through this script:"
 Write-Log ""
