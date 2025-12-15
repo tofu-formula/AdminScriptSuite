@@ -204,7 +204,7 @@ function WinGet-Detect{ # TODO: I may replace this function. I have a whole scri
     $ID
     )
 
-    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) Checking if app $ID is installed"
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Checking if app $ID is installed"
 
     # May want to remove the --exact if it causes issues
     $result = & $winget list --id "$ID" --exact --disable-interactivity --accept-source-agreements --source winget 2>&1#| Out-String
@@ -426,7 +426,7 @@ if($detectPreviousInstallation -eq $true){
 
 
         Write-Log "Installation process completed, now detecting local installation..."
-        Start-Sleep -Seconds 10 
+        Start-Sleep -Seconds 15 
         $detectInstallation = WinGet-Detect $AppID
 
         if($detectInstallation -eq $true){
@@ -517,6 +517,7 @@ if($detectPreviousInstallation -eq $true){
         # if ($_ -match "-1073741701"){
         try {
 
+            Write-Log "Attempting WinGet reset just in case there is corruption..."
             # try clearing the WinGet cache and uninstall
             remove-item -path  "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json" -ErrorAction SilentlyContinue
             remove-item -path  "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\source" -ErrorAction SilentlyContinue
@@ -525,6 +526,7 @@ if($detectPreviousInstallation -eq $true){
 
             # Uninstall WinGet/App Installer
             # NOTE: This doesn't work. Returns the following error: error 0x80070032: AppX Deployment Remove operation on package Microsoft.DesktopAppInstaller_1.27.350.0_arm64__8wekyb3d8bbwe from: C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.27.350.0_arm64__8wekyb3d8bbwe failed. This app is part of Windows and cannot be uninstalled on a per-user basis. An administrator can attempt to remove the app from the computer using Turn Windows Features on or off. However, it may not be possible to uninstall the app
+            # TODO: Replace this with Windows Feature Configurator call
             # get-appxpackage *AppInstaller* | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
             # Start-Sleep -Seconds 10 
 
@@ -558,7 +560,7 @@ if($detectPreviousInstallation -eq $true){
                 }   
 
                 Write-Log "Installation process completed, now detecting local installation..."
-                Start-Sleep -Seconds 10 
+                Start-Sleep -Seconds 15 
                 $detectInstallation2 = WinGet-Detect $AppID
 
                 if($detectInstallation2 -eq $true){

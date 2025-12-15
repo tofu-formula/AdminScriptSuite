@@ -26,12 +26,6 @@
     "WinGetID":"7zip.7zip"
   },
   {
-    "ApplicationName": "7zip.MSI",
-    "InstallMethod": "MSI-Online",
-    "URL":"https://www.7-zip.org/a/7z2201-x64.msi",
-    "MSI_name":"7z2201-x64.msi"
-  },
-  {
     "ApplicationName": ".NET_3.5",
     "InstallMethod": "Custom_Script",
     "ScriptPathFromRepoRoot":"Installers\\Install-DotNET.ps1",
@@ -46,6 +40,21 @@
     "ApplicationName": "Google_Chrome",
     "InstallMethod": "WinGet",
     "WinGetID":"Google.Chrome"
+  }, 
+  {
+    "ApplicationName": "Zoom_Workplace_EXE",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Zoom.Zoom.EXE"
+  }, 
+  {
+    "ApplicationName": "Zoom_Workplace_MSI",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Zoom.Zoom"
+  }, 
+  {
+    "ApplicationName": "WinGet-AutoUpdate",
+    "InstallMethod": "WinGet",
+    "WinGetID":"Romanitho.Winget-AutoUpdate"
   }, 
   {
     "ApplicationName": "MSI-Private-AzureBlob_Example",
