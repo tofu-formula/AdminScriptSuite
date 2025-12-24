@@ -188,7 +188,7 @@ Write-log "SCRIPT: $ThisFileName | Check #1 installed printer named: $PrinterNam
 # Initial Detect
 $Detect1 = & $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
 
-if ($Detect1){
+if ($LASTEXITCODE -eq 0) {
 
     Write-Log "SCRIPT: $ThisFileName | Printer '$PrinterName' detected. Proceeding with uninstallation."
 
@@ -249,7 +249,7 @@ Write-log "SCRIPT: $ThisFileName | Check #2 for installed printer named: $Printe
 
 $Detect2 = & $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
 
-if ($Detect2) {
+if ($LASTEXITCODE -eq 0) {
 
     Write-Log "SCRIPT: $ThisFileName | Printer '$PrinterName' still detected. Proceeding with alternative uninstallation method."
 
@@ -322,7 +322,7 @@ Write-log "SCRIPT: $ThisFileName | Final check for installed printer named: $Pri
 
 $Detect3 = & $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
 
-if ($Detect3) {
+if ($LASTEXITCODE -eq 0) {
 
     Write-Log "SCRIPT: $ThisFileName | Printer '$PrinterName' still detected after uninstallation attempts." "ERROR"
     $uninstallSuccess = $False
