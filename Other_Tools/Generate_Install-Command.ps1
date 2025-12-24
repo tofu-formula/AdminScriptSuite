@@ -439,7 +439,7 @@ function InstallPrinterByIP {
     #>
 
     # Store results in script-scoped variables so the main script can package them up
-    $script:GI_MainInstallCommand    = $installCommand
+    $script:GI_MainInstallCommand    = $installCommand # I don't remember why I named these "main"
     $script:GI_MainInstallCommandTXT = $InstallCommandTXT
     $script:GI_MainDetectCommand     = $detectCommand
     $script:GI_MainDetectCommandTXT  = $DetectCommandTXT
@@ -528,7 +528,7 @@ function UninstallPrinterByName {
     Write-Host ""
     Write-Host "UNINSTALL COMMAND" -ForegroundColor Yellow
     $CustomNameModifier = "Uninstall-Printer-Name.$PrinterName"
-    $UninstallCommand = New-IntuneGitRunnerCommand `
+    $InstallCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "AdminScriptSuite-Repo" `
         -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
         -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
@@ -543,6 +543,7 @@ function UninstallPrinterByName {
     # Export the txt file
     $UninstallCommandTXT = ExportTXT
 
+    $UninstallCommand = $InstallCommand
     <#
     $ReturnHash = @{
         MainInstallCommand = $installCommand
@@ -862,7 +863,7 @@ if ($result -eq "BuildMe") {
             UninstallPrinterScript   = $script:GI_UninstallPrinterScript
         }
 
-        
+
     } else {
 
         Write-Host "Unknown HashPattern: $($Script:HashPattern). Cannot build return hashtable!" -ForegroundColor Red
