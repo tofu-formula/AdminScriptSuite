@@ -465,6 +465,125 @@ function InstallPrinterByIP {
 
 }
 
+##################################################################
+### Example: Uninstall Printer by name (custom install script) ###
+##################################################################
+function UninstallPrinterByName {
+
+    Param(
+
+        [hashtable]$FunctionParams, # NOTE: This works for my intended use case but this with the param received snippet below are NOT done according to intent...
+        [String]$PrinterName="zz" # I don't remember why I had to do this...
+
+    )
+
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" -ForegroundColor Yellow
+
+    Write-Host "Generating Uninstall script for Printer by name..." -ForegroundColor Yellow
+
+    ###
+
+    Write-Host "Function parameters received:"
+    # Check the returned hashtable
+    if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
+        Write-Host "No data returned! Checking if a printer was explicitly specified..." #"ERROR"
+        if(-not $PrinterName){
+            Write-Host "No printer specified. Exiting!" #"ERROR"
+            Exit 1
+
+        } else {
+            Write-Host "Printer specified as: $PrinterName"
+        }
+    } else {
+
+        Write-Host "Values retrieved:"
+        foreach ($key in $FunctionParams.Keys) {
+            $value = $FunctionParams[$key]
+            Write-Host "   $key : $value"
+        }    
+
+        # Turn the returned hashtable into variables
+        Write-Host "Setting values as local variables..."
+        foreach ($key in $FunctionParams.Keys) {
+            Set-Variable -Name $key -Value $FunctionParams[$key] -Scope Local
+            # Write-Log "Should be: $key = $($ReturnHash[$key])"
+            $targetValue = Get-Variable -Name $key -Scope Local
+            Write-Host "Ended up as: $key = $($targetValue.Value)"
+
+        }
+
+    }
+
+    ###
+
+    If ($PrinterName -eq "zz"){
+        Write-Host "PrinterName is still the default 'zz'. Please specify a valid PrinterName. Exiting!" #"ERROR"
+        Exit 1
+    }
+
+
+    #$PrinterName = "Auckland"
+
+    # Main install command:
+    Write-Host ""
+    Write-Host "UNINSTALL COMMAND" -ForegroundColor Yellow
+    $CustomNameModifier = "Uninstall-Printer-Name.$PrinterName"
+    $UninstallCommand = New-IntuneGitRunnerCommand `
+        -RepoNickName "AdminScriptSuite-Repo" `
+        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -ScriptPath "Uninstallers\Uninstall-Printer.ps1" `
+        -CustomNameModifier "$CustomNameModifier" `
+        -ScriptParams @{
+            PrinterName = "$PrinterName"
+            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        }
+
+    $UninstallPrinterScript = $global:CustomScript
+    # Export the txt file
+    $UninstallCommandTXT = ExportTXT
+
+    <#
+    $ReturnHash = @{
+        MainInstallCommand = $installCommand
+        MainInstallCommandTXT = $InstallCommandTXT
+        MainDetectCommand = $detectCommand
+        MainDetectCommandTXT = $DetectCommandTXT
+        InstallPrinterScript = $InstallPrinterScript
+        DetectPrinterScript = $DetectPrinterScript
+    }
+
+    Write-host "Return values prepared."
+    $ReturnHash.Keys | ForEach-Object { Write-Host "   $_ : $($ReturnHash[$_])" }   
+    Return $ReturnHash
+
+    #>
+
+    # Store results in script-scoped variables so the main script can package them up
+    # $script:GI_MainInstallCommand    = $installCommand
+    # $script:GI_MainInstallCommandTXT = $InstallCommandTXT
+
+    $script:GI_UninstallCommand    = $UninstallCommand
+    $script:GI_UninstallCommandTXT  = $UninstallCommandTXT
+    $script:GI_UninstallPrinterScript      = $UninstallPrinterScript
+
+    # Just for visibility, still log what we *think* we produced
+    Write-Host "Return values prepared."
+    Write-Host "   UninstallCommand     : $script:GI_UninstallCommand"
+    Write-Host "   UninstallCommandTXT  : $script:GI_UninstallCommandTXT"
+    Write-Host "   UninstallPrinterScript  : $script:GI_UninstallPrinterScript"
+
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
+    Write-host ""
+
+    $Script:HashPattern = "UninstallPrinterByName"
+
+    return "BuildMe"
+
+
+}
+
+
 
 ######################################
 ### Example: Install App with JSON ###
@@ -733,8 +852,18 @@ if ($result -eq "BuildMe") {
         }
 
 
+    } elseif($Script:HashPattern -eq "UninstallPrinterByName") {
 
-    }else {
+        Write-Host "Building return hashtable for UninstallPrinterByName..."
+
+        $result = @{
+            UninstallCommand     = $script:GI_UninstallCommand
+            UninstallCommandTXT  = $script:GI_UninstallCommandTXT
+            UninstallPrinterScript   = $script:GI_UninstallPrinterScript
+        }
+
+        
+    } else {
 
         Write-Host "Unknown HashPattern: $($Script:HashPattern). Cannot build return hashtable!" -ForegroundColor Red
         Exit 1
