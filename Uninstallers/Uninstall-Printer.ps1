@@ -7,8 +7,8 @@ Param(
 
     $RemoveDriver = $False, # Not implemented yet, may need in the future
 
-    [Parameter(Mandatory=$true)]
-    [String]$WorkingDirectory
+    #[Parameter(Mandatory=$true)]
+    [String]$WorkingDirectory="C:\ProgramData\AdminScriptSuite"
 
 )
 
@@ -186,7 +186,7 @@ Write-log "SCRIPT: $ThisFileName | Check #1 installed printer named: $PrinterNam
 
 
 # Initial Detect
-$Detect1 = $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
+$Detect1 = & $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
 
 if ($Detect1){
 
@@ -247,7 +247,7 @@ if ($Detect1){
 
 Write-log "SCRIPT: $ThisFileName | Check #2 for installed printer named: $PrinterName"
 
-$Detect2 = $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
+$Detect2 = & $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
 
 if ($Detect2) {
 
@@ -320,7 +320,7 @@ if ($Detect2) {
 
 Write-log "SCRIPT: $ThisFileName | Final check for installed printer named: $PrinterName"
 
-$Detect3 = $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
+$Detect3 = & $DetectPrinterScript -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
 
 if ($Detect3) {
 
