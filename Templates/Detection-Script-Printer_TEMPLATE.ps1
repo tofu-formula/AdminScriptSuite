@@ -1,5 +1,5 @@
 # Detection-Script-Printer_TEMPLATE.ps1
-
+# This script was intended to be used as a template for creating standalone detection scripts use in InTune. Currently that feature is only half developed and not in use. This is just being used for detection and is being called from GitRunner.
 
 Param(
 
@@ -12,6 +12,7 @@ Param(
 
 ##########
 ## VARS ##
+##########
 
 $LogRoot = "$WorkingDirectory\Logs\Detection_Logs"
 $ThisFileName = $MyInvocation.MyCommand.Name

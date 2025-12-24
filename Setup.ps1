@@ -507,9 +507,11 @@ function Setup--Azure-Printer{
     Write-Log ""    
     Write-Log "The Intune Win32 app package has been created at: $PrinterIntuneWinPath"
     Write-Log ""    
-    Write-Log "Next we will automatically create the install commands/scripts"
+    Write-Log "Next we will automatically create the install/uninstall commands/scripts and the detection script required for the Intune Win32 app."
 
     Write-Log "" "INFO2"
+
+        # Create install command    
 
         [hashtable]$FunctionParams = @{
             PrinterName = $PrinterName
@@ -550,9 +552,51 @@ function Setup--Azure-Printer{
 
 
         }
+
+        # Create uninstall command    
+
+        [hashtable]$FunctionParams = @{
+            PrinterName = $PrinterName
+        }
+
+        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -FunctionParams $FunctionParams
+
+        # Check the returned hashtable
+        if(($ReturnHash3 -eq $null) -or ($ReturnHash3.Count -eq 0)){
+            Write-Log "No data returned!" "ERROR"
+            Exit 1
+        }
+
+        Write-Log "Values retrieved:" "INFO2"
+
+        foreach ($key in $ReturnHash3.Keys) {
+
+            $value = $ReturnHash3[$key]
+            Write-Log "   $key : $value" "INFO2"
+
+        }    
+
+        # $result = $ReturnHash2
+        # foreach ($key in $result.Keys) {
+
+        #     Write-Host "   $key : $($result[$key])"
+
+        # }
+
+
+        # Turn the returned hashtable into variables
+        Write-Log "Setting values as local variables..." "INFO2"
+        foreach ($key in $ReturnHash3.Keys) {
+            Set-Variable -Name $key -Value $ReturnHash3[$key] -Scope Local
+            # Write-Log "Should be: $key = $($ReturnHash[$key])"
+            $targetValue = Get-Variable -Name $key -Scope Local
+            Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
+
+
+        }
         
     Write-Log ""
-    Write-Log "Install command and detection script created!"
+    Write-Log "Install command, uninstall command, and detection script created!"
     Write-Log ""
     Write-Log "Next we will manually create a Win32 application in InTune for this printer using the new .intunewin file, script, and install command."
     Write-Log ""
@@ -574,11 +618,12 @@ function Setup--Azure-Printer{
     Write-Log "     - Logo: Optional - You could create something with Canva using your organization logo, but standardize it"
     Write-Log ""    
     Write-Log " 4 - PROGRAM:"
-    Write-Log "     - Install command: The install command has already been attached to your clipboard! Simply paste it in there!"
-    Write-Log "         - Alternatively, use the install command found inside this file: $MainInstallCommandTXT"
-    Write-Log "     - Uninstall command: I have not set up uninstallation for apps for Company Portal. Handle these externally or develop your own method. Perhaps I will integrate uninstallation with InTune in the future if time allows. For a dummy command, just type: net"
+    Write-Log "     - Install command:" 
+    Write-Log "         - Use the install command found inside this file: $MainInstallCommandTXT" # I don't remember why I named this "main"
+    Write-Log "     - Uninstall command:" 
+    Write-Log "         - Use the uninstall command found inside this file: $UninstallCommandTXT"
     Write-Log "     - Install time: 15 minutes"
-    Write-Log "     - Allow available uninstall: No"
+    Write-Log "     - Allow available uninstall: Yes"
     Write-Log "     - Install behavior: System"
     Write-Log "     - Device restart behavior: No specific action"
     Write-Log ""    
