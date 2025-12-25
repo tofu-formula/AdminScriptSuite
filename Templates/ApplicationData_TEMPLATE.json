@@ -3,48 +3,52 @@
   {
     "ApplicationName": "Visual_Studio_Code",
     "InstallMethod": "WinGet",
-    "WinGetID":"Microsoft.VisualStudioCode"
+    "WinGetID": "Microsoft.VisualStudioCode"
   },
   {
     "ApplicationName": "Adobe_Creative_Cloud",
     "InstallMethod": "WinGet",
-    "WinGetID":"Adobe.CreativeCloud"
+    "WinGetID": "Adobe.CreativeCloud"
   },
   {
     "ApplicationName": "Adobe_Acrobat_Pro",
     "InstallMethod": "WinGet",
-    "WinGetID":"Adobe.Acrobat.Pro"
+    "WinGetID": "Adobe.Acrobat.Pro"
   },
   {
     "ApplicationName": "FlameShot",
     "InstallMethod": "WinGet",
-    "WinGetID":"Flameshot.Flameshot"
+    "WinGetID": "Flameshot.Flameshot"
   },
   {
     "ApplicationName": "7zip",
     "InstallMethod": "WinGet",
-    "WinGetID":"7zip.7zip"
+    "WinGetID": "7zip.7zip",
+    "UninstallType": "Remove-App-WinGet"
   },
   {
     "ApplicationName": ".NET_3.5",
     "InstallMethod": "Custom_Script",
-    "ScriptPathFromRepoRoot":"Installers\\Install-DotNET.ps1",
-    "CustomScriptArgs":"-Version \"3.5\""
+    "ScriptPathFromRepoRoot": "Installers\\Install-DotNET.ps1",
+    "CustomScriptArgs": "-Version \"3.5\""
   },
   {
     "ApplicationName": "Dell_CommandUpdate",
     "InstallMethod": "Custom_Script",
-    "ScriptPathFromRepoRoot":"Installers\\InstallApp-DellCommandUpdate-FullClean.ps1" 
+    "ScriptPathFromRepoRoot": "Installers\\InstallApp-DellCommandUpdate-FullClean.ps1",
+    "UninstallType": "All",
+    "WinGetID": "Dell.CommandUpdate",
+    "DisplayName": "Dell Command"
   },
   {
     "ApplicationName": "Google_Chrome",
     "InstallMethod": "WinGet",
-    "WinGetID":"Google.Chrome"
+    "WinGetID": "Google.Chrome"
   }, 
   {
     "ApplicationName": "Zoom_Workplace_EXE",
     "InstallMethod": "WinGet",
-    "WinGetID":"Zoom.Zoom.EXE"
+    "WinGetID": "Zoom.Zoom.EXE"
   }, 
   {
     "ApplicationName": "Zoom_Workplace_MSI",
@@ -54,19 +58,19 @@
   {
     "ApplicationName": "WinGet-AutoUpdate",
     "InstallMethod": "WinGet",
-    "WinGetID":"Romanitho.Winget-AutoUpdate"
+    "WinGetID": "Romanitho.Winget-AutoUpdate"
   }, 
   {
     "ApplicationName": "MSI-Private-AzureBlob_Example",
     "InstallMethod": "MSI-Private-AzureBlob",
-    "MSIPathFromContainerRoot":"Adobe_Creative_Cloud/install.msi",
-    "DisplayName":"Adobe Creative Cloud",
-    "PreRequisites":".NET_3.5"
+    "MSIPathFromContainerRoot": "Adobe_Creative_Cloud/install.msi",
+    "DisplayName": "Adobe Creative Cloud",
+    "PreRequisites": ".NET_3.5"
   },
   {
     "ApplicationName": "PreRequisite_Example",
     "InstallMethod": "WinGet",
-    "WinGetID":"Flameshot.Flameshot",
+    "WinGetID": "Flameshot.Flameshot",
     "PreRequisites":"Google_Chrome,7zip,Dell_CommandUpdate"
   }
   ]

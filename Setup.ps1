@@ -736,6 +736,32 @@ Function Setup--Azure-WindowsApp{
         $TargetApp = Select-ApplicationFromJSON
         $DialogueSelection = "A" # reset for next use
 
+        if ($TargetApp -eq $null) {
+
+            $LoopIt = $true
+
+            While ($LoopIt -eq $true) {
+
+                Write-Log "No application selected from the JSON files. Do you want to try again? (y/n)" "WARNING"
+                $Answer = Read-Host "y/n"
+                Write-Log ""
+
+                if ($Answer -eq "y"){
+
+                    $TargetApp = Select-ApplicationFromJSON
+
+                    if ($TargetApp -ne $null) {
+                        $LoopIt = $false
+                    }
+
+                } else {
+                    $LoopIt = $false
+                }
+
+            }
+
+        }
+
         Write-Log "" 
 
         # If ($AppNameToFind -eq "" -or $AppNameToFind -eq $null) {
@@ -958,7 +984,7 @@ Function Setup--Azure-WindowsApp{
     Write-Log "The Intune Win32 app package has been created at: $ApplicationIntuneWinPath"
     Write-Log ""    
 
-    Write-Log "Next we will automatically create the install commands/scripts."
+    Write-Log "Next we will automatically create the install/uninstall commands/scripts."
 
     Write-Log ""    
     Pause
@@ -1030,10 +1056,12 @@ Function Setup--Azure-WindowsApp{
 
     }
 
+
+
+
     Write-Log "" "INFO2"
-
-
-
+    Write-Log "Generating install command..." "INFO2"
+    Write-Log "" "INFO2"
 
     <#
     # Run the automation script to generate the install command and detection script
@@ -1099,10 +1127,78 @@ Function Setup--Azure-WindowsApp{
         Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
     }
 
+
+    ##  Create uninstall command ##
+    Write-Log "" "INFO2"
+    Write-Log "Generating uninstall command..." "INFO2"
+    Write-Log "" "INFO2"
+
+    ## Prereqs
+
+        # Declare these variables if they do not yet exist to avoid errors
+        if(!($Version)){ $Version = $null }
+        if(!($WinGetID)){ $WinGetID = $null }
+        if(!($DisplayName)){ $DisplayName = $null }
+
+        # If InstallMethod is WinGet and UninstallType is not set, set UninstallType to WinGet by default
+        if($InstallMethod -eq "WinGet" -and ($UninstallType -eq "" -or $UninstallType -eq $null)){
+            $UninstallType = "WinGet"
+        }
+
+        # Exit out if UninstallType is still not set
+        # TODO: Swap out for a loop that asks the user to input the uninstall type instead of exiting?
+        If ($UninstallType -eq "" -or $UninstallType -eq $null) {
+
+            Write-Log "The application '$ApplicationName' does not have sufficient information for the UninstallType var in the JSON to auto-generate uninstall command." "WARNING"
+            Write-Log "Please update your JSON with uninstall data and then run this script again" "WARNING"
+            
+            Exit 1
+
+        }
+
+    [hashtable]$FunctionParams = @{
+        ApplicationName = $ApplicationName
+        UninstallType = $UninstallType
+        Version = $Version
+        WinGetID = $WinGetID
+        UninstallString_DisplayName = $DisplayName
+    }
+
+    $FunctionParams
+
+    $ReturnHash3 = @{}
+    $ReturnHash3 = & $GenerateInstallCommand_ScriptPath `
+        -DesiredFunction "UninstallApp" `
+        -FunctionParams $FunctionParams
+
+    # Check the returned hashtable
+    if(($ReturnHash3 -eq $null) -or ($ReturnHash3.Count -eq 0)){
+        Write-Log "No data returned!" "ERROR"
+        Exit 1
+    }
+
+    Write-Log "Values retrieved:" "INFO2"
+
+    foreach ($key in $ReturnHash3.Keys) {
+
+        $value = $ReturnHash3[$key]
+        Write-Log "   $key : $value" "INFO2"
+
+    }    
+
+    Write-Log "Setting values as local variables..." "INFO2"
+    foreach ($key in $ReturnHash3.Keys) {
+        Set-Variable -Name $key -Value $ReturnHash3[$key] -Scope Local
+        # Write-Log "Should be: $key = $($ReturnHash[$key])"
+        $targetValue = Get-Variable -Name $key -Scope Local
+        Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
+
+
+    }
     
 
     Write-Log ""
-    Write-Log "Install command and detection script created!"
+    Write-Log "Install/Uninstall command and detection script created!"
     Write-Log ""
     Write-Log "Next, we will manually create a Win32 app in InTune using the new .intunewin file, command, and script."
     Write-Log ""
@@ -1127,9 +1223,10 @@ Function Setup--Azure-WindowsApp{
     Write-Log "     - Everything else on this page is up to your discretion."
     Write-Log ""    
     Write-Log " 4 - PROGRAM:"
-    Write-Log "     - Install command: The install command has already been attached to your clipboard! Simply paste it in there!"
-    Write-Log "         - Alternatively, use the install command found inside this file: $MainInstallCommandTXT"
-    Write-Log "     - Uninstall command: I have not set up uninstallation for apps for Company Portal. Handle these externally or develop your own method. Perhaps I will integrate uninstallation with InTune in the future if time allows. For a dummy command, just type: net"
+    Write-Log "     - Install command:"
+    Write-Log "         - Use the install command found inside this file: $MainInstallCommandTXT"
+    Write-Log "     - Uninstall command:"
+    Write-Log "         - Use the install command found inside this file: $UninstallCommandTXT"
     Write-Log "     - Install time: 15 minutes"
     Write-Log "     - Allow available uninstall: No"
     Write-Log "     - Install behavior: System"

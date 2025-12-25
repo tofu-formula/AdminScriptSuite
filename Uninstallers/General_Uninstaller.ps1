@@ -12,6 +12,16 @@
 - install winget
 - sometimes the command outputs are blank; remove if so?
 
+IDEA:
+
+Instead of so many uninstall types just have a few main types and then have the external runner pass in extra args as needed. That gives more flexibility and reduces the number of uninstall types needed, both significantly.
+
+
+# TODO: 
+
+- For the UninstallerString method, the supplied AppName must be a valid, exact DisplayName
+- Rename UninstallType to UninstallMethod for consistency
+
 
 #>
 
@@ -56,6 +66,12 @@ Param(
     [Boolean]$SupremeErrorCatching = $True, 
     
     [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
+
+    # These can be explicitly passed if the AppName is seperate
+    $WinGetID=$null,
+    $UninstallString_DisplayName=$null
+
+
 )
 
 
@@ -571,6 +587,10 @@ Function App-Detector {
     }
 
     If ($DetectMethod -eq 'UninstallerString'){
+
+        Write-Log "For UninstallerString method, using wildcard search the registry uninstall strings for DisplayName equal to the supplied AppName"
+        # TODO: the supplied AppName must be a valid, exact DisplayName
+
         $Detection = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, 
                                         HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | 
                     Get-ItemProperty | 
@@ -585,6 +605,8 @@ Function App-Detector {
 
     If ($DetectMethod -eq 'AppxPackage'){
 
+        # TODO: Make this exact match?
+
         #Write-Log "Running detection"
         $Detection = Get-AppxPackage -AllUsers $appName
 
@@ -592,12 +614,17 @@ Function App-Detector {
 
     If ($DetectMethod -eq 'AppPackage'){
 
-       $Detection = Get-AppPackage -AllUsers $appName
+        # TODO: Make this exact match?
+
+        $Detection = Get-AppPackage -AllUsers $appName
 
     }
 
     # UNTESTED
     If ($DetectMethod -eq 'AppxProvisionedPackage'){
+
+        # TODO: Make this exact match?
+
 
         #Write-Log "Running detection"
         #$Detection = Get-AppxPackage -AllUsers $appName
@@ -616,6 +643,8 @@ Function App-Detector {
     # UNTESTED
     If ($DetectMethod -eq 'AppProvisionedPackage'){
 
+        # TODO: Make this exact match?
+
         $provApp = Get-AppProvisionedPackage -Online 
         $proPackageFullName = (Get-AppProvisionedPackage -Online | where {$_.Displayname -eq $appName}).DisplayName
 
@@ -631,11 +660,15 @@ Function App-Detector {
 
     If ($DetectMethod -eq 'CIM'){
 
+        # TODO: Make this exact match?
+
         $Detection = Get-CimInstance -ClassName Win32_Product | Where-Object { $_.Name -like "$Appname*"} | Select-object name
 
     }
 
     If ($DetectMethod -eq 'Uninstallertring2'){
+
+        # TODO: Make this exact match?
 
         $Detection = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where {$_.DisplayName -like $appName} | Select UninstallString
 
@@ -1865,12 +1898,37 @@ if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get'){
 }
 
 
+# Consolidate AppName parameter
+# TODO: Check if both are provided and log a warning if so
+if($WinGetAppID -ne $null -and $WinGetAppID -ne ""){
+
+    Write-Log "Using WinGet AppID parameter for uninstall method"
+    $AppName = $WinGetAppID
+
+} else {
+
+    Write-Log "Using supplied AppName parameter for uninstall method"
+}
+
+if($UninstallString_DisplayName -ne $null -and $UninstallString_DisplayName -ne ""){
+
+    Write-Log "Using UninstallString DisplayName parameter for uninstall method"
+    $AppName = $UninstallString_DisplayName
+
+} else {
+
+    Write-Log "Using supplied AppName parameter for uninstall method"
+}
+
+Write-Log "Final string for uninstall methods: $AppName"
+
 Write-Log "Now beginning work."
 
 # Check if the function is legit first
 if ($Methods -contains $UninstallType) {
 
     Write-Log "Requested uninstall method found: $UninstallType"
+
     Write-Log "Attempting to call this method."
     $result = & $UninstallType -appName $AppName
     
