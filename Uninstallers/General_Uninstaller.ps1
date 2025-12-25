@@ -65,7 +65,7 @@ Param(
 
     [Boolean]$SupremeErrorCatching = $True, 
     
-    [int]$timeoutSeconds = 900 # Timeout in seconds (300 sec = 5 minutes)
+    [int]$timeoutSeconds = 900, # Timeout in seconds (300 sec = 5 minutes)
 
     # These can be explicitly passed if the AppName is seperate
     $WinGetID=$null,
@@ -513,8 +513,9 @@ Function Validate-WinGet-Search{
 
     Write-Log "Checking if AppID $AppID is valid"
 
-    if ($null -eq $Version){
+    if ($Version -eq $null -or $Version -eq ""){
 
+        Write-Log "Running: & $winget show --id $AppId --exact"
         $result = & $winget show --id $AppId --exact 2>&1 | Out-String
         ForEach ($line in $result) { Write-Log "WINGET: $line" } #; if ($LASTEXITCODE -ne 0) {Write-Log "SCRIPT: $ThisFileName | END | Failed. Exit code: $LASTEXITCODE" "ERROR"; Exit 1 }
 
@@ -529,7 +530,7 @@ Function Validate-WinGet-Search{
 
     if ($result -match "No package found") {
 
-        if ($null -eq $Version){
+        if ($Version -eq $null -or $Version -eq ""){
             Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
         } else {
             Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version. Now exiting script." "ERROR"
@@ -538,7 +539,7 @@ Function Validate-WinGet-Search{
         Exit 1
 
     } else {
-        if ($null -eq $Version){
+        if ($Version -eq $null -or $Version -eq ""){
             Write-Log "AppID $AppID is valid. Now proceeding with script."
 
         } else {
@@ -757,7 +758,7 @@ Function Test-AllDetectionMethods {
 
     # Include WinGet method?
     #if ($IncludeWinGet) {     # Only include Win_Get if specifically requested
-    if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get'){ # Only include if it is specifically requested
+    if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get' -or $UninstallType -eq 'Remove-App-WinGet'){ # Only include if it is specifically requested
         Write-Log "Also including Win_Get method"
         $detectionMethods += 'Win_Get'
     }
@@ -1571,14 +1572,13 @@ Function Remove-App-WinGet([String]$appName){
 
         # Santitize the name of the log path
 
-        if($Version -eq $null){
+        if($Version -eq $null -or $Version -eq ""){
 
-            $UninstallCommand_Args = "uninstall --id $AppName -e --silent --accept-source-agreements --all-versions"
+            $UninstallCommand_Args = "uninstall --id $AppName --exact --silent --accept-source-agreements --all-versions"
 
         }else{
 
-            $UninstallCommand_Args = "uninstall --id $AppName -e --silent --accept-source-agreements --version $Version"
-
+            $UninstallCommand_Args = "uninstall --id $AppName --exact --silent --accept-source-agreements --version $Version"
         }
 
         $UninstallCommand_App = $WinGet
@@ -1858,6 +1858,9 @@ Write-Log "TARGET UNINSTALL METHOD: $UninstallType"
 Write-Log "LOG PATH: $LogPath"
 Write-Log "VERBOSE LOGGING ENABLED: $VerboseLogs"
 Write-Log "SUPERIOR ERROR CATCHING LOGIC: $SupremeErrorCatching"
+Write-Log "WORKING DIRECTORY: $WorkingDirectory"
+Write-Log "WinGetID: $WinGetID"
+Write-Log "UninstallString DisplayName: $UninstallString_DisplayName"
 
 Write-Log "========================================="
 
@@ -1889,25 +1892,24 @@ if ([string]::IsNullOrEmpty($AppName) -or [string]::IsNullOrEmpty($UninstallType
 }
 
 # Check if WinGet is required
-if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get'){
+if ($UninstallType -eq 'All' -or $UninstallType -eq 'Win_Get' -or $UninstallType -eq 'Remove-App-WinGet') {
 
-    Write-Log "WinGet uninstall/detect method has been request. Now checking/installing WinGet."
+    Write-Log "WinGet uninstall/detect method has been requested. Now checking/installing WinGet."
     $WinGet = & $InstallWinGetScript -ReturnWinGetPath:$True -WorkingDirectory $WorkingDirectory
     if ($LASTEXITCODE -ne 0) { Write-Log "Could not verify or install WinGet. Check the Install WinGet log. Last exit code: $LASTEXITCODE" "ERROR"; Exit 1}
 
 }
 
-
 # Consolidate AppName parameter
 # TODO: Check if both are provided and log a warning if so
-if($WinGetAppID -ne $null -and $WinGetAppID -ne ""){
+if($WinGetID -ne $null -and $WinGetID -ne ""){
 
-    Write-Log "Using WinGet AppID parameter for uninstall method"
-    $AppName = $WinGetAppID
+    Write-Log "Using WinGetID parameter for uninstall method"
+    $AppName = $WinGetID
 
 } else {
 
-    Write-Log "Using supplied AppName parameter for uninstall method"
+    Write-Log "WinGetID not provided.Using supplied AppName parameter for uninstall method for WinGet if requested."
 }
 
 if($UninstallString_DisplayName -ne $null -and $UninstallString_DisplayName -ne ""){
@@ -1917,8 +1919,11 @@ if($UninstallString_DisplayName -ne $null -and $UninstallString_DisplayName -ne 
 
 } else {
 
-    Write-Log "Using supplied AppName parameter for uninstall method"
+    Write-Log "UninstallString_DisplayName not provided. Using supplied AppName parameter for uninstall method for UninstallString if requested."
 }
+
+
+
 
 Write-Log "Final string for uninstall methods: $AppName"
 
