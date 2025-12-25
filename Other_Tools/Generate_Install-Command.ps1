@@ -336,7 +336,7 @@ function InstallPrinterByIP {
     Param(
 
         [hashtable]$FunctionParams, # NOTE: This works for my intended use case but this with the param received snippet below are NOT done according to intent...
-        [String]$PrinterName="zz" # I don't remember why I had to do this...
+        [String]$PrinterName="zz" # Didn't want to set to $false or $null for eval purposes. If printername is contained inside functionparams this gets overwritten. If I set default as $True, $False, or $Null it will be difficult to evaluate that no printername was passed either way, hence I made it "zz" as a dummy value.
 
     )
     Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" -ForegroundColor Yellow
@@ -345,7 +345,8 @@ function InstallPrinterByIP {
 
     Write-Host "Function parameters received:"
     # Check the returned hashtable
-    if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
+    # TODO: May want to replace this with the method from InstallAppWithJSON function that checks for specific keys instead of just any keys. This method here can produce errors.
+    if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){ 
         Write-Host "No data returned! Checking if a printer was explicitly specified..." #"ERROR"
         if(-not $PrinterName){
             Write-Host "No printer specified. Exiting!" #"ERROR"
@@ -473,7 +474,7 @@ function UninstallPrinterByName {
     Param(
 
         [hashtable]$FunctionParams, # NOTE: This works for my intended use case but this with the param received snippet below are NOT done according to intent...
-        [String]$PrinterName="zz" # I don't remember why I had to do this...
+        [String]$PrinterName="zz" # Didn't want to set to $false or $null for eval purposes. If printername is contained inside functionparams this gets overwritten. If I set default as $True, $False, or $Null it will be difficult to evaluate that no printername was passed either way, hence I made it "zz" as a dummy value.
 
     )
 
@@ -485,6 +486,8 @@ function UninstallPrinterByName {
 
     Write-Host "Function parameters received:"
     # Check the returned hashtable
+    # TODO: May want to replace this with the method from InstallAppWithJSON function that checks for specific keys instead of just any keys. This method here can produce errors.
+
     if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
         Write-Host "No data returned! Checking if a printer was explicitly specified..." #"ERROR"
         if(-not $PrinterName){
@@ -777,6 +780,150 @@ function InstallAppWithJSON {
 
 }
 
+##############################
+### Example: Uninstall App ###
+##############################
+function UninstallApp {
+
+    Param(
+
+        [hashtable]$FunctionParams # NOTE: This works for my intended use case but this with the param received snippet below are NOT done according to intent...
+
+    )
+
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" -ForegroundColor Yellow
+
+    Write-Host "Generating Uninstall script for an application..." -ForegroundColor Yellow
+
+    ###
+
+    Write-Host "Function parameters received:"
+
+    # Check the returned hashtable
+    # if(($FunctionParams -eq $null) -or ($FunctionParams.Count -eq 0)){
+
+    #     Write-Host "No data returned! Checking if a app was explicitly specified..." #"ERROR"
+
+    #     if(-not $AppName){
+
+    #         Write-Host "No app specified. Exiting!" #"ERROR"
+    #         Exit 1
+
+    #     } else {
+    #         Write-Host "App specified as: $AppName"
+    #     }
+
+    # } else {
+
+    #     Write-Host "Values retrieved:"
+    #     foreach ($key in $FunctionParams.Keys) {
+    #         $value = $FunctionParams[$key]
+    #         Write-Host "   $key : $value"
+    #     }    
+
+    #     # Turn the returned hashtable into variables
+    #     Write-Host "Setting values as local variables..."
+    #     foreach ($key in $FunctionParams.Keys) {
+    #         Set-Variable -Name $key -Value $FunctionParams[$key] -Scope Local
+    #         # Write-Log "Should be: $key = $($ReturnHash[$key])"
+    #         $targetValue = Get-Variable -Name $key -Scope Local
+    #         Write-Host "Ended up as: $key = $($targetValue.Value)"
+
+    #     }
+
+    # }
+
+    ###
+
+    Write-Host "App specified as: $ApplicationName"
+    Write-Host "UninstallType specified as: $UninstallType"
+    Write-Host "Version specified as: $Version"
+    Write-Host "UninstallString_DisplayName specified as: $UninstallString_DisplayName"
+    Write-Host "WinGetID specified as: $WinGetID"
+
+
+    If ($ApplicationName -eq $null -or $ApplicationName -eq ""){
+        Write-Host "ApplicationName was not passed within the function parameters or explicityly set. Please specify a valid ApplicationName. Exiting!" #"ERROR"
+        Exit 1
+    }
+
+
+    #$PrinterName = "Auckland"
+
+    if(!($Version)){$Version = $null}
+    # winget ID
+    if(!($WinGetID)){ $WinGetID = $null }
+    # Uninstaller String Display Name
+    if(!($UninstallString_DisplayName)){ $UninstallString_DisplayName = $null }
+
+    # Main install command:
+    Write-Host ""
+    Write-Host "UNINSTALL COMMAND" -ForegroundColor Yellow
+    $CustomNameModifier = "Uninstall-App.$ApplicationName"
+    $InstallCommand = New-IntuneGitRunnerCommand `
+        -RepoNickName "AdminScriptSuite-Repo" `
+        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
+        -CustomNameModifier "$CustomNameModifier" `
+        -ScriptParams @{
+            AppName = "$ApplicationName"
+            UninstallType = "$UninstallType"
+            Version = "$Version"
+            WinGetID = "$WinGetID"
+            UninstallString_DisplayName = "$UninstallString_DisplayName"
+            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        }
+
+
+    $UninstallAppScript = $global:CustomScript
+    # Export the txt file
+    $UninstallCommandTXT = ExportTXT
+
+    $UninstallCommand = $InstallCommand
+    <#
+    $ReturnHash = @{
+        MainInstallCommand = $installCommand
+        MainInstallCommandTXT = $InstallCommandTXT
+        MainDetectCommand = $detectCommand
+        MainDetectCommandTXT = $DetectCommandTXT
+        InstallPrinterScript = $InstallPrinterScript
+        DetectPrinterScript = $DetectPrinterScript
+    }
+
+    Write-host "Return values prepared."
+    $ReturnHash.Keys | ForEach-Object { Write-Host "   $_ : $($ReturnHash[$_])" }   
+    Return $ReturnHash
+
+    #>
+
+    # Store results in script-scoped variables so the main script can package them up
+    # $script:GI_MainInstallCommand    = $installCommand
+    # $script:GI_MainInstallCommandTXT = $InstallCommandTXT
+
+    $script:GI_UninstallCommand    = $UninstallCommand
+    $script:GI_UninstallCommandTXT  = $UninstallCommandTXT
+    $script:GI_UninstallAppScript      = $UninstallAppScript
+
+    # Just for visibility, still log what we *think* we produced
+    Write-Host "Return values prepared."
+    Write-Host "   UninstallCommand     : $script:GI_UninstallCommand"
+    Write-Host "   UninstallCommandTXT  : $script:GI_UninstallCommandTXT"
+    Write-Host "   UninstallAppScript  : $script:GI_UninstallAppScript"
+
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
+    Write-host ""
+
+    $Script:HashPattern = "UninstallApp"
+
+    return "BuildMe"
+
+    #Write-Log "For WinGet functions to work, the supplied AppName must be a valid, exact AppID" "WARNING"
+    #Write-Log "For UninstallerString method, using wildcard search the registry uninstall strings for DisplayName equal to the supplied AppName"
+
+
+
+}
 
 
 ########
@@ -861,6 +1008,17 @@ if ($result -eq "BuildMe") {
             UninstallCommand     = $script:GI_UninstallCommand
             UninstallCommandTXT  = $script:GI_UninstallCommandTXT
             UninstallPrinterScript   = $script:GI_UninstallPrinterScript
+        }
+
+
+    } elseif($Script:HashPattern -eq "UninstallApp"){
+
+        Write-Host "Building return hashtable for UninstallApp..."
+
+        $result = @{
+            UninstallCommand     = $script:GI_UninstallCommand
+            UninstallCommandTXT  = $script:GI_UninstallCommandTXT
+            UninstallAppScript   = $script:GI_UninstallAppScript
         }
 
 
