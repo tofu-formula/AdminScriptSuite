@@ -1873,9 +1873,9 @@ Function Uninstall--Local-Application{
     Function AppPackage-search--uninstall{
 
         $Result1 = Get-AppxPackage -AllUsers | Select-Object Name, PackageFullName
-        $Result2 = Get-AppPackage -AllUsers | Select-Object Name, PackageFullName
-        $Result3 = Get-AppxProvisionedPackage -Online | Select-Object PackageName, PackageFullName
-        $Result4 = Get-AppProvisionedPackage -Online | Select-Object PackageName, PackageFullName
+        # $Result2 = Get-AppPackage -AllUsers | Select-Object Name, PackageFullName
+        $Result3 = Get-AppxProvisionedPackage -Online | Select-Object DisplayName, PackageName
+        # $Result4 = Get-AppProvisionedPackage -Online | Select-Object PackageName, PackageFullName
 
         Write-Log ""
         Write-Log "AppxPackage: Local App Packages found via Get-AppxPackage (all users):"
@@ -1885,13 +1885,13 @@ Function Uninstall--Local-Application{
             Write-Log "Name: $($app.Name) | PackageFullName: $($app.PackageFullName)" "INFO2"
         }
 
-        Write-Log ""
-        Write-Log "AppPackage: Local App Packages found via Get-AppPackage (all users):"
-        Write-Log ""
+        # Write-Log ""
+        # Write-Log "AppPackage: Local App Packages found via Get-AppPackage (all users):"
+        # Write-Log ""
 
-        ForEach ($app in $Result2) {
-            Write-Log "Name: $($app.Name) | PackageFullName: $($app.PackageFullName)" "INFO2"
-        }
+        # ForEach ($app in $Result2) {
+        #     Write-Log "Name: $($app.Name) | PackageFullName: $($app.PackageFullName)" "INFO2"
+        # }
         
 
         Write-Log ""
@@ -1899,87 +1899,134 @@ Function Uninstall--Local-Application{
         Write-Log ""
 
         ForEach ($app in $Result3) {
-            Write-Log "PackageName: $($app.PackageName) | PackageFullName: $($app.PackageFullName)" "INFO2"
+            Write-Log "DisplayName: $($app.DisplayName) | PackageName: $($app.PackageName)" "INFO2"
         }
         
 
-        Write-Log ""
-        Write-Log "AppProvisionedPackage: Local App Packages found via Get-AppProvisionedPackage (online):"
-        Write-Log ""
+        # Write-Log ""
+        # Write-Log "AppProvisionedPackage: Local App Packages found via Get-AppProvisionedPackage (online):"
+        # Write-Log ""
 
-        ForEach ($app in $Result4) {
-            Write-Log "PackageName: $($app.PackageName) | PackageFullName: $($app.PackageFullName)" "INFO2"
-        }
+        # ForEach ($app in $Result4) {
+        #     Write-Log "PackageName: $($app.PackageName) | PackageFullName: $($app.PackageFullName)" "INFO2"
+        # }
         
 
         Write-Log ""
 
         Write-Log "Available AppPackage uninstall methods:"
 
-        Write-Log " 1 - AppxPackage"
-        Write-Log " 2 - AppPackage"
-        Write-Log " 3 - AppxProvisionedPackage"
-        Write-Log " 4 - AppProvisionedPackage"
+        Write-Log " 1 - AppxPackage - Apps currently installed on this machine regardless of user"
+
+        Write-Log " 2 - AppxProvisionedPackage - Apps that will be installed for new users"
+
 
         Write-Log ""
 
-        Write-Log "Look through the lists above. Please select the method you wish to use based on which one contains the app you want to uninstall. If in doubt, try method 1 first:" "WARNING"
+        Write-Log "Enter the uninstall method number of your choice:" "WARNING"
 
-        $Method = Read-Host "Enter the uninstall method number of your choice"
+        $Method = Read-Host "Enter a #"
 
         Write-Log ""
 
-        While( $Method -lt 1 -or $Method -gt 4){
+        While( $Method -lt 1 -or $Method -gt 2){
 
             Write-Log "Invalid choice. Please select a valid method." "WARNING"
-            $Method = Read-Host "Enter the uninstall method number of your choice"
+            $Method = Read-Host "Enter the uninstall method number of your choice from the options above"
 
         }
         Write-Log ""
+
+        Write-Log "Please select an app to uninstall based on this list:" 
+        Write-Log ""
+
 
 
         if( $Method -eq 1){
 
+            Write-Log "AppxPackage has been selected."
             $UninstallMethod = "Remove-AppxPackage"
+            Write-Log ""
+            Write-Log "Here are the available AppxPackages to uninstall:"
+            Write-Log ""
 
-            $Result0 = $Result1
+            $Counter = 1
+            $HashTable = @{}
+            ForEach ($app in $Result1) {
+                
+                #Write-host "$Counter | $($app.DisplayName)"
+
+                Write-Log "$Counter - $($app.Name)"
+
+                $HashTable.Add($Counter, $app.Name)
+
+                $Counter++
+            }
 
         } elseif( $Method -eq 2 ){
 
-            $UninstallMethod = "Remove-AppPackage"
-
-            $Result0 = $Result2
-
-        } elseif( $Method -eq 3 ){
-
+            Write-Log "AppxProvisionedPackage has been selected."
             $UninstallMethod = "Remove-AppxPackage"
+            Write-Log ""
+            Write-Log "Here are the available AppxProvisionedPackages to uninstall:"
+            Write-Log ""
 
-            $Result0 = $Result3
+            $Counter = 1
+            $HashTable = @{}
+            ForEach ($app in $Result3) {
+                
+                #Write-host "$Counter | $($app.DisplayName)"
 
-        } elseif( $Method -eq 4 ){
+                Write-Log "$Counter - $($app.DisplayName)"
 
-            $UninstallMethod = "Remove-AppPackage"
+                $HashTable.Add($Counter, $app.DisplayName)
 
-            $Result0 = $Result4
+                $Counter++
+
+            }
 
         }
 
-        Write-Log ""
-        Write-Log "Please select an app to uninstall based on this list:" 
-        Write-Log ""
+        
+        # if( $Method -eq 1){
 
-        $Counter = 1
-        $HashTable = @{}
-        ForEach ($app in $Result0) {
+        #     $UninstallMethod = "Remove-AppxPackage"
+
+        #     $Result0 = $Result1
+
+        # } elseif( $Method -eq 2 ){
+
+        #     $UninstallMethod = "Remove-AppPackage"
+
+        #     $Result0 = $Result2
+
+        # } elseif( $Method -eq 3 ){
+
+        #     $UninstallMethod = "Remove-AppxPackage"
+
+        #     $Result0 = $Result3
+
+        # } elseif( $Method -eq 4 ){
+
+        #     $UninstallMethod = "Remove-AppPackage"
+
+        #     $Result0 = $Result4
+
+        # }
+
+
+        # $Counter = 1
+        # $HashTable = @{}
+        # ForEach ($app in $Result0) {
             
-            #Write-host "$Counter | $($app.DisplayName)"
+        #     #Write-host "$Counter | $($app.DisplayName)"
 
-            Write-Log "$Counter - $($app.Name)"
+        #     Write-Log "$Counter - $($app.Name)"
 
-            $HashTable.Add($Counter, $app.Name)
+        #     $HashTable.Add($Counter, $app.Name)
 
-            $Counter++
-        }
+        #     $Counter++
+        # }
 
         # $HashTable = $HashTable.GetEnumerator() | Sort-Object -Property:Name
 
@@ -2012,12 +2059,13 @@ Function Uninstall--Local-Application{
 
             Write-Log ""
             Write-Log "Please enter the # of the application you wish to uninstall from the above list:" "WARNING"
-            [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $COUNTER "
+            $numTodisplay = $COUNTER - 1
+            [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $numTodisplay "
 
             While ($TargetAppNum -lt 1 -or $TargetAppNum -ge $COUNTER) {
 
                 Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
-                [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $COUNTER "
+                [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $numTodisplay "
 
             }
 
