@@ -72,8 +72,13 @@ $DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob
 $InstallPrinterIP_ScriptPath = "$RepoRoot\Installers\General_IP-Printer_Installer.ps1"
 # Path to JSON app install script
 $JSONAppInstaller_ScriptPath = "$RepoRoot\Installers\General_JSON-App_Installer.ps1"
-# Printer uninstall script path
+# Path to printer uninstall script
 $UninstallPrinter_ScriptPath = "$RepoRoot\Uninstallers\Uninstall-Printer.ps1"
+# Path to app uninstall script
+$UninstallApp_ScriptPath = "$RepoRoot\Uninstallers\General_Uninstaller.ps1"
+# Path to install WinGet script
+$InstallWinGet_ScriptPath = "$RepoRoot\Installers\Install-WinGet.ps1"
+
 
 $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 
@@ -1541,17 +1546,558 @@ Function Uninstall--Local-Printer{
 
 Function Uninstall--Local-Application{
 
-    Write-Log "Uninstalling a local application function is still being developed." "ERROR"
-    Exit 1
+    Function JSON-search--uninstall{
+
+        Write-Log "To begin we will access the ApplicationData.json files, both public (local repo) and private (Azure Blob) to show you the available documented applications."
+        Write-Log ""
+
+        $TargetApp = Select-ApplicationFromJSON
+
+        if ($TargetApp -eq $null) {
+            Write-Log "No application selected. Exiting." "ERROR"
+            Exit 1
+        } else {
+            Write-Log "Valid application selected for uninstallation: $TargetApp"
+        }
+
+        # Determine if sufficient info is present from the JSON to generate uninstall command
+        if ($UninstallType -eq "" -or $UninstallType -eq $null) {
+
+            if ($installMethod -eq "WinGet") {
+
+                $UninstallType = "WinGet"
+
+            } else {
+
+                Write-Log "The application '$TargetApp' does not have sufficient information for the UninstallType var in the JSON to auto-generate uninstall command." "WARNING"
+                Write-Log "Please update your JSON with uninstall data and then run this script again" "WARNING"
+                
+                Exit 1
+            }
+
+        }
+
+        # Format optional params to avoid issues with empty strings
+        if ($Version -eq "" -or $Version -eq $null) {
+            $Version = $null
+        }
+
+        if ($WinGetID -eq "" -or $WinGetID -eq $null) {
+            $WinGetID = $null
+        }
+
+        if ($DisplayName -eq "" -or $DisplayName -eq $null) {
+            $DisplayName = $null
+        }
+    
+        & $UninstallApp_ScriptPath -AppName $TargetApp -UninstallType $UninstallType -WorkingDirectory $WorkingDirectory -Version $Version -WinGetID $WinGetID -UninstallString_DisplayName $DisplayName
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Uninstall app script failed with exit code: $LASTEXITCODE" "ERROR"
+            Exit 1
+        } else {
+            Write-Log "Application '$TargetApp' uninstalled successfully!" "SUCCESS"
+            Exit 0
+        }
+
+    }
+
+    Function Winget-search--uninstall{
+
+        # Install winget if not present
+
+        $WinGet = & $InstallWinGet_ScriptPath
+        
+        # Winget Search
+
+        $outFile = Join-Path $env:TEMP 'winget-export.json'
+
+        & $winget export -o $outFile --include-versions *> $null
+
+        $data = Get-Content $outFile -Raw | ConvertFrom-Json
+
+        $result =$data.Sources | `
+        ForEach-Object { $_.Packages } | `
+        Select-Object PackageIdentifier, Version | `
+        Sort-Object PackageIdentifier | `
+        Format-Table -AutoSize
+
+        $Result = $result | Out-String
+        Write-Log "Local applications found with winget:"
+        # ForEach ($line in $Result) {
+
+        #     Write-Log $line
+
+        # }
+
+        $Counter = 1
+        $HashTable = @{}
+
+        ForEach ($app in $Result) {
+            
+            Write-Log "$Counter - $($result.PackageIdentifier.packages.packageidentifier)"
+
+            $HashTable.Add($Counter, $($result.PackageIdentifier.packages.packageidentifier))
+
+            $Counter++
+
+        }
+
+        # Ask for user input of EXACT winget ID
+
+        # $WingetID = Read-Host "Enter the exact Winget Package Identifier of the application you wish to uninstall:"
+
+        # # Search again to confirm presence with exact ID
+
+        # if ( -not ($data.Sources.Packages | Where-Object { $_.PackageIdentifier -eq $WingetID }) ) {
+
+        #     Write-Log "The specified Winget Package Identifier '$WingetID' was not found among the installed applications." "ERROR"
+        #     Exit 1
+
+        # } else {
+
+        #     Write-Log "The specified Winget Package Identifier '$WingetID' was confirmed to be valid. Proceeding with uninstallation."
+
+        # }
+
+
+
+        $Exit = "n"
+
+        While ($Exit -ne "y") {
+
+            Write-Log ""
+            $TargetAppNum = Read-Host "Please enter the # of the application you wish to uninstall from the above list:"
+
+            While ($TargetAppNum -lt 1 -or $TargetAppNum -ge $COUNTER) {
+
+                Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
+                $TargetAppNum = Read-Host "Enter the number of the app you wish to uninstall"
+
+            }
+
+            $TargetApp = $HashTable[[int]$TargetAppNum]
+
+            Write-log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product"
+            Read-Host "Is this acceptable? (Y/N)"
+            if ($exit -eq "y") { break }
+            
+
+        }
+
+
+        # Uninstall with winget uninstall
+
+        & $UninstallApp_ScriptPath -AppName $TargetApp -UninstallType "WinGet" -WorkingDirectory $WorkingDirectory -WinGetID $TargetApp
+
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Uninstall app script failed with exit code: $LASTEXITCODE" "ERROR"
+            Exit 1
+        } else {
+            Write-Log "Application '$WingetID' uninstalled successfully!" "SUCCESS"
+            Exit 0  
+        }
+
+    }
+
+    Function CIM-search--uninstall{
+
+        $Result = Get-CimInstance -ClassName Win32_Product | Select-Object Name
+
+        Write-Log "Local applications found via CIM Win32_Product:"
+        $HashTable = @{}
+        $Counter = 1
+        ForEach ($app in $Result) {
+            #Write-Log "$($app.Name)"
+            Write-Log "$Counter - $App"
+
+            $HashTable.Add($Counter, $app)
+
+            $Counter++
+        }
+
+        $Exit = "n"
+
+        While ($Exit -ne "y") {
+
+            Write-Log ""
+            $TargetAppNum = Read-Host "Please enter the # of the application you wish to uninstall from the above list:"
+
+            While ($TargetAppNum -lt 1 -or $TargetAppNum -ge $COUNTER) {
+
+                Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
+                $TargetAppNum = Read-Host "Enter the number of the app you wish to uninstall"
+
+            }
+
+            $TargetApp = $HashTable[[int]$TargetAppNum]
+
+            Write-log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product"
+            Read-Host "Is this acceptable? (Y/N)"
+            if ($exit -eq "y") { break }
+            
+
+        }
+
+
+        Write-Log "Final selected app to uninstall: $TargetApp"
+
+        & $UninstallApp_ScriptPath -AppName $TargetApp -UninstallType "Remove-App-CIM" -WorkingDirectory $WorkingDirectory
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Uninstall app script failed with exit code: $LASTEXITCODE" "ERROR"
+            Exit 1
+        } else {
+            Write-Log "Application '$TargetApp' uninstalled successfully!" "SUCCESS"
+            Exit 0  
+        }
+
+    }
+
+    Function Registry-search--uninstall{
+
+        $paths = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        )
+
+        $Result0 = Get-ItemProperty $paths |`
+        Where-Object DisplayName |`
+        Select-Object DisplayName, DisplayVersion, PSChildName |`
+        Sort-Object DisplayName
+
+
+
+        Write-Log "Please select an app to uninstall based on the above list:"
+
+        $Counter = 1
+        $HashTable = @{}
+
+        ForEach ($app in $Result0) {
+            
+            Write-Log "$Counter - $($app.DisplayName)"
+
+            $HashTable.Add($Counter, $app.DisplayName)
+
+            $Counter++
+
+        }
+
+
+        # Write-Log ""
+        # [int]$Selection = Read-Host "Enter the # of the app you wish to uninstall"
+
+        # $HashTable
+
+        # While ($Selection -lt 1 -or $Selection -ge $COUNTER) {
+
+        # #$HashTable.$Selection
+
+        #     Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
+        #     $Selection = Read-Host "Enter the number of the app you wish to uninstall"
+
+        # }
+
+
+
+
+        $Exit = "n"
+
+        While ($Exit -ne "y") {
+
+            Write-Log ""
+            $TargetAppNum = Read-Host "Please enter the # of the application you wish to uninstall from the above list:"
+
+            While ($TargetAppNum -lt 1 -or $TargetAppNum -ge $COUNTER) {
+
+                Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
+                $TargetAppNum = Read-Host "Enter the number of the app you wish to uninstall"
+
+            }
+
+            $TargetApp = $HashTable[[int]$TargetAppNum]
+
+            Write-log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product"
+            Read-Host "Is this acceptable? (Y/N)"
+            if ($exit -eq "y") { break }
+            
+
+        }
+
+
+
+
+        Write-Log ""
+        Write-log "You selected to uninstall app: $TargetApp using method: $UninstallMethod"
+
+        # NOTE/TODO: there is a flaw here; sometimes there are duplicate DisplayNames. In the future we may want to list the found apps with indexes or other identifiers and have the user select one.
+        <#
+
+            Example of duplicates from my test machine:
+
+            DisplayName                                                     DisplayVersion   PSChildName                           
+            -----------                                                     --------------   -----------                           
+            Flameshot                                                       13.3.0           {8FA03992-037E-4A23-B8A8-AF2768116FBC}
+            Git                                                             2.51.2           Git_is1                               
+            Google Chrome                                                   143.0.7499.41    {AFEF3E4D-0F28-305F-94EA-B5F732F974C2}
+            Microsoft .NET Host - 8.0.15 (arm64)                            64.60.31149      {45BFB9A6-1426-467E-9F8E-93D5E9E63883}
+            Microsoft .NET Host FX Resolver - 8.0.15 (arm64)                64.60.31149      {1658430D-653D-43AF-8FD2-5C283EEDF162}
+            Microsoft .NET Runtime - 8.0.15 (arm64)                         64.60.31149      {77ACC55A-6671-48E3-9A3D-21E79B6627EF}
+            Microsoft 365 Apps for enterprise - en-us                       16.0.19328.20266 O365ProPlusRetail - en-us             
+            Microsoft Edge                                                  143.0.3650.96    Microsoft Edge                        
+            Microsoft Edge WebView2 Runtime                                 143.0.3650.96    Microsoft EdgeWebView                 
+            Microsoft Visual C++ 2022 Arm64 Runtime - 14.44.35211           14.44.35211      {88A3EF6C-D7E4-4707-B3F5-E530B3AD6081}
+            Microsoft Visual C++ 2022 Redistributable (Arm64) - 14.44.35211 14.44.35211.0    {a87e42cd-475d-4f15-8848-e0d60c63c02f}
+            Microsoft Windows Desktop Runtime - 8.0.15 (arm64)              8.0.15.34718     {754291a4-39ad-4334-b288-97b2515eca65}
+            Microsoft Windows Desktop Runtime - 8.0.15 (arm64)              64.60.31203      {CD4994D0-62B1-46E9-BC33-61FAD70FFA57}
+            Office 16 Click-to-Run Extensibility Component                  16.0.19328.20106 {90160000-008C-0000-1000-0000000FF1CE}
+            Office 16 Click-to-Run Licensing Component                      16.0.19029.20244 {90160000-007E-0000-1000-0000000FF1CE}
+            OpenSSL 3.5.1 for ARM (64-bit)                                  3.5.1            {44B11A22-49CB-4C70-9350-DAA6181BC86A}
+            Parallels Tools                                                 26.1.2.57293     {4254F5B9-8150-4F44-AD56-A356893E9C80}
+        
+        #>
+
+        & $UninstallApp_ScriptPath -AppName $TargetApp -UninstallType "All" -WorkingDirectory $WorkingDirectory -UninstallString_DisplayName $DisplayName
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Uninstall app script failed with exit code: $LASTEXITCODE" "ERROR"
+            Exit 1
+        } else {
+            Write-Log "Application '$TargetApp' uninstalled successfully!" "SUCCESS"
+            Exit 0  
+        }
+
+    }
+
+    Function AppPackage-search--uninstall{
+
+        $Result1 = Get-AppxPackage -AllUsers | Select-Object Name, PackageFullName
+        $Result2 = Get-AppPackage -AllUsers | Select-Object Name, PackageFullName
+        $Result3 = Get-AppxProvisionedPackage -Online | Select-Object PackageName, PackageFullName
+        $Result4 = Get-AppProvisionedPackage -Online | Select-Object PackageName, PackageFullName
+
+        Write-Log ""
+        Write-Log "AppxPackage: Local App Packages found via Get-AppxPackage (all users):"
+        Write-Log ""
+
+        ForEach ($app in $Result1) {
+            Write-Log "Name: $($app.Name) | PackageFullName: $($app.PackageFullName)" "INFO2"
+        }
+
+        Write-Log ""
+        Write-Log "AppPackage: Local App Packages found via Get-AppPackage (all users):"
+        Write-Log ""
+
+        ForEach ($app in $Result2) {
+            Write-Log "Name: $($app.Name) | PackageFullName: $($app.PackageFullName)" "INFO2"
+        }
+        
+
+        Write-Log ""
+        Write-Log "AppxProvisionedPackage: Local App Packages found via Get-AppxProvisionedPackage (online):"
+        Write-Log ""
+
+        ForEach ($app in $Result3) {
+            Write-Log "PackageName: $($app.PackageName) | PackageFullName: $($app.PackageFullName)" "INFO2"
+        }
+        
+
+        Write-Log ""
+        Write-Log "AppProvisionedPackage: Local App Packages found via Get-AppProvisionedPackage (online):"
+        Write-Log ""
+
+        ForEach ($app in $Result4) {
+            Write-Log "PackageName: $($app.PackageName) | PackageFullName: $($app.PackageFullName)" "INFO2"
+        }
+        
+
+        Write-Log ""
+
+        Write-Log "Available AppPackage uninstall methods:"
+
+        Write-Log " 1 - AppxPackage"
+        Write-Log " 2 - AppPackage"
+        Write-Log " 3 - AppxProvisionedPackage"
+        Write-Log " 4 - AppProvisionedPackage"
+
+        Write-Log ""
+
+        Write-Log "Look through the lists above. Please select the method you wish to use based on which one contains the app you want to uninstall. If in doubt, try method 1 first:" "WARNING"
+
+        $Method = Read-Host "Enter the uninstall method number of your choice"
+
+        Write-Log ""
+
+        While( $Method -lt 1 -or $Method -gt 4){
+
+            Write-Log "Invalid choice. Please select a valid method." "WARNING"
+            $Method = Read-Host "Enter the uninstall method number of your choice"
+
+        }
+        Write-Log ""
+
+
+        if( $Method -eq 1){
+
+            $UninstallMethod = "Remove-AppxPackage"
+
+            $Result0 = $Result1
+
+        } elseif( $Method -eq 2 ){
+
+            $UninstallMethod = "Remove-AppPackage"
+
+            $Result0 = $Result2
+
+        } elseif( $Method -eq 3 ){
+
+            $UninstallMethod = "Remove-AppxPackage"
+
+            $Result0 = $Result3
+
+        } elseif( $Method -eq 4 ){
+
+            $UninstallMethod = "Remove-AppPackage"
+
+            $Result0 = $Result4
+
+        }
+
+        Write-Log ""
+        Write-Log "Please select an app to uninstall based on this list:" 
+        Write-Log ""
+
+        $Counter = 1
+        $HashTable = @{}
+        ForEach ($app in $Result0) {
+            
+            #Write-host "$Counter | $($app.DisplayName)"
+
+            Write-Log "$Counter - $($app.Name)"
+
+            $HashTable.Add($Counter, $app.Name)
+
+            $Counter++
+        }
+
+        # $HashTable = $HashTable.GetEnumerator() | Sort-Object -Property:Name
+
+        # ForEach ($item in $HashTable) {
+
+        #     Write-Log "$($item.Name) | $($item.Value)"
+
+        # }
+
+
+
+
+        # Write-Log ""
+        # $Selection = Read-Host "Enter the number of the app you wish to uninstall"
+
+        # While( -not $HashTable.ContainsKey([int]$Selection) ){
+
+        #     Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
+        #     $Selection = Read-Host "Enter the number of the app you wish to uninstall"
+
+        # }
+
+        # Write-Host "HERE IS THE HASH TABLE:"
+        # $HashTable
+
+
+        $Exit = "n"
+
+        While ($Exit -ne "y") {
+
+            Write-Log ""
+            Write-Log "Please enter the # of the application you wish to uninstall from the above list:" "WARNING"
+            [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $COUNTER "
+
+            While ($TargetAppNum -lt 1 -or $TargetAppNum -ge $COUNTER) {
+
+                Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
+                [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $COUNTER "
+
+            }
+
+            $TargetApp = $HashTable.$TargetAppNum
+
+            Write-Log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product | Is this acceptable?" "WARNING"
+            $exit = Read-Host "(Y/N)" 
+
+            if ($exit -eq "y") { break }
+            
+        }
+
+
+
+
+        
+        Write-Log ""
+        Write-Log "You selected to uninstall app: $TargetApp using method: $UninstallMethod"
+        Write-Log ""
+
+        & $UninstallApp_ScriptPath -AppName $TargetApp -UninstallType $UninstallMethod -WorkingDirectory $WorkingDirectory
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Uninstall app script failed with exit code: $LASTEXITCODE" "ERROR"
+            Exit 1
+        } else {
+            Write-Log "Application '$TargetApp' uninstalled successfully!" "SUCCESS"
+            Exit 0  
+        }
+
+    }
+
+
+
     # Suggest using Control panel of open it for them?
 
     # NOTE: This is actually pretty complex and needs to be thought through well. Perhaps we should develop this out after re-architecting the Uninstall infrastructure.
 
-    # Do you want to uninstall an application from the JSON?
+    # Do you want to uninstall an application from the JSON, winget search -> uninstall, or CIM search -> uninstall?
 
-    # If not, do you want to see a list of applications installed on your machines and the potential uninstall methods?
+    Write-Log "These are the uninstall functions currently available through this script:"
+    Write-Log ""
 
-        # Select an uninstall method (dot source the uninstall script)
+    $methods = Get-Command -CommandType Function -Name "*--uninstall" | Select-Object -ExpandProperty Name
+
+    $AvailableFunctions = @{}
+
+    #Write-Log "Available Functions:" "INFO"
+    $COUNTER = 1
+    $methods | ForEach-Object { 
+        
+        Write-Log "$Counter - $_" "INFO"
+        $AvailableFunctions.add($Counter,$_)
+        $Counter++ 
+
+    }
+
+    Write-Log "================================="
+    Write-Log ""
+
+    Write-Log "Enter the # of your desired uninstall function:" "WARNING"
+    [int]$SelectedFunctionNumber = Read-Host "Please enter a #"
+
+
+    While ($SelectedFunctionNumber -lt 1 -or $SelectedFunctionNumber -ge $COUNTER) {
+        Write-Log "No function selected. Please enter a function number from the list above:" "ERROR"
+        [int]$SelectedFunctionNumber = Read-Host "Please enter a #"
+    }
+
+
+    $SelectedFunction2 = $AvailableFunctions[$SelectedFunctionNumber]
+    Write-Log ""
+    Write-Log "You have selected: $SelectedFunction2"
+    Write-Log "================================="
+    Write-Log ""
+    & $SelectedFunction2
+    Write-Log "================================="
+    Write-Log ""
+    Write-Log "SCRIPT: $ThisFileName | END | Function $SelectedFunction2 complete" "SUCCESS"
+
 
 }
 
@@ -2011,14 +2557,14 @@ Write-Log ""
 
 $methods = Get-Command -CommandType Function -Name "*--*" | Select-Object -ExpandProperty Name
 
-$AvailableTests = @{}
+$AvailableFunctions = @{}
 
 #Write-Log "Available Functions:" "INFO"
 $COUNTER = 1
 $methods | ForEach-Object { 
     
     Write-Log "$Counter - $_" "INFO"
-    $AvailableTests.add($Counter,$_)
+    $AvailableFunctions.add($Counter,$_)
     $Counter++ 
 
 }
@@ -2036,7 +2582,7 @@ While ($SelectedFunctionNumber -lt 1 -or $SelectedFunctionNumber -ge $COUNTER) {
 }
 
 
-$SelectedFunction = $AvailableTests[$SelectedFunctionNumber]
+$SelectedFunction = $AvailableFunctions[$SelectedFunctionNumber]
 Write-Log ""
 Write-Log "You have selected: $SelectedFunction"
 Write-Log "================================="
