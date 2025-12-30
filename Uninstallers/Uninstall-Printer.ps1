@@ -198,30 +198,55 @@ if ($LASTEXITCODE -eq 0) {
         try {
 
             # Get the the port before deletion
+            Write-Log "SCRIPT: $ThisFileName | Retrieving port name for printer '$PrinterName' before removal."
             $printer = Get-Printer -Name $PrinterName -ErrorAction Stop
             $portName = $printer.PortName
+            Try { Get-PrinterPort -Name $portName -ErrorAction Stop; Write-Log "Verified port exists"; $PortExists = $True} Catch { Write-Log "Error verifying port existence." "WARNING" ; $PortExists = $False }
+
+            Write-Log "SCRIPT: $ThisFileName | Retrieved port name '$portName' for printer '$PrinterName'."
+
 
             # Remove the printer
             Remove-Printer -Name $PrinterName -ErrorAction Stop
             Write-Log "SCRIPT: $ThisFileName | Successfully removed printer '$PrinterName' using Remove-Printer."
             
-            # Attempt to remove associated port
-            Try {
+            If ($PortExists) {
 
-                # Get and delete the port
-                $printer = Get-Printer -Name $PrinterName -ErrorAction Stop
-                $portName = $printer.PortName
+                # Verify again if port exists after printer removal
+                Try { 
+                    
+                    Get-PrinterPort -Name $portName -ErrorAction Stop; 
+                    
+                    Write-Log "Verified port exists after printer removal, this is unexpected behaviour. Will attempt to delete port." "WARNING" ; 
+                    
+                    $PortExists2 = $True
+                
+                } Catch { 
+                    
+                    Write-Log "Port existence could not be verified after printer removal. This is expected and preferred behaviour. No need to do further troubleshooting to delete port."; 
+                    
+                    $PortExists2 = $False 
+                
+                }
 
-                Write-Log "SCRIPT: $ThisFileName | Now attempting to delete associated port '$portName'."
+                # Attempt to remove associated port
 
-                $port = Get-PrinterPort -Name $portName -ErrorAction Stop
-                Remove-PrinterPort -Name $portName -ErrorAction Stop
-                Write-Log "SCRIPT: $ThisFileName | Successfully removed port '$portName'."
+                If ($PortExists2) {
+                    Try {
 
-            } Catch {
+                        Write-Log "SCRIPT: $ThisFileName | Now attempting to delete associated port '$portName'."
 
-                Write-Log "SCRIPT: $ThisFileName | Failed to delete port associated with printer '$PrinterName': $_" "WARNING"
-                Throw $_
+                        $port = Get-PrinterPort -Name $portName -ErrorAction Stop
+                        Remove-PrinterPort -Name $portName -ErrorAction Stop
+                        Write-Log "SCRIPT: $ThisFileName | Successfully removed port '$portName'."
+
+                    } Catch {
+
+                        Write-Log "SCRIPT: $ThisFileName | Failed to delete port associated with printer '$PrinterName': $_" "WARNING"
+                        Throw $_
+
+                    }
+                }
 
             }
 
@@ -278,14 +303,15 @@ if ($LASTEXITCODE -eq 0) {
                         $port = Get-WmiObject -Query "SELECT * FROM Win32_TCPIPPrinterPort WHERE Name = '$($printer.PortName)'"
                         if ($port) {
                             $port.Delete()
-                            Write-Host "Port '$($printer.PortName)' deleted."
+                            Write-Log "Port '$($printer.PortName)' deleted."
                         }
 
                         $uninstallSuccess = $True
 
                     } Catch {
 
-                        Write-Host "Failed to delete port '$($printer.PortName)': $_"
+                        Write-Log "Failed to delete port '$($printer.PortName)': $_" "WARNING"
+                        Write-Log "NOTE: This may be expected if the port was removed along with the printer." "WARNING"
                         Throw $_
                     }
 
