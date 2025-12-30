@@ -72,7 +72,8 @@ $DownloadAzureBlobSAS_ScriptPath = "$RepoRoot\Downloaders\DownloadFrom-AzureBlob
 $InstallPrinterIP_ScriptPath = "$RepoRoot\Installers\General_IP-Printer_Installer.ps1"
 # Path to JSON app install script
 $JSONAppInstaller_ScriptPath = "$RepoRoot\Installers\General_JSON-App_Installer.ps1"
-
+# Printer uninstall script path
+$UninstallPrinter_ScriptPath = "$RepoRoot\Uninstallers\Uninstall-Printer.ps1"
 
 $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 
@@ -1503,6 +1504,56 @@ Function Install--Local-Printer{
     }   
 
 }   
+
+Function Uninstall--Local-Printer{
+
+    # Write-Log "Uninstalling a local printer function is still being developed." "ERROR"
+    # Exit 1
+
+    # List the installed printers
+    $PrinterList = Get-Printer | Select-Object -ExpandProperty Name
+    Write-Log "Here are the installed printers on this machine:"
+    foreach ($printer in $PrinterList) {
+        Write-Log " - $printer"
+    }
+    Write-Log ""
+
+    # Select a printer to uninstall
+    Write-Log "Please enter the name of the printer you wish to uninstall from the above list:" "WARNING"
+    $PrinterName = Read-Host "Printer Name"
+    While ([string]::IsNullOrWhiteSpace($PrinterName)) {
+        Write-Log "No printer name provided. Please enter a printer name from the list above:" "ERROR"
+        $PrinterName = Read-Host "Printer Name"
+    }
+
+    # Call the uninstall script with the selected printer
+    & $UninstallPrinter_ScriptPath -PrinterName $PrinterName -WorkingDirectory $WorkingDirectory
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Log "Uninstall-Printer script failed with exit code: $LASTEXITCODE" "ERROR"
+        Exit $LASTEXITCODE
+    } else {
+        Write-Log "Printer '$PrinterName' uninstalled successfully!" "SUCCESS"
+    }
+
+    Pause
+}
+
+Function Uninstall--Local-Application{
+
+    Write-Log "Uninstalling a local application function is still being developed." "ERROR"
+    Exit 1
+    # Suggest using Control panel of open it for them?
+
+    # NOTE: This is actually pretty complex and needs to be thought through well. Perhaps we should develop this out after re-architecting the Uninstall infrastructure.
+
+    # Do you want to uninstall an application from the JSON?
+
+    # If not, do you want to see a list of applications installed on your machines and the potential uninstall methods?
+
+        # Select an uninstall method (dot source the uninstall script)
+
+}
 
 Function Install--Local-Application{
 
