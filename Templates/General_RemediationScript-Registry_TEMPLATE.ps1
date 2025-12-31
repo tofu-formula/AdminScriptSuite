@@ -363,7 +363,15 @@ if ($RegistryChanges -ne "" -and $RegistryChanges -ne $null){
             Try {
                 $EndValue = & $RegEditScriptPath -KeyPath $KeyPath -ValueName $ValueName -ValueType $ValueType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify" -AlsoLockDown $AlsoLockDown
             } catch {
+
+
+                Write-Log "SCRIPT: $ThisFileName | Failed to run the registry modification script. Error: $_" "ERROR"
+
+                Write-Log "SCRIPT: $ThisFileName | Attempted command: $RegEditScriptPath -KeyPath $KeyPath -ValueName $ValueName -ValueType $ValueType -Value $Value -WorkingDirectory $WorkingDirectory -Function "Modify" -AlsoLockDown $AlsoLockDown" "ERROR"
+
                 Write-Log "SCRIPT: $ThisFileName | END | Failed to write these values to the registry: $line" "ERROR"
+
+
                 Exit 1
             }
 
