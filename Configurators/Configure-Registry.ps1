@@ -22,9 +22,9 @@ Param(
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory,
 
-    [boolean]$KeyOnly = $false, # Used to create an empty key without setting a value
+    $KeyOnly = $false, # Used to create an empty key without setting a value
 
-    [boolean]$AlsoLockDown = $False # Used for doing lockdown during initial creation of a key
+    $AlsoLockDown = $False # Used for doing lockdown during initial creation of a key
 
     # [ValidateSet('Auto','Reg32','Reg64')]
     # [string]$RegistryView = 'Auto'
@@ -322,7 +322,7 @@ function Reg-Modify {
             New-Item -Path $KeyPath -Force | Out-Null
             Write-Log "Key created."
 
-            if ($AlsoLockDown) {
+            if ($AlsoLockDown -eq $True) {
 
                 Write-Log "Lockdown of key requested"
 
