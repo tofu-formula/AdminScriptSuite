@@ -22,6 +22,7 @@ Instead of so many uninstall types just have a few main types and then have the 
 - For the UninstallerString method, the supplied AppName must be a valid, exact DisplayName
 - Rename UninstallType to UninstallMethod for consistency
 
+- Remove "AppPackage" stuff it's literally the same as AppxPackage.
 
 #>
 
@@ -46,6 +47,34 @@ Chrome, Remove-App-EXE-S
 
 
 #>
+
+# NOTE/TODO: there is a flaw with uninstall based on registry DisplayName; sometimes there are duplicate DisplayNames. In the future we may want to list the found apps with indexes or other identifiers and have the user select one.
+<#
+
+    Example of duplicates from my test machine:
+
+    DisplayName                                                     DisplayVersion   PSChildName                           
+    -----------                                                     --------------   -----------                           
+    Flameshot                                                       13.3.0           {8FA03992-037E-4A23-B8A8-AF2768116FBC}
+    Git                                                             2.51.2           Git_is1                               
+    Google Chrome                                                   143.0.7499.41    {AFEF3E4D-0F28-305F-94EA-B5F732F974C2}
+    Microsoft .NET Host - 8.0.15 (arm64)                            64.60.31149      {45BFB9A6-1426-467E-9F8E-93D5E9E63883}
+    Microsoft .NET Host FX Resolver - 8.0.15 (arm64)                64.60.31149      {1658430D-653D-43AF-8FD2-5C283EEDF162}
+    Microsoft .NET Runtime - 8.0.15 (arm64)                         64.60.31149      {77ACC55A-6671-48E3-9A3D-21E79B6627EF}
+    Microsoft 365 Apps for enterprise - en-us                       16.0.19328.20266 O365ProPlusRetail - en-us             
+    Microsoft Edge                                                  143.0.3650.96    Microsoft Edge                        
+    Microsoft Edge WebView2 Runtime                                 143.0.3650.96    Microsoft EdgeWebView                 
+    Microsoft Visual C++ 2022 Arm64 Runtime - 14.44.35211           14.44.35211      {88A3EF6C-D7E4-4707-B3F5-E530B3AD6081}
+    Microsoft Visual C++ 2022 Redistributable (Arm64) - 14.44.35211 14.44.35211.0    {a87e42cd-475d-4f15-8848-e0d60c63c02f}
+    Microsoft Windows Desktop Runtime - 8.0.15 (arm64)              8.0.15.34718     {754291a4-39ad-4334-b288-97b2515eca65}
+    Microsoft Windows Desktop Runtime - 8.0.15 (arm64)              64.60.31203      {CD4994D0-62B1-46E9-BC33-61FAD70FFA57}
+    Office 16 Click-to-Run Extensibility Component                  16.0.19328.20106 {90160000-008C-0000-1000-0000000FF1CE}
+    Office 16 Click-to-Run Licensing Component                      16.0.19029.20244 {90160000-007E-0000-1000-0000000FF1CE}
+    OpenSSL 3.5.1 for ARM (64-bit)                                  3.5.1            {44B11A22-49CB-4C70-9350-DAA6181BC86A}
+    Parallels Tools                                                 26.1.2.57293     {4254F5B9-8150-4F44-AD56-A356893E9C80}
+
+#>
+
 
 Param(
 
@@ -1305,7 +1334,7 @@ Function Remove-App-EXE-S-QUOTES([String]$appName)
 
 }
 
-# UNTESTED
+# TESTED
 Function Remove-AppxPackage([String]$appName){
 
     # I may need to break this in to 2 seperate functions.
@@ -1428,7 +1457,7 @@ Function Remove-AppxPackage([String]$appName){
     } 
 }
 
-# UNTESTED
+# UNTESTED, not needed
 Function Remove-AppPackage([String]$appName){
 
     # I may need to break this in to 2 seperate functions.
