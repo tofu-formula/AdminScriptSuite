@@ -1705,14 +1705,17 @@ Function Uninstall--Local-Application{
 
         $Result = Get-CimInstance -ClassName Win32_Product | Select-Object Name
 
+        Write-Log ""
         Write-Log "Local applications found via CIM Win32_Product:"
+        Write-Log ""
+
         $HashTable = @{}
         $Counter = 1
         ForEach ($app in $Result) {
             #Write-Log "$($app.Name)"
-            Write-Log "$Counter - $App"
+            Write-Log "$Counter - $($App.name)"
 
-            $HashTable.Add($Counter, $app)
+            $HashTable.Add($Counter, $($App.name))
 
             $Counter++
         }
@@ -1722,23 +1725,32 @@ Function Uninstall--Local-Application{
         While ($Exit -ne "y") {
 
             Write-Log ""
-            $TargetAppNum = Read-Host "Please enter the # of the application you wish to uninstall from the above list:"
+            Write-Log "Please enter the # of the application you wish to uninstall from the above list:" "WARNING"
+            $numTodisplay = $COUNTER - 1
+            [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $numTodisplay "
 
             While ($TargetAppNum -lt 1 -or $TargetAppNum -ge $COUNTER) {
 
                 Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
-                $TargetAppNum = Read-Host "Enter the number of the app you wish to uninstall"
+                [int]$TargetAppNum = Read-Host "Please enter a # between 1 and $numTodisplay "
 
             }
 
-            $TargetApp = $HashTable[[int]$TargetAppNum]
+            $TargetApp = $HashTable.$TargetAppNum
 
-            Write-log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product"
-            Read-Host "Is this acceptable? (Y/N)"
+            Write-Log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product | Is this acceptable?" "WARNING"
+            $exit = Read-Host "(Y/N)" 
+
             if ($exit -eq "y") { break }
             
-
         }
+
+
+        
+        Write-Log ""
+        Write-Log "You selected to uninstall app: $TargetApp using method: $UninstallMethod"
+        Write-Log ""
+
 
 
         Write-Log "Final selected app to uninstall: $TargetApp"
@@ -2071,7 +2083,7 @@ Function Uninstall--Local-Application{
 
             $TargetApp = $HashTable.$TargetAppNum
 
-            Write-Log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product | Is this acceptable?" "WARNING"
+            Write-Log "You selected to uninstall app: $TargetApp using method: $UninstallMethod | Is this acceptable?" "WARNING"
             $exit = Read-Host "(Y/N)" 
 
             if ($exit -eq "y") { break }
@@ -2288,8 +2300,15 @@ function Select-ApplicationFromJSON {
         Write-Log "Applications found from the public JSON:"
         Write-Log ""
         #$list = $jsonData.applications.ApplicationName 
+        $Counter = 1
+        $HashTable = @{}
         Foreach ($item in $list1) {
-            Write-Log "$item"
+            Write-Log "$Counter - $item"
+
+            $HashTable.Add($Counter,$item)
+
+            $Counter++
+
         }
         Write-Log "" 
         Write-Log "----------------------------------------------------------------"
@@ -2298,47 +2317,82 @@ function Select-ApplicationFromJSON {
         Write-Log ""
         #$list = $jsonData.applications.ApplicationName 
         Foreach ($item in $list2) {
-            Write-Log "$item"
+            Write-Log "$Counter - $item"
+
+            $HashTable.Add($Counter,$item)
+
+            $Counter++
         }
         Write-Log "" 
         Write-Log "----------------------------------------------------------------"
         Write-Log ""
+
         if ($AppNameToFind -ne $null) {
 
             Write-Log "Application name provided as parameter: $AppNameToFind"
+            $exit = "y"
 
         } else {
 
+            $exit = "n"
+
+        }
+
+
+        While($exit -ne "y") {
+
             if ($DialogueSelection -eq "B"){
 
-                Write-Log "Enter the name of an app from the above list to add to InTune." "WARNING"
+                Write-Log "Enter the # of an app from the above list to add to InTune." "WARNING"
                 Write-Log " - NOTE: If you DO NOT SEE the app you want, type 'exit' and you can add your own." "WARNING"
             
             } else {
 
-                Write-Log "Enter the name of an app from the list above for installation." "WARNING"
+                Write-Log "Enter the # of an app from the list above for installation." "WARNING"
 
             }
             
             
-            $AppNameToFind = Read-Host "Application Name"
-            if ($AppNameToFind -eq 'exit') {
+            $AppNumToFind = Read-Host "Please enter a number between 1 and $($COUNTER - 1)"
+
+            if ($AppNumToFind -eq 'exit') {
 
                 Return $null
 
             }
-        }
 
-        While ([string]::IsNullOrWhiteSpace($AppNameToFind)) {
-            Write-Log "No application name provided. Please enter an application name from the list above. If you wish to exit this selection, type 'exit'." "ERROR"
-            $AppNameToFind = Read-Host "Application Name"
+            While ( [int]$AppNumToFind -lt 1 -or [int]$AppNumToFind -ge $COUNTER ) {
 
-            if ($AppNameToFind -eq 'exit') {
+                Write-Log "Invalid choice. Please select a valid number from the list above." "WARNING"
+                $AppNumToFind = Read-Host "Please enter a number between 1 and $($COUNTER - 1)"
+
+                if ($AppNumToFind -eq 'exit') {
+
+                    Return $null
+
+                }
+
+            }
+
+            While ([string]::IsNullOrWhiteSpace($AppNumToFind)) {
+            Write-Log "No application name provided. Please enter a # from the list above. If you wish to exit this selection, type 'exit'." "ERROR"
+            $AppNumToFind = Read-Host "Please enter a number between 1 and $($COUNTER - 1)"
+
+            if ($AppNumToFind -eq 'exit') {
                 Return $null
             }
 
+            }
+
+            $AppNameToFind = $HashTable[[int]$AppNumToFind]
+
+            Write-Log "Application requested: $AppNameToFind | Is this correct?" "WARNING"
+            $exit = Read-Host "(Y/N)"
+
         }
+
         
+
         #Set $AppNameToFind to global variable for use in other functions
         $Global:AppNameToFind = $AppNameToFind
 
