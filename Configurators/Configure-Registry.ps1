@@ -22,7 +22,7 @@ Param(
     [Parameter(Mandatory=$true)]
     [string]$WorkingDirectory,
 
-    $KeyOnly = $false, # Used to create an empty key without setting a value
+    [string]$KeyOnly = $false, # Used to create an empty key without setting a value
 
     $AlsoLockDown = $False # Used for doing lockdown during initial creation of a key
 
