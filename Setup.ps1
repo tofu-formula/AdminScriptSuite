@@ -78,7 +78,8 @@ $UninstallPrinter_ScriptPath = "$RepoRoot\Uninstallers\Uninstall-Printer.ps1"
 $UninstallApp_ScriptPath = "$RepoRoot\Uninstallers\General_Uninstaller.ps1"
 # Path to install WinGet script
 $InstallWinGet_ScriptPath = "$RepoRoot\Installers\Install-WinGet.ps1"
-
+# Path to app detect script
+$AppDetect_ScriptPath = "$RepoRoot\Templates\Detection-Script-Application_TEMPLATE.ps1"
 
 $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 
@@ -1546,12 +1547,12 @@ Function Uninstall--Local-Printer{
 
 Function Uninstall--Local-Application{
 
-    Function JSON-search--uninstall{
+    Function JSON--search-and-uninstall{
 
         Write-Log "To begin we will access the ApplicationData.json files, both public (local repo) and private (Azure Blob) to show you the available documented applications."
         Write-Log ""
 
-        $TargetApp = Select-ApplicationFromJSON
+        $TargetApp = Select-ApplicationFromJSON -DialogueSelection "C"
 
         if ($TargetApp -eq $null) {
             Write-Log "No application selected. Exiting." "ERROR"
@@ -1602,7 +1603,7 @@ Function Uninstall--Local-Application{
 
     }
 
-    Function Winget-search--uninstall{
+    Function Winget--search-and-uninstall{
 
         # Install winget if not present
 
@@ -1701,7 +1702,7 @@ Function Uninstall--Local-Application{
 
     }
 
-    Function CIM-search--uninstall{
+    Function CIM--search-and-uninstall{
 
         $Result = Get-CimInstance -ClassName Win32_Product | Select-Object Name
 
@@ -1767,7 +1768,7 @@ Function Uninstall--Local-Application{
 
     }
 
-    Function Registry-search--uninstall{
+    Function Registry--search-and-uninstall{
 
         $paths = @(
         'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
@@ -1882,7 +1883,14 @@ Function Uninstall--Local-Application{
 
     }
 
-    Function AppPackage-search--uninstall{
+    Function Adobe--search-and-uninstall{
+
+        Write-Log "Adobe application uninstallation is not yet implemented." "ERROR"
+        Exit 1
+
+    }
+
+    Function AppPackage--search-and-uninstall{
 
         $Result1 = Get-AppxPackage -AllUsers | Select-Object Name, PackageFullName
         # $Result2 = Get-AppPackage -AllUsers | Select-Object Name, PackageFullName
@@ -2121,7 +2129,7 @@ Function Uninstall--Local-Application{
     Write-Log "These are the uninstall functions currently available through this script:"
     Write-Log ""
 
-    $methods = Get-Command -CommandType Function -Name "*--uninstall" | Select-Object -ExpandProperty Name
+    $methods = Get-Command -CommandType Function -Name "*--search-and-uninstall" | Select-Object -ExpandProperty Name
 
     $AvailableFunctions = @{}
 
@@ -2139,6 +2147,9 @@ Function Uninstall--Local-Application{
     Write-Log ""
 
     Write-Log "Enter the # of your desired uninstall function:" "WARNING"
+    Write-Log "NOTE: If you are not sure where to begin, start with JSON--search-and-uninstall." "WARNING"
+    Write-Log "NOTE: For All Adobe CC apps, please use Adobe--search-and-uninstall." "WARNING"
+    Write-Log "NOTE: For the largest selection of apps, try AppPackage--search-and-uninstall." "WARNING"4
     [int]$SelectedFunctionNumber = Read-Host "Please enter a #"
 
 
@@ -2212,8 +2223,83 @@ Function Install--Local-Application{
         Write-Log "Application '$AppNameToFind' installed successfully!" "SUCCESS"
     }   
 
-    
 
+
+
+}
+
+Function SearchJSONForApp {
+
+        param(
+            [string]$AppNameToSearch
+        )
+
+        if ($list1 -contains $AppNameToSearch) {
+
+            Write-Log "Confirmed valid application name: $AppNameToSearch" "INFO2"
+
+
+            Write-Log "Found $AppNameToSearch in public JSON data." "INFO2"
+            $AppData = $PublicJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToSearch }
+            Write-log "Application data for $AppNameToSearch retrieved from public JSON:" "INFO2"
+            $Output = ($AppData | ConvertTo-Json -Depth 10)
+            
+            Write-Log $Output "INFO2"
+
+            # Record the needed data as variables for use in other functions
+            # Convert the JSON values into local variables for access later
+            Write-Log "Setting application data values as local variables..." "INFO2"
+            foreach ($property in $AppData.PSObject.Properties) {
+
+                $propName = $property.Name
+                $propValue = $property.Value
+                Set-Variable -Name $propName -Value $propValue -Scope Global
+                Write-Log "Should be: $propName = $propValue" "INFO2"
+                $targetValue = Get-Variable -Name $propName -Scope Global
+                Write-Log "Ended up as: $propName = $($targetValue.Value)" "INFO2"
+
+            }
+
+            # Return $AppNameToSearch
+
+
+        } elseif($list2 -contains $AppNameToSearch){
+
+            Write-Log "Confirmed valid application name: $AppNameToSearch"
+
+
+            Write-Log "Found $AppNameToSearch in private JSON data."
+            $AppData = $PrivateJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToSearch }
+
+            Write-log "Application data for $AppNameToSearch retrieved from private JSON:" "INFO2"
+            Write-Log ($AppData | ConvertTo-Json -Depth 10)
+
+            # Record the needed data as variables for use in other functions
+            # Convert the JSON values into local variables for access later
+            Write-Log "Setting application data values as local variables..." "INFO2"
+            foreach ($property in $AppData.PSObject.Properties) {
+
+                $propName = $property.Name
+                $propValue = $property.Value
+                Set-Variable -Name $propName -Value $propValue -Scope Global
+                Write-Log "Should be: $propName = $propValue" "INFO2"
+                $targetValue = Get-Variable -Name $propName -Scope Global
+                Write-Log "Ended up as: $propName = $($targetValue.Value)" "INFO2"
+
+            }
+
+            # Return $AppNameToSearch
+
+
+        } else {
+
+            Write-Log "Application $AppNameToSearch not found in either public or private JSON data." "ERROR"
+            # Return $null
+            Throw
+
+        }
+
+        # Exit without a return cuz it is too messy
 
 }
 
@@ -2221,8 +2307,11 @@ function Select-ApplicationFromJSON {
 
     Param (
 
-        $AppNameToFind=$null
+        $AppNameToFind=$null,
+        $DialogueSelection="A"
     )
+
+    # main 
 
     Write-Log "Parsing Public JSON" "INFO2"
 
@@ -2309,6 +2398,8 @@ function Select-ApplicationFromJSON {
 
             $Counter++
 
+            #$HashTable
+
         }
         Write-Log "" 
         Write-Log "----------------------------------------------------------------"
@@ -2322,6 +2413,8 @@ function Select-ApplicationFromJSON {
             $HashTable.Add($Counter,$item)
 
             $Counter++
+
+            #$HashTable
         }
         Write-Log "" 
         Write-Log "----------------------------------------------------------------"
@@ -2338,6 +2431,129 @@ function Select-ApplicationFromJSON {
 
         }
 
+        # Write-Log "Looking through:"
+        # $HashTable[1]
+        # Write-Log "But just:"
+        # $HashTable.Values
+
+
+        if ($DialogueSelection -eq "C") {
+
+            # Loop through each application in the JSON and check if it is installed
+
+            Write-Log "Checking installation status of applications listed in JSON..."
+
+            $HashTable2 = @{}
+            $HashTable3 = @{}
+            $COUNTER=1
+
+            # Write-Log "Looking through:"
+            # $HashTable[1]
+            # Write-Log "But just:"
+            # $HashTable.Values
+
+            ForEach ($appName in $HashTable.Values) {
+
+                Write-Log "" 
+
+                Write-Log "SCRIPT: $ThisFileName | Checking installation status for application in JSON: $appName"
+                Write-Log "" 
+
+
+                $WinGetID = $Null
+                $DisplayName = $Null
+
+                $InstallMethod = $null
+                $DetectMethod = $null
+
+
+                SearchJSONForApp -AppNameToSearch $appName
+
+
+                
+                Write-Log "WinGetID: $WinGetID"
+
+                # Check if the application is installed using the values from the JSON
+
+                # Determine the detect method by the install method
+                if($InstallMethod -match "MSI") {
+                    $detectMethod = "MSI_Registry"
+                } elseif ($InstallMethod -match "WinGet") {
+                    $detectMethod = "WinGet"
+                } else {
+                    $detectMethod = "All"
+                }
+
+                # if ($WinGetID -eq $null -or $WinGetID -eq "") {
+                #     $WinGetID = $Null
+                # }
+
+                # if ($DisplayName -eq $null -or $DisplayName -eq "") {
+                #     $DisplayName = $Null
+                # }
+                Write-Log "WinGetID: $WinGetID"
+
+                Write-Log "" 
+                Write-Log "Using detect method: $detectMethod"
+                Write-Log "" 
+                Write-Log "Running command: $AppDetect_ScriptPath -AppToDetect $appName -DetectMethod $detectMethod -WorkingDirectory $WorkingDirectory -AppID $WinGetID -DisplayName $DisplayName"
+                Write-Log "" 
+
+                # Call the detect script
+                & $AppDetect_ScriptPath -AppToDetect $appName -DetectMethod $detectMethod -WorkingDirectory $WorkingDirectory -AppID $WinGetID -DisplayName $DisplayName
+
+
+                if ( $LASTEXITCODE -eq 0 ) {
+
+                    Write-Log "" 
+
+                    #Write-Log "$Counter - INSTALLED: $appName"
+                    Write-Log "Application '$appName' is already installed on this system." "INFO"
+                    $HashTable2.Add($COUNTER, "YES: $appName")
+                    $HashTable3.Add($COUNTER, $appName)
+
+                    $Counter++
+
+                } else {
+
+                    Write-Log "" 
+
+
+                    #Write-Log "N/A - NOT INSTALLED: $appName" "INFO2"
+
+                    Write-Log "Application '$appName' is NOT installed on this system." "INFO"
+                    $HashTable2.Add($COUNTER, "NO: $appName")
+                    $HashTable3.Add($COUNTER, $appName)
+
+                    $Counter++
+
+                }
+
+                Write-Log "" 
+
+
+                
+            }
+
+            #$HashTable2
+
+            Write-Log ""
+            Write-Log "Now showing installed applications from the JSON data for uninstallation selection (marked as YES):"
+            Write-Log ""
+
+            $HashTable4 = $HashTable2
+
+            ForEach ($Item in ($HashTable4.GetEnumerator() | Sort-Object -Property:Name)) {
+
+                Write-Log "$($Item.Name) - $($Item.Value)"
+
+            }
+
+
+            $HashTable = $HashTable3
+
+        }
+        Write-Log ""
 
         While($exit -ne "y") {
 
@@ -2346,9 +2562,17 @@ function Select-ApplicationFromJSON {
                 Write-Log "Enter the # of an app from the above list to add to InTune." "WARNING"
                 Write-Log " - NOTE: If you DO NOT SEE the app you want, type 'exit' and you can add your own." "WARNING"
             
-            } else {
+            } elseif ($DialogueSelection -eq "A"){
 
                 Write-Log "Enter the # of an app from the list above for installation." "WARNING"
+
+            } elseif ($DialogueSelection -eq "C"){
+
+                Write-Log "Enter the # of an app from the list above for uninstallation." "WARNING"
+
+            } else {
+
+                Write-Log "Enter the # of an app from the list above." "WARNING"
 
             }
             
@@ -2384,7 +2608,7 @@ function Select-ApplicationFromJSON {
 
             }
 
-            $AppNameToFind = $HashTable[[int]$AppNumToFind]
+            [string]$AppNameToFind = $HashTable[[int]$AppNumToFind]
 
             Write-Log "Application requested: $AppNameToFind | Is this correct?" "WARNING"
             $exit = Read-Host "(Y/N)"
@@ -2399,70 +2623,21 @@ function Select-ApplicationFromJSON {
         ### Search for the target application in the private JSON data
         Write-Log "" "INFO2"
 
-        if ($list1 -contains $AppNameToFind) {
-
-            Write-Log "Confirmed valid application name: $AppNameToFind" "INFO2"
-
-
-            Write-Log "Found $AppNameToFind in public JSON data." "INFO2"
-            $AppData = $PublicJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
-
-            Write-log "Application data for $AppNameToFind retrieved from public JSON:" "INFO2"
-            $Output = ($AppData | ConvertTo-Json -Depth 10)
+        Try {
             
-            Write-Log $Output "INFO2"
-
-            # Record the needed data as variables for use in other functions
-            # Convert the JSON values into local variables for access later
-            Write-Log "Setting application data values as local variables..." "INFO2"
-            foreach ($property in $AppData.PSObject.Properties) {
-
-                $propName = $property.Name
-                $propValue = $property.Value
-                Set-Variable -Name $propName -Value $propValue -Scope Script
-                Write-Log "Should be: $propName = $propValue" "INFO2"
-                $targetValue = Get-Variable -Name $propName -Scope Script
-                Write-Log "Ended up as: $propName = $($targetValue.Value)" "INFO2"
-
-            }
+            SearchJSONForApp -AppNameToSearch $AppNameToFind
 
             Return $AppNameToFind
 
+        } Catch {
 
-        } elseif($list2 -contains $AppNameToFind){
-
-            Write-Log "Confirmed valid application name: $AppNameToFind"
-
-
-            Write-Log "Found $AppNameToFind in private JSON data."
-            $AppData = $PrivateJSONdata.applications | Where-Object { $_.ApplicationName -eq $AppNameToFind }
-
-            Write-log "Application data for $AppNameToFind retrieved from private JSON:" "INFO2"
-            Write-Log ($AppData | ConvertTo-Json -Depth 10)
-
-            # Record the needed data as variables for use in other functions
-            # Convert the JSON values into local variables for access later
-            Write-Log "Setting application data values as local variables..." "INFO2"
-            foreach ($property in $AppData.PSObject.Properties) {
-
-                $propName = $property.Name
-                $propValue = $property.Value
-                Set-Variable -Name $propName -Value $propValue -Scope Script
-                Write-Log "Should be: $propName = $propValue" "INFO2"
-                $targetValue = Get-Variable -Name $propName -Scope Script
-                Write-Log "Ended up as: $propName = $($targetValue.Value)" "INFO2"
-
-            }
-
-            Return $AppNameToFind
-
-
-        } else {
-
-            Write-Log "Application $AppNameToFind not found in either public or private JSON data." "ERROR"
             Return $null
 
         }
+
+        
+
+        
 
 }
 
@@ -2612,6 +2787,7 @@ If ($Answer -eq "y"){
 Write-Log "" "INFO2"
 
 Try{
+
 # Grab organization custom registry values
     Write-Log "Retrieving organization custom registry values..." "INFO2"
     $ReturnHash = & $OrgRegReader_ScriptPath #| Out-Null
