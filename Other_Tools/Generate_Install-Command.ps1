@@ -154,7 +154,23 @@ Write-Host ""
 ############################################################
 ### Example: Create Detect/Remediation Script for InTune ###
 ############################################################
-Function RemediationScript {
+Function RegRemediationScript {
+
+    Param(
+
+    $StorageAccountName = "powerdeploy",
+
+    $PrinterDataJSONpath = "printers/PrinterData.json",
+    $PrinterContainerSASkey,
+
+    $ApplicationDataJSONpath = "applications/ApplicationData.json",
+    $ApplicationContainerSASkey
+
+
+
+
+
+    )
 
     Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | START" -ForegroundColor Yellow
 
@@ -191,7 +207,7 @@ Function RemediationScript {
         $ValueName = "StorageAccountName"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "genericdeploy" # Modify this
+        $Value = "$StorageAccountName" # Modify this
 
         $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -200,7 +216,7 @@ Function RemediationScript {
         $ValueName = "PrinterDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "printers/PrinterData.json" # Modify this
+        $Value = "$PrinterDataJSONpath" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -209,7 +225,7 @@ Function RemediationScript {
         $ValueName = "PrinterContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "" # Modify this
+        $Value = "$PrinterContainerSASkey" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -218,7 +234,7 @@ Function RemediationScript {
         $ValueName = "ApplicationDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "applications/ApplicationData.json" # Modify this
+        $Value = "$ApplicationDataJSONpath" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
@@ -227,7 +243,7 @@ Function RemediationScript {
         $ValueName = "ApplicationContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        $Value = "" # Modify this
+        $Value = "$ApplicationContainerSASkey" # Modify this
 
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"
 
@@ -262,8 +278,12 @@ Function RemediationScript {
             Function = "Detect"
         }
 
+    # # Export the txt file
+    # ExportTXT
+
+    $DetectScript = $global:CustomScript
     # Export the txt file
-    ExportTXT
+    $DetectScriptCommandTXT = ExportTXT
 
     # Then compose the install command args and run for REMEDIATE
     Write-Host ""
@@ -283,8 +303,12 @@ Function RemediationScript {
             AlsoLockDown = $True
         }
 
+    # # Export the txt file
+    # ExportTXT
+
+    $RemediationScript = $global:CustomScript
     # Export the txt file
-    ExportTXT
+    $RemediationScriptCommandTXT = ExportTXT
 
     <#
 
@@ -293,6 +317,34 @@ Function RemediationScript {
 
     Output for remediate
     #>
+
+
+     # Store results in script-scoped variables so the main script can package them up
+
+    $script:GI_DetectScript = $DetectScript
+    $script:GI_DetectScriptCommandTXT = $DetectScriptCommandTXT
+    $script:GI_RemediationScript = $RemediationScript
+    $script:GI_RemediationScriptCommandTXT = $RemediationScriptCommandTXT
+
+    # Just for visibility, still log what we *think* we produced
+    Write-Host "Return values prepared."
+
+
+    Write-Host "script:GI_DetectScript = $script:GI_DetectScript"
+    Write-Host "script:GI_DetectScriptCommandTXT = $script:GI_DetectScriptCommandTXT"
+    Write-Host "script:GI_RemediationScript = $script:GI_RemediationScript"
+    Write-Host "script:GI_RemediationScriptCommandTXT = $script:GI_RemediationScriptCommandTXT"
+
+
+
+    Write-Host "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END"
+    Write-host ""
+
+
+
+    $Script:HashPattern = "RegRemediation"
+
+    return "BuildMe"
 }
 ###
 
@@ -958,7 +1010,7 @@ Return $ReturnHash
 
 if ($DesiredFunction -eq $null -or $DesiredFunction -eq ""){
 
-$DesiredFunction = Read-Host "Please enter the name of your desired function (InstallAppWithJSON, InstallPrinterByIP, RemediationScript)"
+    $DesiredFunction = Read-Host "Please enter the name of your desired function (InstallAppWithJSON, InstallPrinterByIP, RemediationScript)"
 
 }
 
@@ -1022,7 +1074,19 @@ if ($result -eq "BuildMe") {
         }
 
 
-    } else {
+    } elseif ($Script:HashPattern -eq "RegRemediation"){
+
+
+        $result = @{
+
+            DetectScript = $script:GI_DetectScript
+            DetectScriptCommandTXT = $script:GI_DetectScriptCommandTXT
+            RemediationScript = $script:GI_RemediationScript
+            RemediationScriptCommandTXT = $script:GI_RemediationScriptCommandTXT
+        }
+
+
+    }Else{
 
         Write-Host "Unknown HashPattern: $($Script:HashPattern). Cannot build return hashtable!" -ForegroundColor Red
         Exit 1
