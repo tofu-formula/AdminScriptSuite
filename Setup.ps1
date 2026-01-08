@@ -2705,6 +2705,115 @@ Function ParseJSON {
 
 }
 
+Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
+
+
+    # Collect input data
+
+    Write-Log ""
+
+    Write-Log "Currently this function only supports updating SAS keys for Azure Blob, no custom variables" "WARNING"
+
+    Write-Log ""
+
+    Write-Log "Enter your custom PRINTER share SAS key:"
+
+    $PrinterContainerSASkey = Read-Host "SAS KEY"
+
+    Write-Log ""
+
+    Write-Log "Enter your custom APPLICATION share SAS key:"
+
+    $ApplicationContainerSASkey = Read-Host "SAS KEY"
+
+    Write-Log ""
+
+    
+        [hashtable]$FunctionParams = @{
+            PrinterContainerSASkey = $PrinterContainerSASkey
+            ApplicationContainerSASkey = $ApplicationContainerSASkey
+        }
+
+        [hashtable]$ReturnHash
+
+        $ReturnHash = & $GenerateInstallCommand_ScriptPath `
+        -DesiredFunction "RegRemediationScript" `
+        -FunctionParams $FunctionParams
+
+        # Check the returned hashtable
+        if(($ReturnHash -eq $null) -or ($ReturnHash.Count -eq 0)){
+            Write-Log "No data returned!" "ERROR"
+            Exit 1
+        }
+
+        Write-Log "Values retrieved:" "INFO2"
+
+        foreach ($key in $ReturnHash.Keys) {
+
+            $value = $ReturnHash[$key]
+            Write-Log "   $key : $value" "INFO2"
+
+        }    
+
+        Write-Log "Setting values as local variables..." "INFO2"
+        foreach ($key in $ReturnHash.Keys) {
+            Set-Variable -Name $key -Value $ReturnHash[$key] -Scope Local
+            # Write-Log "Should be: $key = $($ReturnHash[$key])"
+            $targetValue = Get-Variable -Name $key -Scope Local
+            Write-Log "Ended up as: $key = $($targetValue.Value)" "INFO2"
+
+        }
+
+    Write-Log ""
+
+    Write-Log "Next we are going to upload the detect and remediation script to InTune."
+    Write-Log ""
+
+    Write-Log "1. In InTune, navigate to: Device > Windows > Scripts and remediations"
+    Write-Log " - Direct link: https://intune.microsoft.com/#view/Microsoft_Intune_DeviceSettings/DevicesWindowsMenu/~/powershell"
+
+    Write-Log ""
+    Write-Log "2. Navigate to your PowerDeploy Registry Update remediation script package. If you for sure do not have one, we will walk through creating one."
+    Write-Log " - Make sure that you do not leave behind old remediation scripts in production once replace them." "WARNING"
+    Write-Log ""
+
+    $Answer = Read-Host "Do you need to create a new package? (y/n)"
+
+    if ($Answer -eq "y"){
+
+        Write-Log "  To create a new package..."
+        write-Log "   1. Click ""Create"""
+        write-log "   2. Suggested name: ""PowerDeploy Registry Update"""
+        Write-Log "   3. Suggested description: ""Used to update company registry values for use with PowerDeploy. For more information see the official repo: https://github.com/Adrian-Mandel/PowerDeploy"""
+        Write-Log "   4. Click Next to go to the Script settings page."
+        Write-Log "   5. For ""Detection script file"", select the script located at: $DetectScript"
+        Write-Log "   6. For ""Remediation script file"", select the script located at: $RemediationScript"
+        Write-Log "   7. For ""Run script in 64-bit PowerShell"" select: Yes"
+        Write-Log "   8. Click Next to go to the Scope tags page."
+        Write-Log "   9. Add any scope tags you wish to use. I don't use any personally."
+        Write-Log "  10. Click Next to go to the Assignments page and assign to your desired groups. I recommend starting with a small test group first, then expanding to the whole org (if appropriate) once confirmed working."
+        Write-Log ""
+        Write-Log "  11. Click ""Create"" to finish creating the remediation package."
+
+
+    } else {
+
+        Write-Log "  Update your existing package as follows..."
+        Write-Log "   For ""Detection script file"", select the script located at: $DetectScript"
+        Write-Log "   For ""Remediation script file"", select the script located at: $RemediationScript"
+
+
+
+    }
+
+    Pause
+    Write-Log ""
+    Write-Log "That's all! Now give your target machines some time and monitor progress." "SUCCESS"
+
+
+
+}
+
 
 ##########
 ## MAIN ##
@@ -2755,7 +2864,7 @@ If( (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdent
     -not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::User))`
     -and !(([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -eq 'S-1-5-18'))){ # skip block if user is System
 
-    Write-Log "You are not running this script as an administrator or as the logged in user." "WARNING"
+    Write-Log "You are either not running this script as an administrator or as the logged in user." "ERROR"
     Write-Log ""
     Write-Log "WinGet WILL NOT WORK PROPERLY." "WARNING"
     Write-Log ""
