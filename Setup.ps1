@@ -1225,7 +1225,8 @@ Function Setup--Azure-WindowsApp{
     Write-Log " 3 - APP INFORMATION:"
     write-log "     - Name: follow your org naming conventions, E.g., 'APP: [App Name]'"
     Write-Log "     - Description: Up to your descretion. Copying the description from Windows Store, App website, etc could be beneficial.,"
-    Write-Log "     - Version: Recommend to leave blank unless you are using a static installer."
+    Write-Log "     - Publisher: Look up the publisher if you are not sure. You can check the Windows Store, app website, etc."
+    Write-Log "     - Version: Recommend to leave blank unless you are using a static MSI installer with a set version.."
     Write-Log "     - Logo: Optional - You could create something with Canva using your organization logo, but standardize it"
     Write-Log "     - Everything else on this page is up to your discretion."
     Write-Log ""    
@@ -2782,26 +2783,57 @@ Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
     if ($Answer -eq "y"){
 
         Write-Log "  To create a new package..."
+            Write-Log ""
+
         write-Log "   1. Click ""Create"""
+            Write-Log ""
+
         write-log "   2. Suggested name: ""PowerDeploy Registry Update"""
+            Write-Log ""
+
         Write-Log "   3. Suggested description: ""Used to update company registry values for use with PowerDeploy. For more information see the official repo: https://github.com/Adrian-Mandel/PowerDeploy"""
+            Write-Log ""
+
         Write-Log "   4. Click Next to go to the Script settings page."
+            Write-Log ""
+
         Write-Log "   5. For ""Detection script file"", select the script located at: $DetectScript"
+            Write-Log ""
+
         Write-Log "   6. For ""Remediation script file"", select the script located at: $RemediationScript"
+            Write-Log ""
+
         Write-Log "   7. For ""Run script in 64-bit PowerShell"" select: Yes"
+            Write-Log ""
+
         Write-Log "   8. Click Next to go to the Scope tags page."
+            Write-Log ""
+
         Write-Log "   9. Add any scope tags you wish to use. I don't use any personally."
+            Write-Log ""
+
         Write-Log "  10. Click Next to go to the Assignments page and assign to your desired groups. I recommend starting with a small test group first, then expanding to the whole org (if appropriate) once confirmed working."
-        Write-Log ""
+            Write-Log ""
+        
         Write-Log "  11. Click ""Create"" to finish creating the remediation package."
 
 
     } else {
 
         Write-Log "  Update your existing package as follows..."
-        Write-Log "   For ""Detection script file"", select the script located at: $DetectScript"
-        Write-Log "   For ""Remediation script file"", select the script located at: $RemediationScript"
+            Write-Log ""
 
+        Write-Log "   For ""Detection script file"", select the script located at: $DetectScript"
+            Write-Log ""
+
+        Write-Log "   For ""Remediation script file"", select the script located at: $RemediationScript"
+            Write-Log ""
+
+        Write-Log "   Make sure ""Run script in 64-bit PowerShell"" is set to: Yes"
+            Write-Log ""
+
+        Write-Log "   Save your changes."
+            Write-Log ""
 
 
     }
