@@ -1,3 +1,6 @@
+
+<img width="2083" height="1718" alt="powerdeploy_logo_white_bg" src="https://github.com/user-attachments/assets/fe2d39b3-1500-4629-94c8-6f08702f1e84" />
+
 # PowerDeploy
 
 Released with authorization from Santa Cruz County Office of Education, 1/7/26
