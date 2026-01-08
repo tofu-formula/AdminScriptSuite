@@ -560,12 +560,12 @@ Function Validate-WinGet-Search{
     if ($result -match "No package found") {
 
         if ($Version -eq $null -or $Version -eq ""){
-            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID is not valid. Please use WinGet Search to find a valid ID." "WARNING"
         } else {
-            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version. Now exiting script." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | END | AppID $AppID with version $Version is not valid. Please use WinGet Search to find a valid ID and version." "WARNING"
         }
 
-        Exit 1
+        Throw "1"
 
     } else {
         if ($Version -eq $null -or $Version -eq ""){
@@ -575,6 +575,8 @@ Function Validate-WinGet-Search{
             Write-Log "AppID $AppID with version $Version is valid. Now proceeding with script."
 
         }
+
+        Return "0"
     }
 
 }
@@ -599,8 +601,20 @@ Function App-Detector {
         Write-Log "For WinGet functions to work, the supplied AppName must be a valid, exact AppID" "WARNING"
 
         Write-Log "Checking if AppName is a valid AppID"
-        Validate-WinGet-Search -AppID $AppName
-        if ($LASTEXITCODE -ne 0) { return "AppIDinvalid" }
+
+        Try {
+
+            Validate-WinGet-Search -AppID $AppName
+
+        } catch {
+
+            Write-Log "Installation detected of $AppName not detected due to invalid AppID. Will continue on." "WARNING"
+
+            return "AppIDinvalid"
+
+        }
+        
+        #if ($response -ne 0) { return "AppIDinvalid" }
 
 
         Write-Log "Checking if AppID is present locally"
