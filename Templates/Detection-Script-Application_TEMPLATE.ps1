@@ -7,16 +7,18 @@
 Param(
 
     [string]$AppToDetect,# = "Dell Command Update", # ENTER THE NICK NAME OF THE APPLICATION TO DETECT HERE    
-    [string]$WorkingDirectory= "C:\ProgramData\AdminScriptSuite", # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
+    [string]$WorkingDirectory= "C:\ProgramData\PowerDeploy", # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
     [string]$AppID,# = "Dell.CommandUpdate", # ENTER THE EXACT WINGET APP ID HERE
-    [String]$DisplayName,# = "Dell Command Update", # ENTER THE DISPLAY NAME TO SEARCH FOR IN REGISTRY HERE
+    [String]$DisplayName,# = "Dell Command Update", # ENTER THE DISPLAY NAME TO SEARCH FOR IN REGISTRY OR AppXProvisionedPackage HERE,
+    [String]$AppXpackageName, # ENTER THE EXACT APPX PACKAGE NAME HERE
+
     [String]$DetectMethod# = "WinGet" # Possible values: "WinGet", "MSI_Registry"
 
 )
 
 
 $forcemachinecontext=$false
-$ReturnWinGetPath=$False
+# $ReturnWinGetPath=$False # I don't remember why I had this here...
 
 
 $LocalRepoPath = "$WorkingDirectory\$RepoNickName"
@@ -534,6 +536,8 @@ Function CheckAndInstall-NuGet{
 
 }
 
+# This is an independent install-winget function to be used in InTune detection scripts or otherwise without having to access the full repo for the sake of full modularity
+# TODO: Is it possible to have this function use a local repo instead of redoing everything here?
 Function Install-WinGet {
 
     # Method 1
@@ -737,12 +741,15 @@ Function Install-WinGet {
 
 }
 
-function Detect-MSI-ApplicationInstalled {
+function Detect--MSI-ApplicationInstalled {
 
     if ($DisplayName -eq $null -or $DisplayName -eq ""){
 
-        Write-Log "SCRIPT: $ThisFileName | No DisplayName supplied for MSI_Registry detection. Exiting." "ERROR"
-        Exit 1
+        # Write-Log "SCRIPT: $ThisFileName | No DisplayName supplied for MSI_Registry detection. Exiting." "WARNING"
+        # Return 1
+
+        Write-Log "SCRIPT: $ThisFileName | No DisplayName supplied for MSI_Registry detection. Will attempt to use AppToDetect." "WARNING"
+        $DisplayName = $AppToDetect
 
     }
     
@@ -776,28 +783,28 @@ function Detect-MSI-ApplicationInstalled {
             
             Write-Log "SCRIPT: $ThisFileName | End | Application ""$DisplayName"" detected in registry" "SUCCESS"
             Write-Log "-----------------------------------------"
-            Exit 0
+            Return 0
         } else {
             #Write-Log "Application not found in registry" "WARNING"
             Write-Log "SCRIPT: $ThisFileName | End | Application ""$DisplayName"" not detected in registry" "WARNING"
             Write-Log "-----------------------------------------"
-            Exit 1
+            Return 1
         }
         
     } catch {
         Write-Log "SCRIPT: $ThisFileName | End | Error checking registry: $_" "ERROR"
         #Write-Log "SCRIPT: $ThisFileName | End"
         Write-Log "-----------------------------------------"
-        Exit 1
+        Return 1
     }
 }
 
-Function Detect-WinGetApplicationInstalled {
+Function Detect--WinGetApplicationInstalled {
 
     if($appID -eq $null -or $AppID -eq ""){
 
-        Write-Log "SCRIPT: $ThisFileName | No AppID supplied for WinGet detection. Exiting." "ERROR"
-        Exit 1
+        Write-Log "SCRIPT: $ThisFileName | No AppID supplied for WinGet detection. Cannot run WinGet List." "WARNING"
+        Return 1
 
     }
 
@@ -818,7 +825,7 @@ Function Detect-WinGetApplicationInstalled {
         if ($WinGet -eq "Failure"){
 
             Write-Log "SCRIPT: $ThisFileName | END | Failed to confirm WinGet is working after installation. Please investigate." "ERROR"
-            Exit 1
+            Return 1
 
         }
 
@@ -841,22 +848,125 @@ Function Detect-WinGetApplicationInstalled {
         
         if(!($Result -like "No installed package found matching input criteria.")){
             Write-Log "SCRIPT: $ThisFileName | END | Application $AppID detected!" "SUCCESS"
-            Exit 0
+            Return 0
         }else{
-            Write-Log "SCRIPT: $ThisFileName | END | Application $AppID NOT detected!" "ERROR"
-            Exit 1
+            Write-Log "SCRIPT: $ThisFileName | END | Application $AppID NOT detected!" "WARNING"
+            Return 1
         }
 
     } Catch {
 
         Write-Log "Error encountered when running search: $_" "ERROR"
-        Exit 1
+        Return 1
 
     }
 
 
 }
 
+Function Detect--AppXPackageInstalled {
+
+    if ($AppXpackageName -eq $null -or $AppXpackageName -eq ""){
+
+        Write-Log "SCRIPT: $ThisFileName | No AppXpackageName supplied for AppXpackage detection. Will attempt to use DisplayName and NickName." "WARNING"
+
+        $Detection1 = Get-AppxPackage -AllUsers $AppToDetect
+
+        $Detection2 = Get-AppxPackage -AllUsers $DisplayName
+
+        if ($Detection1 -ne $null){
+
+            Write-Log "SCRIPT: $ThisFileName | Application detected by AppXpackageName: $AppToDetect" "SUCCESS"
+            Return 0
+
+        } elseif ($Detection2 -ne $null){
+
+            Write-Log "SCRIPT: $ThisFileName | Application detected by DisplayName: $DisplayName" "SUCCESS"
+            Return 0
+
+        } else {
+
+            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by AppXpackageName or DisplayName" "WARNING"
+            Return 1
+
+        }
+        
+
+    } elseif ($AppXpackageName -ne $null -or $AppXpackageName -ne ""){
+        
+        Write-Log "SCRIPT: $ThisFileName | Searching for application as AppX package: $AppXpackageName"
+
+        $Detection = Get-AppxPackage -AllUsers $AppXpackageName
+
+        if ($Detection -ne $null){
+
+            Write-Log "SCRIPT: $ThisFileName | Application detected by AppXpackageName: $AppXpackageName" "SUCCESS"
+            Return 0
+
+        } else {
+
+            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by AppXpackageName: $AppXpackageName" "WARNING"
+            Return 1
+
+        }
+
+    } else {
+
+        Write-Log "SCRIPT: $ThisFileName | Insufficient parameters for AppXpackage detection." "WARNING"
+        Return 1
+
+    }
+
+    
+
+
+
+}
+
+Function Detect--AppXProvisionedPackageInstalled {
+
+    Write-Log "SCRIPT: $ThisFileName | Searching for application as AppX Provisioned package: $AppToDetect"
+
+    if ($DisplayName -ne $null -and $DisplayName -ne ""){
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting detection by DisplayName: $DisplayName"
+
+        $Detection = Get-AppxProvisionedPackage -Online | Where-Object {$_.DisplayName -like "*$DisplayName*"}
+
+        if ($Detection -ne $null){
+
+            Write-Log "SCRIPT: $ThisFileName | Application detected by DisplayName: $DisplayName" "SUCCESS"
+            Return 0
+
+        } else {
+
+            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by DisplayName: $DisplayName" "WARNING"
+            # Continue to next detection method
+
+        }
+
+    } elseif( $AppToDetect -ne $null -and $AppToDetect -ne ""){
+
+        $Detection = Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -like "*$AppToDetect*"}
+
+        if ($Detection -ne $null){
+
+            Write-Log "SCRIPT: $ThisFileName | Application detected by AppXProvisionedPackage: $AppToDetect" "SUCCESS"
+            Return 0
+
+        } else {
+
+            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by AppXProvisionedPackage: $AppToDetect" "WARNING"
+            Return 1
+
+        }
+
+    }
+
+
+
+
+}
 ##########
 ## Main ##
 ##########
@@ -917,12 +1027,12 @@ Write-Log "++++++++++++++++++++++++++++"
 Write-Log "App to detect: $AppName"
 Write-Log "WorkingDirectory: $WorkingDirectory"
 Write-Log "Force Machine Install Context: $forcemachinecontext"
-Write-Log "Return WinGet Path: $ReturnWinGetPath"
+#Write-Log "Return WinGet Path: $ReturnWinGetPath"
 Write-Log "Script User: $scriptUser"
 Write-Log "Windows User: $loggedInUser"
 Write-Log "Detect Method: $DetectMethod"
 Write-Log "WinGet AppID to detect: $AppID"
-Write-Log "MSI Registry DisplayName to detect: $DisplayName"
+Write-Log "DisplayName to detect: $DisplayName"
 
 Write-Log "++++++++++++++++++++++++++++"
 
@@ -959,15 +1069,65 @@ if ($DetectMethod -eq "WinGet") {
 
     Write-Log "SCRIPT: $ThisFileName | Using WinGet detection method."
 
-    Detect-WinGetApplicationInstalled
+    Detect--WinGetApplicationInstalled
 
 } elseif ($DetectMethod -eq "MSI_Registry") {
 
     Write-Log "SCRIPT: $ThisFileName | Using MSI Registry detection method."
 
-    Detect-MSI-ApplicationInstalled #-DisplayName $DisplayName
+    Detect--MSI-ApplicationInstalled #-DisplayName $DisplayName
 
-} else {
+} elseif($DetectMethod -eq "AppXpackage") {
+
+    Write-Log "SCRIPT: $ThisFileName | Using AppXpackage detection method."
+
+    Detect--AppXPackageInstalled
+
+} elseif($DetectMethod -eq "AppXProvisionedPackage") {
+
+    Write-Log "SCRIPT: $ThisFileName | Using AppXProvisionedPackage detection method."
+
+    Detect--AppXProvisionedPackageInstalled
+
+}elseif($DetectMethod -eq "All") {
+
+
+    Write-Log "SCRIPT: $ThisFileName | Using ALL detection methods."
+
+    $methods = Get-Command -CommandType Function -Name "Detect--*" | Select-Object -ExpandProperty Name
+    $detectionSuccess = $False
+    ForEach ($method in $methods){
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting detection method: $method"
+
+        Try {
+
+            $Detect = & $method
+
+            if ($Detect -eq 0){
+
+                Write-Log "SCRIPT: $ThisFileName | Detection method $method reported success!" "SUCCESS"
+                $detectionSuccess = $True
+                Break
+
+            } else {
+
+                Write-Log "SCRIPT: $ThisFileName | Detection method $method reported failure." "WARNING"
+
+            }
+
+        } Catch {
+
+            Write-Log "SCRIPT: $ThisFileName | Detection method $method encountered error: $_" "ERROR"
+
+        }
+
+    }
+
+
+
+
+}else{
 
     Write-Log "Unsupported detect method: $DetectMethod" "ERROR"
     Write-Log "SCRIPT: $ThisFileName | END | Exiting script." "ERROR"
@@ -975,6 +1135,18 @@ if ($DetectMethod -eq "WinGet") {
 
 }
 
+
+if ($detectionSuccess -eq $True){
+
+    Write-Log "SCRIPT: $ThisFileName | END | Application detected by method: $DetectMethod!" "SUCCESS"
+    Exit 0
+
+} else {
+
+    Write-Log "SCRIPT: $ThisFileName | END | Application NOT detected by method: $DetectMethod!" "WARNING"
+    Exit 1
+
+}
 
 
 

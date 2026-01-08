@@ -63,14 +63,14 @@
   {
     "ApplicationName": "MSI-Private-AzureBlob_Example",
     "InstallMethod": "MSI-Private-AzureBlob",
-    "MSIPathFromContainerRoot": "Adobe_Creative_Cloud/install.msi",
-    "DisplayName": "Adobe Creative Cloud",
+    "MSIPathFromContainerRoot": "zz/zz/install.msi",
+    "DisplayName": "TESTESTEST",
     "PreRequisites": ".NET_3.5"
   },
   {
     "ApplicationName": "PreRequisite_Example",
     "InstallMethod": "WinGet",
-    "WinGetID": "Flameshot.Flameshot",
+    "WinGetID": "TESTESTEST",
     "PreRequisites":"Google_Chrome,7zip,Dell_CommandUpdate"
   }
   ]

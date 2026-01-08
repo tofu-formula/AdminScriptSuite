@@ -19,7 +19,7 @@ $RegistryChangeScriptPath = "$RepoRoot\Configurators\Configure-Registry.ps1"
 # Folders to hit:
 # - Working Directory
 # - C:\ProgramData\Microsoft\IntuneManagementExtension\Logs
-# - HKLM:\SOFTWARE\AdminScriptSuite
+# - HKLM:\SOFTWARE\PowerDeploy
 
 # List of folders to check / fix
 $Folders = @(
@@ -31,7 +31,7 @@ $Folders = @(
 
 # REGISTRY KEYS to check/fix
 $RegistryKeys = @(
-    'HKLM:\SOFTWARE\AdminScriptSuite'
+    'HKLM:\SOFTWARE\PowerDeploy'
 )
 
 
@@ -550,7 +550,7 @@ foreach ($folder in $Folders) {
 
         } else {
 
-            Write-Log "Non-Parallels VM environment detected. ACL protection support is required. Exiting." "ERROR"
+            Write-Log "Could not apply ACL protection. This may be due to running from a non-Parallels VM environment. ACL protection support is required. Exiting." "ERROR"
 
             Exit 1
 

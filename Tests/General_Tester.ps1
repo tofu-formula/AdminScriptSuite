@@ -22,7 +22,9 @@ $UninstallerScript = "$RepoRoot\Uninstallers\General_Uninstaller.ps1"
 # path of the DotNet installer
 $DotNetInstallerScript = "$RepoRoot\Installers\Install-DotNET.ps1"
 # path to Git Runner
-$GitRunnerScript = "$RepoRoot\Templates\Git_Runner_TEMPLATE.ps1"
+$GitRunnerScript = "$RepoRoot\Templates\Git-Runner_TEMPLATE.ps1"
+# path of General_RemediationScriptSuite-Registry-Detection_TEMPLATE
+$General_RemediationScript_Registry_TEMPLATE = "$RepoRoot\Templates\General_RemediationScript-Registry_TEMPLATE.ps1"
 
 
 $AppToTest
@@ -259,7 +261,7 @@ Function TESTER-UninstallAll-Git {
 
 }
 
-Function TESTER-UninstallWinGet-Git {
+Function TESTER--UninstallWinGet--Git {
 
 
     # Write-Log "========================================"
@@ -291,7 +293,7 @@ Function TESTER-UninstallWinGet-Git {
 
 }
 
-Function TESTER-InstallWinGet-7Zip {
+Function TESTER--InstallWinGet--7Zip {
 
     Write-Log "========================================="
 
@@ -319,7 +321,7 @@ Function TESTER-InstallWinGet-7Zip {
 
 }
 
-Function TESTER-GitRunner-InstallWinGet-7Zip{
+Function TESTER--GitRunner--InstallWinGet--7Zip{
 
     Write-Log "========================================="
 
@@ -338,9 +340,9 @@ Function TESTER-GitRunner-InstallWinGet-7Zip{
         #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
 
 
-        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
-        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
         
         #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
 
@@ -356,7 +358,7 @@ Function TESTER-GitRunner-InstallWinGet-7Zip{
 
 
         # & $GitRunnerScript -RepoNickName 'TEST' `
-        #     -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+        #     -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
         #     -UpdateLocalRepoOnly $False `
         #     -WorkingDirectory $WorkingDirectory `
         #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
@@ -364,7 +366,7 @@ Function TESTER-GitRunner-InstallWinGet-7Zip{
         
         & $GitRunnerScript `
             -RepoNickName 'TEST' `
-            -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+            -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
             -UpdateLocalRepoOnly $False `
             -WorkingDirectory $WorkingDirectory `
             -ScriptPath "Installers\General_WinGet_Installer.ps1" `
@@ -384,7 +386,7 @@ Function TESTER-GitRunner-InstallWinGet-7Zip{
 
 }
 
-Function TESTER-GitRunner-UninstallWinGet-7Zip{
+Function TESTER--GitRunner--UninstallWinGet--7Zip{
 
     Write-Log "========================================="
 
@@ -403,9 +405,9 @@ Function TESTER-GitRunner-UninstallWinGet-7Zip{
         #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
 
 
-        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
-        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
         
         #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
 
@@ -421,7 +423,7 @@ Function TESTER-GitRunner-UninstallWinGet-7Zip{
 
 
         # & $GitRunnerScript -RepoNickName 'TEST' `
-        #     -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+        #     -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
         #     -UpdateLocalRepoOnly $False `
         #     -WorkingDirectory $WorkingDirectory `
         #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
@@ -429,7 +431,7 @@ Function TESTER-GitRunner-UninstallWinGet-7Zip{
         
         & $GitRunnerScript `
             -RepoNickName 'TEST' `
-            -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+            -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
             -UpdateLocalRepoOnly $False `
             -WorkingDirectory $WorkingDirectory `
             -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
@@ -449,7 +451,7 @@ Function TESTER-GitRunner-UninstallWinGet-7Zip{
 
 }
 
-Function TESTER-GitRunner-UninstallAll-7Zip{
+Function TESTER--GitRunner--UninstallAll--7Zip{
 
     Write-Log "========================================="
 
@@ -468,9 +470,9 @@ Function TESTER-GitRunner-UninstallAll-7Zip{
         #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
 
 
-        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git_Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
-        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
         
         #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
 
@@ -486,7 +488,7 @@ Function TESTER-GitRunner-UninstallAll-7Zip{
 
 
         # & $GitRunnerScript -RepoNickName 'TEST' `
-        #     -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+        #     -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
         #     -UpdateLocalRepoOnly $False `
         #     -WorkingDirectory $WorkingDirectory `
         #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
@@ -494,7 +496,7 @@ Function TESTER-GitRunner-UninstallAll-7Zip{
         
         & $GitRunnerScript `
             -RepoNickName 'TEST' `
-            -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' `
+            -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
             -UpdateLocalRepoOnly $False `
             -WorkingDirectory $WorkingDirectory `
             -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
@@ -513,6 +515,196 @@ Function TESTER-GitRunner-UninstallAll-7Zip{
     }
 
 }
+
+Function TESTER--General_RemediationScript-Registry_TEMPLATE--Detect--MSedge{
+
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge"
+    $ValueName = "DisplayName"
+    $ValueType = "String"
+    $Value = "Microsoft Edge"
+
+
+    $RegistryChanges = "-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""
+
+    Try {
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to detect: $RegistryChanges"
+
+        & $General_RemediationScript_Registry_TEMPLATE -RegistryChanges $RegistryChanges -WorkingDirectory $WorkingDirectory -Function "Detect"
+        
+        
+        if ($LASTEXITCODE -eq 1) { throw "The script successfully ran, but returned either a fail or no detection. Check logs." }
+        if ($LASTEXITCODE -ne 0) { throw $LASTEXITCODE}
+
+    } catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $($MyInvocation.MyCommand.Name) failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
+Function TESTER--General_RemediationScript-Registry_TEMPLATE--Detect--MSedge-2{
+
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge"
+    $ValueName = "DisplayName"
+    $ValueType = "String"
+    $Value = "Microsoft Edge"
+
+    $RegistryChanges = "'"+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"'"+","
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge Update"
+    $ValueName = "NoRemove"
+    $ValueType = "dword"
+    $Value = "1"
+
+    $RegistryChanges+="-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""
+
+    Try {
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to detect: $RegistryChanges"
+
+        & $General_RemediationScript_Registry_TEMPLATE -RegistryChanges $RegistryChanges -WorkingDirectory $WorkingDirectory -Function "Detect"
+        
+        
+        if ($LASTEXITCODE -eq 1) { throw "The script successfully ran, but returned either a fail or no detection. Check logs." }
+        if ($LASTEXITCODE -ne 0) { throw $LASTEXITCODE}
+    } catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $($MyInvocation.MyCommand.Name) failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
+Function TESTER--General_RemediationScript-Registry_TEMPLATE--Remediate-PowerDeployTest-Static {
+
+    
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test"
+    $ValueName = "Test"
+    $ValueType = "String"
+    $Value = "Success"
+
+
+    $RegistryChanges = "-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""
+
+    Try {
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to detect: $RegistryChanges"
+
+        & $General_RemediationScript_Registry_TEMPLATE -RegistryChanges $RegistryChanges -WorkingDirectory $WorkingDirectory -Function "Remediate"
+        
+        
+        if ($LASTEXITCODE -eq 1) { throw "The script successfully ran, but returned either a fail or no detection. Check logs." }
+        if ($LASTEXITCODE -ne 0) { throw $LASTEXITCODE}
+    } catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $($MyInvocation.MyCommand.Name) failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
+Function TESTER--General_RemediationScript-Registry_TEMPLATE--Remediate-PowerDeployTest-Dynamic {
+
+    
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test"
+    $ValueName = "Test"
+    $ValueType = "String"
+    $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+
+
+    $RegistryChanges = "-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""
+
+    Try {
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to detect: $RegistryChanges"
+
+        & $General_RemediationScript_Registry_TEMPLATE -RegistryChanges $RegistryChanges -WorkingDirectory $WorkingDirectory -Function "Remediate"
+        
+        
+        if ($LASTEXITCODE -eq 1) { throw "The script successfully ran, but returned either a fail or no detection. Check logs." }
+        if ($LASTEXITCODE -ne 0) { throw $LASTEXITCODE}
+    } catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $($MyInvocation.MyCommand.Name) failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
+Function TESTER--General_RemediationScript-Registry_TEMPLATE--Remediate-PowerDeployTest-Dynamic-2 {
+
+    
+
+    Write-Log "========================================="
+
+    Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Begin"
+
+    # $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test"
+    # $ValueName = "Test"
+    # $ValueType = "String"
+    # $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+
+
+    # $RegistryChanges = "-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test"
+    $ValueName = "Test"
+    $ValueType = "String"
+    $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+
+    $RegistryChanges = "'"+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"'"+","
+
+    $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test"
+    $ValueName = "Test 2"
+    $ValueType = "String"
+    $Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss') 2"
+
+    $RegistryChanges+="-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""
+
+    Try {
+
+        Write-Log "SCRIPT: $ThisFileName | Attempting to detect: $RegistryChanges"
+
+        & $General_RemediationScript_Registry_TEMPLATE -RegistryChanges $RegistryChanges -WorkingDirectory $WorkingDirectory -Function "Remediate"
+        
+        
+        if ($LASTEXITCODE -eq 1) { throw "The script successfully ran, but returned either a fail or no detection. Check logs." }
+        if ($LASTEXITCODE -ne 0) { throw $LASTEXITCODE}
+    } catch {
+
+        Write-Log "SCRIPT: $ThisFileName | END | $($MyInvocation.MyCommand.Name) failed. Code: $_" "ERROR"
+        Exit 1
+
+    }
+
+}
+
 
 
 ##########

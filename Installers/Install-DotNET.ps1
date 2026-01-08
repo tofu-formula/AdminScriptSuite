@@ -48,14 +48,14 @@
     Installs .NET 8 SDK
 
 .NOTES
-    SOURCE: https://github.com/tofu-formula/AdminScriptSuite
+    SOURCE: https://github.com/Adrian-Mandel/PowerDeploy
 #>
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$Version,
 
-    [string]$WorkingDirectory="C:\ProgramData\AdminScriptSuite",
+    [string]$WorkingDirectory="C:\ProgramData\PowerDeploy",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("Desktop", "SDK", "AspNet", "Runtime")]

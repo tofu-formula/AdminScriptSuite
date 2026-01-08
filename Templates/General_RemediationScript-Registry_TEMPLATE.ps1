@@ -19,8 +19,8 @@ Param(
 
 )
 
-# $WorkingDirectory = "C:\ProgramData\AdminScriptSuite",
-# $RepoNickName = "AdminScriptSuite-Repo"
+# $WorkingDirectory = "C:\ProgramData\PowerDeploy",
+# $RepoNickName = "PowerDeploy-Repo"
 
 if ($WorkingDirectory -eq "" -or $WorkingDirectory -eq $null -or $RepoNickName -eq "" -or $RepoNickName -eq $null){
 

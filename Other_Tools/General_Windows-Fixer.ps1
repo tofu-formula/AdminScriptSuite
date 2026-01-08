@@ -6,7 +6,7 @@
 
 Param (
 
-    $WorkingDirectory="C:\ProgramData\AdminScriptSuite"
+    $WorkingDirectory="C:\ProgramData\PowerDeploy"
 
 )
 

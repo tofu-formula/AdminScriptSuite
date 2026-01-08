@@ -381,7 +381,7 @@ function Reg-Read-All {
 
     Write-Host "`nTesting access to specific registry values:"
 
-    $RegData["HKLM:\Software\AdminScriptSuite-Test\Applications"]["ApplicationContainerSASkey"]
+    $RegData["HKLM:\Software\PowerDeploy-Test\Applications"]["ApplicationContainerSASkey"]
     #>
 
     Function AddValues-To-Hash{
@@ -444,8 +444,8 @@ function Reg-Read-All {
 
             if ($keyTable.Count -eq 0) { continue }
 
-            # Convert .Name (e.g. 'HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite')
-            # into a friendly PS-style path (HKLM:\SOFTWARE\AdminScriptSuite)
+            # Convert .Name (e.g. 'HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy')
+            # into a friendly PS-style path (HKLM:\SOFTWARE\PowerDeploy)
             #$rawName = $ConvertedKeyObj.Name
             $psPath  = switch -Regex ($rawName) {
                 '^HKEY_LOCAL_MACHINE\\(.*)'    { "HKLM:\$($Matches[1])"; break }
@@ -500,7 +500,7 @@ function Reg-Read-All {
         foreach ($child in $children) {
 
             $ChildName = $child.Name
-            # .Name looks like "HKEY_LOCAL_MACHINE\Software\AdminScriptSuite\Printers"
+            # .Name looks like "HKEY_LOCAL_MACHINE\Software\PowerDeploy\Printers"
             $KeyPathsToCheck.Enqueue($ChildName)
 
             Write-Log "   $ChildName"
@@ -590,7 +590,7 @@ Function Reg-Lockdown{
         #     [string]$KeyPath
         # )
         
-        # Parse the path - expects format like HKLM:\SOFTWARE\AdminScriptSuite # TODO: Replace this part with common function
+        # Parse the path - expects format like HKLM:\SOFTWARE\PowerDeploy # TODO: Replace this part with common function
         if ($KeyPath -match '^(HKLM|HKEY_LOCAL_MACHINE):\\?(.+)$') { 
             $hive = [Microsoft.Win32.RegistryHive]::LocalMachine
             $subKeyPath = $Matches[2]
