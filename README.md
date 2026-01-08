@@ -7,9 +7,11 @@ This writeup was written by AI and is just for proof of concept purposes.
 
 A comprehensive PowerShell automation framework designed for enterprise endpoint management and deployment. This suite provides centralized administrative scripts that automate software installation, configuration management, and system maintenance tasks across organizational environments.
 
+
 ## Overview
 
 PowerDeploy is specifically architected for deployment through enterprise tools like **Microsoft Intune**, **Datto RMM**, and **SCCM**, with scripts designed to run in SYSTEM context on managed endpoints. The framework emphasizes reliability, consistency, and enterprise-scale deployment capabilities.
+
 
 ### Key Features
 
@@ -19,10 +21,12 @@ PowerDeploy is specifically architected for deployment through enterprise tools 
 - **Windows Features** — Enable/disable Windows Optional Features programmatically
 - **Registry Management** — Secure registry operations with ACL management and 32/64-bit redirection handling
 - **Git-Based Deployment** — Pull latest scripts from repositories and execute on target machines
+- 
 
 ## Why PowerDeploy?
 
 Native Microsoft Intune has significant limitations that create headaches for IT administrators. PowerDeploy was built to solve these real-world problems:
+
 
 ### 🖨️ Printer Management Done Right
 
@@ -30,11 +34,13 @@ Native Microsoft Intune has significant limitations that create headaches for IT
 
 **Our Solution:** PowerDeploy includes complete infrastructure to replace your print server. Easily add and manage printer availability across your organization using Azure Blob Storage for centralized driver and configuration management.
 
+
 ### 📦 Reliable Application Deployment
 
 **The Problem:** Intune has notoriously inconsistent installation success rates. Even custom installers under 50MB fail regularly. Larger applications like Microsoft Office or Adobe Acrobat have extremely high failure rates when deployed through native Intune.
 
 **Our Solution:** Only a lightweight runner script is hosted in Intune. The actual applications are pulled from the Microsoft Store via WinGet or your private Azure Blob storage — dramatically improving reliability and eliminating Intune's size limitations.
+
 
 ### ⚡ Rapid Development & Testing
 
@@ -42,11 +48,13 @@ Native Microsoft Intune has significant limitations that create headaches for IT
 
 **Our Solution:** The installer script never needs modification for troubleshooting. Make changes in real-time via GitHub or Azure Blob — your endpoints pull the latest version automatically. Test iterations in minutes, not hours.
 
+
 ### 📋 Comprehensive Logging
 
 **The Problem:** Native Intune installation logging is inflexible, vague, and scattered across multiple locations. Troubleshooting failed deployments often feels like detective work.
 
 **Our Solution:** Every script includes detailed, color-coded logging with timestamps, severity levels, and centralized log storage. Know exactly what happened, when, and why.
+
 
 ### 🏪 Full Microsoft Store Access
 
@@ -54,11 +62,13 @@ Native Microsoft Intune has significant limitations that create headaches for IT
 
 **Our Solution:** Full, real-time access to nearly everything in the Microsoft Store through WinGet. Install the latest versions of applications the moment they're available.
 
+
 ### 🔄 Streamlined Update Management
 
 **The Problem:** Intune is extremely clunky at handling application updates. Keeping apps current requires creating new app entries, managing supersedence, and hoping detection rules work correctly.
 
 **Our Solution:** For WinGet-based installs, pair with [WinGet Updater](https://github.com/Romanitho/Winget-AutoUpdate) to automatically keep applications current. For custom MSI deployments, simply update your JSON configuration and Azure Blob source — no need to touch the Intune app entry. *(Custom app auto-updater coming soon)*
+
 
 ### 🗑️ Simplified Uninstallation
 
@@ -66,17 +76,20 @@ Native Microsoft Intune has significant limitations that create headaches for IT
 
 **Our Solution:** The General Uninstaller script handles multiple removal methods automatically — WinGet, registry-based, WMI, and more. Just provide the app name and let the script figure out the rest.
 
+
 ### ✅ WinGet That Actually Works
 
 **The Problem:** WinGet in SYSTEM context (how Intune runs scripts) has numerous quirks and often fails silently.
 
 **Our Solution:** Our WinGet installer script handles all the edge cases — bootstrapping WinGet if missing, resetting sources, handling 32/64-bit contexts, and providing detailed error reporting when things go wrong.
 
+
 ### 🚀 On-Demand Execution
 
 **The Problem:** Intune automatic app deployment can take anywhere from minutes to 48+ hours with no option to trigger execution manually for testing or urgent deployments.
 
 **Our Solution:** Scripts are stored locally in ProgramData with manual launch options. Need an app installed right now? Run it directly. No waiting for Intune sync cycles.
+
 
 ---
 
