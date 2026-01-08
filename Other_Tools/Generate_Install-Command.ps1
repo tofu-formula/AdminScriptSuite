@@ -46,7 +46,7 @@ $CustomGitRunnerMakerScript = "$RepoRoot\Other_Tools\Generate_Custom-Script_From
 
 $ThisFileName = $MyInvocation.MyCommand.Name
 
-# $RepoRoot = "C:\ProgramData\AdminScriptSuite\AdminScriptSuite-Repo"
+# $RepoRoot = "C:\ProgramData\PowerDeploy\PowerDeploy-Repo"
 # $WorkingDirectory = Split-Path -Path $RepoRoot -Parent
 
 
@@ -141,7 +141,7 @@ function ExportTXT {
 <#
 $updateCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "Test00" `
-    -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
+    -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
     -WorkingDirectory "C:\ProgramData\Test7"
 
 Write-Host "Update Only Command:" -ForegroundColor Green
@@ -166,7 +166,7 @@ Function RemediationScript {
 
         <#
         # Registry Value 1
-        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test"
         $ValueName = "Test"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
@@ -176,7 +176,7 @@ Function RemediationScript {
 
 
         # Registry Value 2
-        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test"
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test"
         $ValueName = "Test 2"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss') 2"
@@ -187,7 +187,7 @@ Function RemediationScript {
 
 
         # Registry Value 1
-        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\General"
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\General"
         $ValueName = "StorageAccountName"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
@@ -196,7 +196,7 @@ Function RemediationScript {
         $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
         # Registry Value 2
-        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Printers"
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Printers"
         $ValueName = "PrinterDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
@@ -205,7 +205,7 @@ Function RemediationScript {
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
         # Registry Value 3
-        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Printers"
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Printers"
         $ValueName = "PrinterContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
@@ -214,7 +214,7 @@ Function RemediationScript {
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
         # Registry Value 4
-        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Applications"
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Applications"
         $ValueName = "ApplicationDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
@@ -223,7 +223,7 @@ Function RemediationScript {
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
         # Registry Value 5
-        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite\Applications"
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Applications"
         $ValueName = "ApplicationContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
@@ -241,7 +241,7 @@ Function RemediationScript {
     
         # This works too!
         # $RegistryChanges = @()
-        # $RegistryChanges += '''[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -ValueName "Test" -ValueType "String" -Value "zz"],[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite-Test" -ValueName "Test 2" -ValueType "String" -Value "zz 2"]'''
+        # $RegistryChanges += '''[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test" -ValueName "Test" -ValueType "String" -Value "zz"],[-KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy-Test" -ValueName "Test 2" -ValueType "String" -Value "zz 2"]'''
 
         Write-Host "Registry Changes to process: $RegistryChanges" #-ForegroundColor Yellow
 
@@ -250,15 +250,15 @@ Function RemediationScript {
     Write-Host "DETECT SCRIPT" -ForegroundColor Yellow
     $CustomNameModifier = "Detect"
     $installCommand = New-IntuneGitRunnerCommand `
-        -RepoNickName "AdminScriptSuite-Repo" `
-        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -RepoNickName "PowerDeploy-Repo" `
+        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             RegistryChanges = $RegistryChanges
-            RepoNickName = "AdminScriptSuite-Repo"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            RepoNickName = "PowerDeploy-Repo"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
             Function = "Detect"
         }
 
@@ -270,15 +270,15 @@ Function RemediationScript {
     Write-Host "REMEDIATION SCRIPT" -ForegroundColor Yellow
     $CustomNameModifier = "Remediate"
     $installCommand = New-IntuneGitRunnerCommand `
-        -RepoNickName "AdminScriptSuite-Repo" `
-        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -RepoNickName "PowerDeploy-Repo" `
+        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             RegistryChanges = $RegistryChanges
-            RepoNickName = "AdminScriptSuite-Repo"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            RepoNickName = "PowerDeploy-Repo"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
             Function = "Remediate"
             AlsoLockDown = $True
         }
@@ -289,7 +289,7 @@ Function RemediationScript {
     <#
 
     Output for detect:
-    %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'AdminScriptSuite-Repo' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\AdminScriptSuite' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
+    %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'PowerDeploy-Repo' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy.git' -WorkingDirectory 'C:\ProgramData\PowerDeploy' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
 
     Output for remediate
     #>
@@ -303,9 +303,9 @@ Function RemediationScript {
 
 <#
 $installCommand = New-IntuneGitRunnerCommand `
-    -RepoNickName "AdminScriptSuite-Repo" `
-    -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+    -RepoNickName "PowerDeploy-Repo" `
+    -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+    -WorkingDirectory "C:\ProgramData\PowerDeploy" `
     -ScriptPath "Installers\Install-DellCommandUpdate-FullClean.ps1"
 #>
 
@@ -316,14 +316,14 @@ $installCommand = New-IntuneGitRunnerCommand `
 
 <#
 $installCommand = New-IntuneGitRunnerCommand `
-    -RepoNickName "AdminScriptSuite-Repo" `
-    -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+    -RepoNickName "PowerDeploy-Repo" `
+    -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+    -WorkingDirectory "C:\ProgramData\PowerDeploy" `
     -ScriptPath "Installers\General_WinGet_Installer.ps1" `
     -ScriptParams @{
         AppName = "Zoom.Zoom.EXE"
         AppID = "Zoom.Zoom.EXE"
-        WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        WorkingDirectory = "C:\ProgramData\PowerDeploy"
     }
 #>
 
@@ -389,14 +389,14 @@ function InstallPrinterByIP {
     Write-Host "INSTALL COMMAND" -ForegroundColor Yellow
     $CustomNameModifier = "Install-Printer-IP.$PrinterName"
     $installCommand = New-IntuneGitRunnerCommand `
-        -RepoNickName "AdminScriptSuite-Repo" `
-        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -RepoNickName "PowerDeploy-Repo" `
+        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Installers\General_IP-Printer_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             PrinterName = "$PrinterName"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
         }
 
     $InstallPrinterScript = $global:CustomScript
@@ -408,14 +408,14 @@ function InstallPrinterByIP {
     Write-Host "DETECT SCRIPT" -ForegroundColor Yellow
     $CustomNameModifier = "Detect-Printer.$PrinterName"
     $detectCommand = New-IntuneGitRunnerCommand `
-        -RepoNickName "AdminScriptSuite-Repo" `
-        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -RepoNickName "PowerDeploy-Repo" `
+        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Templates\Detection-Script-Printer_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             PrinterName = "$PrinterName"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
         }
 
     $DetectPrinterScript = $global:CustomScript
@@ -532,14 +532,14 @@ function UninstallPrinterByName {
     Write-Host "UNINSTALL COMMAND" -ForegroundColor Yellow
     $CustomNameModifier = "Uninstall-Printer-Name.$PrinterName"
     $InstallCommand = New-IntuneGitRunnerCommand `
-        -RepoNickName "AdminScriptSuite-Repo" `
-        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -RepoNickName "PowerDeploy-Repo" `
+        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Uninstallers\Uninstall-Printer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             PrinterName = "$PrinterName"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
         }
 
     $UninstallPrinterScript = $global:CustomScript
@@ -658,14 +658,14 @@ function InstallAppWithJSON {
     Write-Host "INSTALL COMMAND" -ForegroundColor Yellow
     $CustomNameModifier = "Install-JSON-App.$ApplicationName"
     $installCommand = New-IntuneGitRunnerCommand `
-        -RepoNickName "AdminScriptSuite-Repo" `
-        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -RepoNickName "PowerDeploy-Repo" `
+        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Installers\General_JSON-App_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             TargetAppName = "$ApplicationName"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
         }
 
 
@@ -689,13 +689,13 @@ function InstallAppWithJSON {
 
         $CustomNameModifier = "Detect-App.Winget.$ApplicationName"
         $detectCommand = New-IntuneGitRunnerCommand `
-            -RepoNickName "AdminScriptSuite-Repo" `
-            -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-            -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+            -RepoNickName "PowerDeploy-Repo" `
+            -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+            -WorkingDirectory "C:\ProgramData\PowerDeploy" `
             -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
             -CustomNameModifier "$CustomNameModifier" `
             -ScriptParams @{
-                WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+                WorkingDirectory = "C:\ProgramData\PowerDeploy"
                 AppToDetect = $ApplicationName
                 AppID = $AppID
                 DetectMethod = $DetectMethod
@@ -708,13 +708,13 @@ function InstallAppWithJSON {
  
         $CustomNameModifier = "Detect-App.MSIRegistry.$ApplicationName"
         $detectCommand = New-IntuneGitRunnerCommand `
-            -RepoNickName "AdminScriptSuite-Repo" `
-            -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-            -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+            -RepoNickName "PowerDeploy-Repo" `
+            -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+            -WorkingDirectory "C:\ProgramData\PowerDeploy" `
             -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
             -CustomNameModifier "$CustomNameModifier" `
             -ScriptParams @{
-                WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+                WorkingDirectory = "C:\ProgramData\PowerDeploy"
                 DisplayName = $DisplayName
                 AppToDetect = $ApplicationName
                 DetectMethod = $DetectMethod
@@ -861,9 +861,9 @@ function UninstallApp {
     Write-Host "UNINSTALL COMMAND" -ForegroundColor Yellow
     $CustomNameModifier = "Uninstall-App.$ApplicationName"
     $InstallCommand = New-IntuneGitRunnerCommand `
-        -RepoNickName "AdminScriptSuite-Repo" `
-        -RepoUrl "https://github.com/tofu-formula/AdminScriptSuite.git" `
-        -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
+        -RepoNickName "PowerDeploy-Repo" `
+        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
@@ -872,7 +872,7 @@ function UninstallApp {
             Version = "$Version"
             WinGetID = "$WinGetID"
             UninstallString_DisplayName = "$UninstallString_DisplayName"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
         }
 
 

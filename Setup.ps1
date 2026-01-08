@@ -4,7 +4,7 @@
     Setup script for Admin Script Suite. 
 
 .DESCRIPTION
-    This script is the main point of contact for the technician users of AdminScriptSuite. 
+    This script is the main point of contact for the technician users of PowerDeploy. 
     Uses Azure Blob Storage based JSON files to set up printer and application deployments via Intune.
     It can:
     - Set up printer/app deployments via Intune (from Azure Blob Storage JSON)
@@ -1547,6 +1547,7 @@ Function Uninstall--Local-Printer{
 
 Function Uninstall--Local-Application{
 
+    # UNFINISHED
     Function JSON--search-and-uninstall{
 
         Write-Log "To begin we will access the ApplicationData.json files, both public (local repo) and private (Azure Blob) to show you the available documented applications."
@@ -1603,6 +1604,7 @@ Function Uninstall--Local-Application{
 
     }
 
+    # UNFINISHED
     Function Winget--search-and-uninstall{
 
         # Install winget if not present
@@ -1702,6 +1704,7 @@ Function Uninstall--Local-Application{
 
     }
 
+    # TESTED AND WORKING!
     Function CIM--search-and-uninstall{
 
         $Result = Get-CimInstance -ClassName Win32_Product | Select-Object Name
@@ -1768,6 +1771,7 @@ Function Uninstall--Local-Application{
 
     }
 
+    # UNFINISHED
     Function Registry--search-and-uninstall{
 
         $paths = @(
@@ -1883,6 +1887,7 @@ Function Uninstall--Local-Application{
 
     }
 
+    # UNFINISHED
     Function Adobe--search-and-uninstall{
 
         Write-Log "Adobe application uninstallation is not yet implemented." "ERROR"
@@ -2728,10 +2733,10 @@ Pause
 
 # Warnings
 Write-Log ""
-# If this script is not being ran against C:ProgramData\AdminScriptSuite, it is going to lock down files in the root of the repo parent folder. Give a big fat warning. 
-if ($WorkingDirectory -ne "C:\ProgramData\AdminScriptSuite") {
+# If this script is not being ran against C:ProgramData\PowerDeploy, it is going to lock down files in the root of the repo parent folder. Give a big fat warning. 
+if ($WorkingDirectory -ne "C:\ProgramData\PowerDeploy") {
     Write-Log "You are running this script from a non-standard location: $WorkingDirectory" "WARNING"
-    Write-Log "This may cause permission issues with files created in the this folder. It is recommended to run this script from C:\ProgramData\AdminScriptSuite" "WARNING"
+    Write-Log "This may cause permission issues with files created in the this folder. It is recommended to run this script from C:\ProgramData\PowerDeploy" "WARNING"
     Write-Log ""
     Write-Log "The following folders will be locked down:" "WARNING"
     Write-Log " - $WorkingDirectory\Temp" "WARNING"
@@ -2776,7 +2781,7 @@ If ($Answer -eq "y"){
 
     $RepoNickName = Split-Path $RepoRoot -leaf
 
-    & $GitRunnerScript -WorkingDirectory $WorkingDirectory -RepoNickName $RepoNickName -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite' -UpdateLocalRepoOnly $true
+    & $GitRunnerScript -WorkingDirectory $WorkingDirectory -RepoNickName $RepoNickName -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true
 
     Write-Log "" "INFO2"
  

@@ -3,8 +3,8 @@
 
 Param(
 
-    [string]$PrinterName,
-    [string]$WorkingDirectory= "C:\ProgramData\AdminScriptSuite" # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
+    [string]$z,
+    [string]$WorkingDirectory= "C:\ProgramData\PowerDeploy" # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
 )
 
 
@@ -77,7 +77,7 @@ if(get-command -name Get-Printer -erroraction silentlyContinue){
 }
 
 
-#Write-Log "SCRIPT: $ThisFileName | Result of search: $result"
+#Write-Log "SCRIPT: $ThisFileName | Result of searchx: $result"
 
 If($result -eq $PrinterName){
     

@@ -8,7 +8,7 @@ Param(
     $RemoveDriver = $False, # Not implemented yet, may need in the future
 
     #[Parameter(Mandatory=$true)]
-    [String]$WorkingDirectory="C:\ProgramData\AdminScriptSuite"
+    [String]$WorkingDirectory="C:\ProgramData\PowerDeploy"
 
 )
 

@@ -2,7 +2,7 @@
 
 Param(
 
-    [string]$RegistryStoredScriptValuesRoot="HKLM:\Software\AdminScriptSuite"
+    [string]$RegistryStoredScriptValuesRoot="HKLM:\Software\PowerDeploy"
 
 )
 
@@ -71,11 +71,11 @@ if((!$RegData) -or ($RegData.Count -eq 0) -or $RegData -eq $null) {
 
 
 ## TEMPLATE: Set the needed variables for your organization
-    $ApplicationContainerSASkey = $RegData["HKLM:\Software\AdminScriptSuite\Applications"]["ApplicationContainerSASkey"]
-    $ApplicationDataJSONpath = $RegData["HKLM:\Software\AdminScriptSuite\Applications"]["ApplicationDataJSONpath"]
-    $PrinterDataJSONpath = $RegData["HKLM:\Software\AdminScriptSuite\Printers"]["PrinterDataJSONpath"]
-    $PrinterContainerSASkey = $RegData["HKLM:\Software\AdminScriptSuite\Printers"]["PrinterContainerSASkey"]
-    $StorageAccountName = $RegData["HKLM:\Software\AdminScriptSuite\General"]["StorageAccountName"]
+    $ApplicationContainerSASkey = $RegData["HKLM:\Software\PowerDeploy\Applications"]["ApplicationContainerSASkey"]
+    $ApplicationDataJSONpath = $RegData["HKLM:\Software\PowerDeploy\Applications"]["ApplicationDataJSONpath"]
+    $PrinterDataJSONpath = $RegData["HKLM:\Software\PowerDeploy\Printers"]["PrinterDataJSONpath"]
+    $PrinterContainerSASkey = $RegData["HKLM:\Software\PowerDeploy\Printers"]["PrinterContainerSASkey"]
+    $StorageAccountName = $RegData["HKLM:\Software\PowerDeploy\General"]["StorageAccountName"]
 
     # Build a hashtable of the values
     $Hash = @{

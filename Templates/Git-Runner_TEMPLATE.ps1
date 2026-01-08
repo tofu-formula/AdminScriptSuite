@@ -7,7 +7,7 @@
 .DESCRIPTION
     This template...
         - can be used to pull the latest commit from your target repo, and run a powershell script within, even passing parameters to that powershell script.
-        - was intended to be used as the primary component in this project: https://github.com/tofu-formula/AdminScriptSuite and interacts with the scripts within
+        - was intended to be used as the primary component in this project: https://github.com/Adrian-Mandel/PowerDeploy and interacts with the scripts within
         - can be ran as-is, or set up to be ran independently by removing the parameters.
         - will not be updated much so safe to keep and run. If used as a part of the github repo above, it can update itself.
 
@@ -25,12 +25,12 @@
 .PARAMETER RepoNickName
     Name to call the repo, for logging/local file path ($LocalRepoPath = "$WorkingDirectory\Git_Repos\$RepoNickName")
     EXAMPLE
-        Win-AdminScriptSuite
+        Win-PowerDeploy
 
 .PARAMETER RepoUrl
     Link to the target repo
     EXAMPLE
-        https://github.com/tofu-formula/AdminScriptSuite.git
+        https://github.com/Adrian-Mandel/PowerDeploy.git
 
 .PARAMETER UpdateLocalRepoOnly
     If $true, forces script to exit early right after it finishes pulling the latest commit.
@@ -50,7 +50,7 @@
     NOTE: The directory will be created if it does not already exist
     NOTE: A seperate WorkingDirectory path will need to be provided in the params passed to the target script
     EXAMPLE
-        C:\ProgramData\AdminScriptSuite
+        C:\ProgramData\PowerDeploy
 
 
 
@@ -60,7 +60,7 @@
     NOTE: Enclose in single brackets
     EXAMPLE 
         for General_Uninstaller.ps1: 
-            '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"'
+            '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\PowerDeploy"'
 
 
 .PARAMETER ScriptParamsBase64
@@ -69,7 +69,7 @@
     How do you use this parameter? The Generate_Custom-Script_FromTemplate.ps1 will do it for you automatically! See that script for further instuctions.
 
 .EXAMPLE
-    .\Git-Runner_TEMPLATE.ps1 -RepoNickName "Win-AdminScriptSuite" -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\AdminScriptSuite" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"'
+    .\Git-Runner_TEMPLATE.ps1 -RepoNickName "Win-PowerDeploy" -RepoURL "https://github.com/Adrian-Mandel/PowerDeploy.git" -ScriptPath "Uninstallers\General_Uninstaller.ps1" -WorkingDirectory "C:\ProgramData\PowerDeploy" -ScriptParams '-AppName "7-zip" -UninstallType "All" -WorkingDirectory "C:\ProgramData\PowerDeploy"'
     
     Template: .\Git-Runner_TEMPLATE.ps1 -RepoNickName "" -RepoURL "" -ScriptPath "" -WorkingDirectory "" -ScriptParams ""
 
@@ -79,7 +79,7 @@
         - Maybe add a timeout feature for the script?
 
     SOURCE:
-        https://github.com/tofu-formula/AdminScriptSuite
+        https://github.com/Adrian-Mandel/PowerDeploy
 
 
                 
@@ -99,7 +99,7 @@ param(
     [string]$ScriptPath, # Path from repo root to the target script
 
     [Parameter(Mandatory=$true)]
-    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\AdminScriptSuite"
+    [string]$WorkingDirectory, # Recommended param: "C:\ProgramData\PowerDeploy"
 
     [Parameter(Mandatory=$false)]
     [string]$ScriptParamsBase64, # Base64 encoded params for better Intune compatibility,
@@ -562,9 +562,9 @@ if (!(Test-Path "$WorkingDirectory\TEMP")){
 # Create the working registry path if it doesn't exist
 try{
 
-    Write-Log "Ensuring working registry path exists: HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite"
+    Write-Log "Ensuring working registry path exists: HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy"
 
-    & $RegistryChangeScriptPath -WorkingDirectory $WorkingDirectory -KeyOnly $true -KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\AdminScriptSuite" -Function "Modify"
+    & $RegistryChangeScriptPath -WorkingDirectory $WorkingDirectory -KeyOnly $true -KeyPath "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy" -Function "Modify"
     if ($LASTEXITCODE -ne 0) { throw "$LASTEXITCODE" }
 
 } catch {

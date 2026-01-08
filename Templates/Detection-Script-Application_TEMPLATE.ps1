@@ -7,7 +7,7 @@
 Param(
 
     [string]$AppToDetect,# = "Dell Command Update", # ENTER THE NICK NAME OF THE APPLICATION TO DETECT HERE    
-    [string]$WorkingDirectory= "C:\ProgramData\AdminScriptSuite", # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
+    [string]$WorkingDirectory= "C:\ProgramData\PowerDeploy", # This is one of the few scripts that needs this param explicitly set. It is ran independently from InTune and doesn't inherit this param from anywhere.
     [string]$AppID,# = "Dell.CommandUpdate", # ENTER THE EXACT WINGET APP ID HERE
     [String]$DisplayName,# = "Dell Command Update", # ENTER THE DISPLAY NAME TO SEARCH FOR IN REGISTRY OR AppXProvisionedPackage HERE,
     [String]$AppXpackageName, # ENTER THE EXACT APPX PACKAGE NAME HERE

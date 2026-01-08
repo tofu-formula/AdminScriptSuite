@@ -55,7 +55,7 @@
     Installs app.msi without post-install verification
 
 .NOTES
-    SOURCE: https://github.com/tofu-formula/AdminScriptSuite
+    SOURCE: https://github.com/Adrian-Mandel/PowerDeploy
     
     Common MSI Exit Codes:
     0    - Success

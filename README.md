@@ -1,4 +1,6 @@
-# AdminScriptSuite
+# PowerDeploy
+
+Released with authorization from Santa Cruz County Office of Education, 1/7/26
 
 This writeup was written by AI and is just for proof of concept purposes.
 
@@ -6,7 +8,7 @@ A comprehensive PowerShell automation framework designed for enterprise endpoint
 
 ## Overview
 
-AdminScriptSuite is specifically architected for deployment through enterprise tools like **Microsoft Intune**, **Datto RMM**, and **SCCM**, with scripts designed to run in SYSTEM context on managed endpoints. The framework emphasizes reliability, consistency, and enterprise-scale deployment capabilities.
+PowerDeploy is specifically architected for deployment through enterprise tools like **Microsoft Intune**, **Datto RMM**, and **SCCM**, with scripts designed to run in SYSTEM context on managed endpoints. The framework emphasizes reliability, consistency, and enterprise-scale deployment capabilities.
 
 ### Key Features
 
@@ -17,15 +19,15 @@ AdminScriptSuite is specifically architected for deployment through enterprise t
 - **Registry Management** — Secure registry operations with ACL management and 32/64-bit redirection handling
 - **Git-Based Deployment** — Pull latest scripts from repositories and execute on target machines
 
-## Why AdminScriptSuite?
+## Why PowerDeploy?
 
-Native Microsoft Intune has significant limitations that create headaches for IT administrators. AdminScriptSuite was built to solve these real-world problems:
+Native Microsoft Intune has significant limitations that create headaches for IT administrators. PowerDeploy was built to solve these real-world problems:
 
 ### 🖨️ Printer Management Done Right
 
 **The Problem:** Intune only offers Universal Print by default, which is unreliable and doesn't cover many enterprise printing scenarios.
 
-**Our Solution:** AdminScriptSuite includes complete infrastructure to replace your print server. Easily add and manage printer availability across your organization using Azure Blob Storage for centralized driver and configuration management.
+**Our Solution:** PowerDeploy includes complete infrastructure to replace your print server. Easily add and manage printer availability across your organization using Azure Blob Storage for centralized driver and configuration management.
 
 ### 📦 Reliable Application Deployment
 
@@ -91,7 +93,7 @@ Native Microsoft Intune has significant limitations that create headaches for IT
 
 ```powershell
 # Clone or download the repository
-git clone https://github.com/tofu-formula/AdminScriptSuite.git
+git clone https://github.com/Adrian-Mandel/PowerDeploy.git
 
 # Run the setup script (as Administrator)
 .\Setup_RUNNER.bat
@@ -105,17 +107,17 @@ The Git Runner allows you to pull the latest commit from the repository and exec
 
 ```powershell
 .\Git-Runner_TEMPLATE.ps1 `
-    -RepoNickName "AdminScriptSuite-Repo" `
-    -RepoURL "https://github.com/tofu-formula/AdminScriptSuite.git" `
+    -RepoNickName "PowerDeploy-Repo" `
+    -RepoURL "https://github.com/Adrian-Mandel/PowerDeploy.git" `
     -ScriptPath "Installers\General_WinGet_Installer.ps1" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite" `
-    -ScriptParams '-AppID "7zip.7zip" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"'
+    -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+    -ScriptParams '-AppID "7zip.7zip" -WorkingDirectory "C:\ProgramData\PowerDeploy"'
 ```
 
 ## Directory Structure
 
 ```
-AdminScriptSuite/
+PowerDeploy/
 ├── Setup.ps1                    # Main setup wizard
 ├── Setup_RUNNER.bat             # Batch launcher for Setup.ps1
 ├── Installers/
@@ -149,13 +151,13 @@ Installs applications using Windows Package Manager (WinGet) with automatic WinG
 ```powershell
 .\General_WinGet_Installer.ps1 `
     -AppID "Microsoft.VisualStudioCode" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+    -WorkingDirectory "C:\ProgramData\PowerDeploy"
 
 # With specific version
 .\General_WinGet_Installer.ps1 `
     -AppID "7zip.7zip" `
     -Version "23.01" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+    -WorkingDirectory "C:\ProgramData\PowerDeploy"
 ```
 
 #### General_IP-Printer_Installer.ps1
@@ -166,7 +168,7 @@ Installs network printers with automatic driver download from Azure Blob Storage
     -PrinterName "Office-HP-LaserJet" `
     -IPAddress "192.168.1.100" `
     -DriverName "HP Universal Printing PCL 6" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+    -WorkingDirectory "C:\ProgramData\PowerDeploy"
 ```
 
 #### Install-DotNET.ps1
@@ -174,13 +176,13 @@ Installs .NET Framework or .NET Runtime/SDK versions using appropriate methods.
 
 ```powershell
 # .NET Framework 3.5 (uses Windows Optional Features)
-.\Install-DotNET.ps1 -Version "3.5" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+.\Install-DotNET.ps1 -Version "3.5" -WorkingDirectory "C:\ProgramData\PowerDeploy"
 
 # .NET 8 Desktop Runtime (uses WinGet)
-.\Install-DotNET.ps1 -Version "8" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+.\Install-DotNET.ps1 -Version "8" -WorkingDirectory "C:\ProgramData\PowerDeploy"
 
 # .NET 8 SDK
-.\Install-DotNET.ps1 -Version "8" -InstallType "SDK" -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+.\Install-DotNET.ps1 -Version "8" -InstallType "SDK" -WorkingDirectory "C:\ProgramData\PowerDeploy"
 ```
 
 ### Uninstallers
@@ -193,13 +195,13 @@ Multi-method uninstaller supporting WinGet, registry-based, WMI, and other remov
 .\General_Uninstaller.ps1 `
     -AppName "7-zip" `
     -UninstallType "All" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+    -WorkingDirectory "C:\ProgramData\PowerDeploy"
 
 # Uninstall using WinGet only
 .\General_Uninstaller.ps1 `
     -AppName "7-zip" `
     -UninstallType "Win_Get" `
-    -WorkingDirectory "C:\ProgramData\AdminScriptSuite"
+    -WorkingDirectory "C:\ProgramData\PowerDeploy"
 ```
 
 ### Templates
@@ -229,20 +231,20 @@ Generate deployment commands using the built-in command generator:
 .\Other_Tools\Generate_Install-Command.ps1 `
     -DesiredFunction "CreateIntuneCommand" `
     -FunctionParams @{
-        RepoNickName = "AdminScriptSuite-Repo"
-        RepoUrl = "https://github.com/tofu-formula/AdminScriptSuite.git"
-        WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+        RepoNickName = "PowerDeploy-Repo"
+        RepoUrl = "https://github.com/Adrian-Mandel/PowerDeploy.git"
+        WorkingDirectory = "C:\ProgramData\PowerDeploy"
         ScriptPath = "Installers\General_WinGet_Installer.ps1"
         ScriptParams = @{
             AppID = "7zip.7zip"
-            WorkingDirectory = "C:\ProgramData\AdminScriptSuite"
+            WorkingDirectory = "C:\ProgramData\PowerDeploy"
         }
     }
 ```
 
 **Intune Command Format:**
 ```cmd
-%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'AdminScriptSuite-Repo' -RepoUrl 'https://github.com/tofu-formula/AdminScriptSuite.git' -WorkingDirectory 'C:\ProgramData\AdminScriptSuite' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'BASE64_ENCODED_PARAMS'"
+%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'PowerDeploy-Repo' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy.git' -WorkingDirectory 'C:\ProgramData\PowerDeploy' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'BASE64_ENCODED_PARAMS'"
 ```
 
 ### Remediation Scripts
@@ -267,7 +269,7 @@ Create detection and remediation script pairs for Intune Proactive Remediations:
 4. Configure registry values on endpoints:
 
 ```powershell
-# Registry path: HKLM:\SOFTWARE\AdminScriptSuite
+# Registry path: HKLM:\SOFTWARE\PowerDeploy
 # Values required:
 #   General\StorageAccountName = "yourstorageaccount"
 #   Printers\PrinterDataJSONpath = "printers/PrinterData.json"
@@ -364,11 +366,11 @@ PENDING
 
 ## Support
 
-For issues and feature requests, please use the [GitHub Issues](https://github.com/tofu-formula/AdminScriptSuite/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/Adrian-Mandel/PowerDeploy/issues) page.
 
 ---
 
-**Source:** [https://github.com/tofu-formula/AdminScriptSuite](https://github.com/tofu-formula/AdminScriptSuite)
+**Source:** [https://github.com/Adrian-Mandel/PowerDeploy](https://github.com/Adrian-Mandel/PowerDeploy)
 
 ---
 
