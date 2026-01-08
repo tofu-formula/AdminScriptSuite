@@ -1548,7 +1548,7 @@ Function Uninstall--Local-Printer{
 Function Uninstall--Local-Application{
 
     # UNFINISHED
-    Function JSON--search-and-uninstall{
+    Function JSON-zz-search-and-uninstall{
 
         Write-Log "To begin we will access the ApplicationData.json files, both public (local repo) and private (Azure Blob) to show you the available documented applications."
         Write-Log ""
@@ -1605,7 +1605,7 @@ Function Uninstall--Local-Application{
     }
 
     # UNFINISHED
-    Function Winget--search-and-uninstall{
+    Function Winget-zz-search-and-uninstall{
 
         # Install winget if not present
 
@@ -1772,7 +1772,7 @@ Function Uninstall--Local-Application{
     }
 
     # UNFINISHED
-    Function Registry--search-and-uninstall{
+    Function Registry-zz-search-and-uninstall{
 
         $paths = @(
         'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
@@ -1888,13 +1888,14 @@ Function Uninstall--Local-Application{
     }
 
     # UNFINISHED
-    Function Adobe--search-and-uninstall{
+    Function Adobe-zz-search-and-uninstall{
 
         Write-Log "Adobe application uninstallation is not yet implemented." "ERROR"
         Exit 1
 
     }
 
+    # TESTED AND WORKING!
     Function AppPackage--search-and-uninstall{
 
         $Result1 = Get-AppxPackage -AllUsers | Select-Object Name, PackageFullName
@@ -2152,8 +2153,8 @@ Function Uninstall--Local-Application{
     Write-Log ""
 
     Write-Log "Enter the # of your desired uninstall function:" "WARNING"
-    Write-Log "NOTE: If you are not sure where to begin, start with JSON--search-and-uninstall." "WARNING"
-    Write-Log "NOTE: For All Adobe CC apps, please use Adobe--search-and-uninstall." "WARNING"
+    # Write-Log "NOTE: If you are not sure where to begin, start with JSON--search-and-uninstall." "WARNING"
+    # Write-Log "NOTE: For All Adobe CC apps, please use Adobe--search-and-uninstall." "WARNING"
     Write-Log "NOTE: For the largest selection of apps, try AppPackage--search-and-uninstall." "WARNING"4
     [int]$SelectedFunctionNumber = Read-Host "Please enter a #"
 
