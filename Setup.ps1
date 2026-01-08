@@ -1772,8 +1772,8 @@ Function Uninstall--Local-Application{
 
     }
 
-    # UNFINISHED
-    Function Registry-zz-search-and-uninstall{
+    # TESTED AND WORKING!
+    Function Registry--search-and-uninstall{
 
         $paths = @(
         'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
@@ -1825,7 +1825,7 @@ Function Uninstall--Local-Application{
         While ($Exit -ne "y") {
 
             Write-Log ""
-            $TargetAppNum = Read-Host "Please enter the # of the application you wish to uninstall from the above list:"
+            $TargetAppNum = Read-Host "Please enter the # of the application you wish to uninstall from the above list"
 
             While ($TargetAppNum -lt 1 -or $TargetAppNum -ge $COUNTER) {
 
@@ -1836,8 +1836,8 @@ Function Uninstall--Local-Application{
 
             $TargetApp = $HashTable[[int]$TargetAppNum]
 
-            Write-log "You selected to uninstall app: $TargetApp using method: CIM Win32_Product"
-            Read-Host "Is this acceptable? (Y/N)"
+            Write-log "You selected to uninstall app: $TargetApp. We will attempt to hit it with every uninstall method available."
+            $exit =Read-Host "Is this acceptable? (Y/N)"
             if ($exit -eq "y") { break }
             
 
@@ -1847,7 +1847,7 @@ Function Uninstall--Local-Application{
 
 
         Write-Log ""
-        Write-log "You selected to uninstall app: $TargetApp using method: $UninstallMethod"
+        Write-log "You selected to uninstall app: $TargetApp. "
 
         # NOTE/TODO: there is a flaw here; sometimes there are duplicate DisplayNames. In the future we may want to list the found apps with indexes or other identifiers and have the user select one.
         <#
