@@ -3,15 +3,6 @@
 
 # PowerDeploy
 
-Released with authorization from Santa Cruz County Office of Education, 1/7/26
-
- ## About
-   AdminScriptSuite was developed by Adrian Mandel for the Santa Cruz County Office of Education 
-   and is released as open source for the benefit of the education community.
-   
-   **Copyright © 2026 Santa Cruz County Office of Education**  
-   **Maintained by:** Adrian Mandel ([@tofu-formula](https://github.com/tofu-formula))
-
 This writeup was written by AI and is just for proof of concept purposes.
 
 A comprehensive PowerShell automation framework designed for enterprise endpoint management and deployment. This suite provides centralized administrative scripts that automate software installation, configuration management, and system maintenance tasks across organizational environments.
