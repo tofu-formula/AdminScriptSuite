@@ -803,13 +803,13 @@ Function Detect--WinGetApplicationInstalled {
 
     if($appID -eq $null -or $AppID -eq ""){
 
-        Write-Log "SCRIPT: $ThisFileName | No AppID supplied for WinGet detection. Cannot run WinGet List." "WARNING"
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | No AppID supplied for WinGet detection. Cannot run WinGet List." "WARNING"
         Return 1
 
     }
 
     # Check if WinGet is installed
-    Write-Log "SCRIPT: $ThisFileName | Checking if WinGet is installed..."
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) |Checking if WinGet is installed..."
 
     $WinGet = Check-WinGet
 
@@ -824,7 +824,7 @@ Function Detect--WinGetApplicationInstalled {
         $WinGet = Check-WinGet
         if ($WinGet -eq "Failure"){
 
-            Write-Log "SCRIPT: $ThisFileName | END | Failed to confirm WinGet is working after installation. Please investigate." "ERROR"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END | Failed to confirm WinGet is working after installation. Please investigate." "ERROR"
             Return 1
 
         }
@@ -836,6 +836,7 @@ Function Detect--WinGetApplicationInstalled {
 
     Write-Log "Now attempting to use WinGet to detect app: $AppID"
 
+    $Result = $null
     Try {
 
         $Result = & $Winget list $AppID -e
@@ -847,20 +848,21 @@ Function Detect--WinGetApplicationInstalled {
         }
         
         if(!($Result -like "No installed package found matching input criteria.")){
-            Write-Log "SCRIPT: $ThisFileName | END | Application $AppID detected!" "SUCCESS"
-            Return 0
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END | Application $AppID detected!" "SUCCESS"
+            $Result = 0
         }else{
-            Write-Log "SCRIPT: $ThisFileName | END | Application $AppID NOT detected!" "WARNING"
-            Return 1
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | END | Application $AppID NOT detected!" "WARNING"
+            $Result =  1
         }
 
     } Catch {
 
-        Write-Log "Error encountered when running search: $_" "ERROR"
-        Return 1
+        Write-Log "FUNCTION: $($MyInvocation.MyCommand.Name) | Error encountered when running search: $_" "ERROR"
+        $Result =  1
 
     }
 
+    Return $Result
 
 }
 
@@ -868,7 +870,7 @@ Function Detect--AppXPackageInstalled {
 
     if ($AppXpackageName -eq $null -or $AppXpackageName -eq ""){
 
-        Write-Log "SCRIPT: $ThisFileName | No AppXpackageName supplied for AppXpackage detection. Will attempt to use DisplayName and NickName." "WARNING"
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | No AppXpackageName supplied for AppXpackage detection. Will attempt to use DisplayName and NickName." "WARNING"
 
         $Detection1 = Get-AppxPackage -AllUsers $AppToDetect
 
@@ -876,17 +878,17 @@ Function Detect--AppXPackageInstalled {
 
         if ($Detection1 -ne $null){
 
-            Write-Log "SCRIPT: $ThisFileName | Application detected by AppXpackageName: $AppToDetect" "SUCCESS"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application detected by AppXpackageName: $AppToDetect" "SUCCESS"
             Return 0
 
         } elseif ($Detection2 -ne $null){
 
-            Write-Log "SCRIPT: $ThisFileName | Application detected by DisplayName: $DisplayName" "SUCCESS"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application detected by DisplayName: $DisplayName" "SUCCESS"
             Return 0
 
         } else {
 
-            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by AppXpackageName or DisplayName" "WARNING"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application NOT detected by AppXpackageName or DisplayName" "WARNING"
             Return 1
 
         }
@@ -894,25 +896,25 @@ Function Detect--AppXPackageInstalled {
 
     } elseif ($AppXpackageName -ne $null -or $AppXpackageName -ne ""){
         
-        Write-Log "SCRIPT: $ThisFileName | Searching for application as AppX package: $AppXpackageName"
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Searching for application as AppX package: $AppXpackageName"
 
         $Detection = Get-AppxPackage -AllUsers $AppXpackageName
 
         if ($Detection -ne $null){
 
-            Write-Log "SCRIPT: $ThisFileName | Application detected by AppXpackageName: $AppXpackageName" "SUCCESS"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application detected by AppXpackageName: $AppXpackageName" "SUCCESS"
             Return 0
 
         } else {
 
-            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by AppXpackageName: $AppXpackageName" "WARNING"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application NOT detected by AppXpackageName: $AppXpackageName" "WARNING"
             Return 1
 
         }
 
     } else {
 
-        Write-Log "SCRIPT: $ThisFileName | Insufficient parameters for AppXpackage detection." "WARNING"
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Insufficient parameters for AppXpackage detection." "WARNING"
         Return 1
 
     }
@@ -925,22 +927,21 @@ Function Detect--AppXPackageInstalled {
 
 Function Detect--AppXProvisionedPackageInstalled {
 
-    Write-Log "SCRIPT: $ThisFileName | Searching for application as AppX Provisioned package: $AppToDetect"
+    Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Searching for application as AppX Provisioned package: $AppToDetect"
 
     if ($DisplayName -ne $null -and $DisplayName -ne ""){
 
-        Write-Log "SCRIPT: $ThisFileName | Attempting detection by DisplayName: $DisplayName"
-
+        Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Attempting detection by DisplayName: $DisplayName"
         $Detection = Get-AppxProvisionedPackage -Online | Where-Object {$_.DisplayName -like "*$DisplayName*"}
 
         if ($Detection -ne $null){
 
-            Write-Log "SCRIPT: $ThisFileName | Application detected by DisplayName: $DisplayName" "SUCCESS"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application detected by DisplayName: $DisplayName" "SUCCESS"
             Return 0
 
         } else {
 
-            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by DisplayName: $DisplayName" "WARNING"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application NOT detected by DisplayName: $DisplayName" "WARNING"
             # Continue to next detection method
 
         }
@@ -951,12 +952,12 @@ Function Detect--AppXProvisionedPackageInstalled {
 
         if ($Detection -ne $null){
 
-            Write-Log "SCRIPT: $ThisFileName | Application detected by AppXProvisionedPackage: $AppToDetect" "SUCCESS"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application detected by AppXProvisionedPackage: $AppToDetect" "SUCCESS"
             Return 0
 
         } else {
 
-            Write-Log "SCRIPT: $ThisFileName | Application NOT detected by AppXProvisionedPackage: $AppToDetect" "WARNING"
+            Write-Log "SCRIPT: $ThisFileName | FUNCTION: $($MyInvocation.MyCommand.Name) | Application NOT detected by AppXProvisionedPackage: $AppToDetect" "WARNING"
             Return 1
 
         }
