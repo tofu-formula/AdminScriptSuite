@@ -1066,29 +1066,33 @@ Write-Log "--------------------------------------"
 
 # Determine the detect method
 
+$detectionSuccess = $False
+
+$methods = @()
+
 if ($DetectMethod -eq "WinGet") {
 
     Write-Log "SCRIPT: $ThisFileName | Using WinGet detection method."
 
-    Detect--WinGetApplicationInstalled
+    $methods = @("Detect--WinGetApplicationInstalled")
 
 } elseif ($DetectMethod -eq "MSI_Registry") {
 
     Write-Log "SCRIPT: $ThisFileName | Using MSI Registry detection method."
 
-    Detect--MSI-ApplicationInstalled #-DisplayName $DisplayName
+    $methods = @("Detect--MSI-ApplicationInstalled")
 
 } elseif($DetectMethod -eq "AppXpackage") {
 
     Write-Log "SCRIPT: $ThisFileName | Using AppXpackage detection method."
 
-    Detect--AppXPackageInstalled
+    $methods = @("Detect--AppXPackageInstalled")
 
 } elseif($DetectMethod -eq "AppXProvisionedPackage") {
 
     Write-Log "SCRIPT: $ThisFileName | Using AppXProvisionedPackage detection method."
 
-    Detect--AppXProvisionedPackageInstalled
+    $methods = @("Detect--AppXProvisionedPackageInstalled")
 
 }elseif($DetectMethod -eq "All") {
 
@@ -1096,43 +1100,40 @@ if ($DetectMethod -eq "WinGet") {
     Write-Log "SCRIPT: $ThisFileName | Using ALL detection methods."
 
     $methods = Get-Command -CommandType Function -Name "Detect--*" | Select-Object -ExpandProperty Name
-    $detectionSuccess = $False
-    ForEach ($method in $methods){
-
-        Write-Log "SCRIPT: $ThisFileName | Attempting detection method: $method"
-
-        Try {
-
-            $Detect = & $method
-
-            if ($Detect -eq 0){
-
-                Write-Log "SCRIPT: $ThisFileName | Detection method $method reported success!" "SUCCESS"
-                $detectionSuccess = $True
-                Break
-
-            } else {
-
-                Write-Log "SCRIPT: $ThisFileName | Detection method $method reported failure." "WARNING"
-
-            }
-
-        } Catch {
-
-            Write-Log "SCRIPT: $ThisFileName | Detection method $method encountered error: $_" "ERROR"
-
-        }
-
-    }
-
-
-
-
+    
 }else{
 
     Write-Log "Unsupported detect method: $DetectMethod" "ERROR"
     Write-Log "SCRIPT: $ThisFileName | END | Exiting script." "ERROR"
     Exit 1
+
+}
+
+ForEach ($method in $methods){
+
+    Write-Log "SCRIPT: $ThisFileName | Attempting detection method: $method"
+
+    Try {
+
+        $Detect = & $method
+
+        if ($Detect -eq 0){
+
+            Write-Log "SCRIPT: $ThisFileName | Detection method $method reported success!" "SUCCESS"
+            $detectionSuccess = $True
+            Break
+
+        } else {
+
+            Write-Log "SCRIPT: $ThisFileName | Detection method $method reported failure." "WARNING"
+
+        }
+
+    } Catch {
+
+        Write-Log "SCRIPT: $ThisFileName | Detection method $method encountered error: $_" "ERROR"
+
+    }
 
 }
 
