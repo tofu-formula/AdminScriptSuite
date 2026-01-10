@@ -62,7 +62,7 @@ function New-IntuneGitRunnerCommand {
     param(
         [string]$RepoNickName,
         [string]$RepoUrl,
-        [string]$TargetWorkingDirectory,
+        [string]$WorkingDirectory,
         [string]$ScriptPath,
         [hashtable]$ScriptParams,
         [string]$CustomNameModifier
