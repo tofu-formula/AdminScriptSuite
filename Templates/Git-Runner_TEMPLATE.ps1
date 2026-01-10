@@ -95,6 +95,8 @@ param(
     [string]$RepoUrl,
 
     [string]$RepoToken=$null, # Optional token for private repos. Not fully tested yet.
+
+    [string]$RepoBranch="main", # Optional branch name. Default: main
     
     [boolean]$UpdateLocalRepoOnly, # If true, script exits early after just updating
 
@@ -462,6 +464,7 @@ Write-Log "+++++ Git Runner +++++"
 Write-Log "RepoNickName: $RepoNickName"
 Write-Log "RepoUrl: $RepoUrl"
 Write-Log "RepoToken: $RepoToken"
+Write-Log "RepoBranch: $RepoBranch"
 Write-Log "ScriptPath: $ScriptPath"
 Write-Log "WorkingDirectory: $WorkingDirectory"
 Write-Log "ScriptParams: $ScriptParams"
@@ -562,6 +565,59 @@ if ($DoClone -eq $true){
     #Exit 1
 }
 ##
+
+# Switch branch if needed
+if ($RepoBranch -ne "main") {
+    Write-Log "Switching to branch: $RepoBranch"
+    Push-Location $LocalRepoPath
+    try {
+
+        # $gitOutput = git checkout $RepoBranch 2>&1
+
+        $gitOutput = git switch $RepoBranch 2>&1
+
+        foreach ($line in $gitOutput) {
+            Write-Log "GIT: $line"
+        }
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "++++++++++++++++++++++"
+            Write-Log "SCRIPT: $ThisFileName | END | Failed at: git checkout $RepoBranch." "ERROR"
+            Exit 1            
+        }
+
+
+        $gitOutput = git reset --hard HEAD
+
+        foreach ($line in $gitOutput) {
+            Write-Log "GIT: $line"
+        }
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "++++++++++++++++++++++"
+            Write-Log "SCRIPT: $ThisFileName | END | Failed at: git checkout $RepoBranch." "ERROR"
+            Exit 1            
+        }
+
+        $gitOutput = git pull
+
+        foreach ($line in $gitOutput) {
+            Write-Log "GIT: $line"
+        }
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "++++++++++++++++++++++"
+            Write-Log "SCRIPT: $ThisFileName | END | Failed at: git checkout $RepoBranch." "ERROR"
+            Exit 1            
+        } else {
+            Write-Log "Successfully switched to branch: $RepoBranch" "SUCCESS"
+        }
+
+    }
+    finally {
+        Pop-Location
+    }
+}
 
 # Create the temp directory if it doesn't exist
 if (!(Test-Path "$WorkingDirectory\TEMP")){

@@ -38,6 +38,8 @@
             "MSI_name":"7z2201-x64.msi"
         },
 
+    TODO: Add ability to switch current branch of this script?
+
 
 
 #>
@@ -86,10 +88,8 @@ $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 $MyCompanyRepoURL = ""
 $MyCompanyRepoURLTOKEN = ""
 $OfficialPublicRepoURL = "https://github.com/Santa-Cruz-COE/PowerDeploy"
-
-$TargetWorkingDir = ""
-
-$DeployMode = "Test" # Possible values: "Test", "Production"
+$Global:RepoNickName = ""
+$Global:DeployMode = "" 
 
 $ExamplePrinterJSON = @"
 {
@@ -280,24 +280,47 @@ function Write-Log {
 Function Set-URL {
 
     Write-Log "Before we begin, please confirm the deployment mode."
-    Write-Log "1 - TEST MODE: The resulting InTune application will utilize the official public repository for PowerDeploy. This is good for testing the latest code before merging it into your own code. Target URL: $OfficialPublicRepoURL"
-    Write-Log "2 - PRODUCTION MODE: The resulting InTune application will utilize your organization's custom repository for PowerDeploy. Target URL: $CustomRepoURL"
-    
+    # Write-Log "1 - TEST MODE: The resulting InTune application will utilize the official public repository for PowerDeploy. This is good for testing the latest code before merging it into your own code. Target URL: $OfficialPublicRepoURL"
+    # Write-Log "2 - PRODUCTION MODE: The resulting InTune application will utilize your organization's custom repository for PowerDeploy. Target URL: $CustomRepoURL"
+    Write-Log "Please select the deployment mode:"
+    Write-Log "1 - [PUBLIC-DEVELOPMENT] - Uses official public PowerDeploy repo - (DEV branch) - For TESTING purposes."
+    Write-Log "2 - [PUBLIC-TESTING] - Uses official public PowerDeploy repo - (MAIN branch) - For TESTING purposes."
+    Write-Log "3 - [PRIVATE-DEVELOPMENT] - Uses your organization's custom PowerDeploy repository (DEV branch) for TESTING purposes."
+    Write-Log "4 - [PRODUCTION] - Uses your organization's custom PowerDeploy repository (MAIN branch) for PRODUCTION deployments."
     $modeSelected = $false
 
-
-
     while (-not $modeSelected) {
-        $userInput = Read-Host "Please enter '1' for TEST MODE or '2' for PRODUCTION MODE"
-        switch ($userInput) {
+        $userInput = Read-Host "Please enter a number (1-4) to select the deployment mode:"
+        
+         switch ($userInput) {
             '1' {
-                $Global:DeployMode = "Test"
-                Write-Log "Deployment mode set to TEST MODE." "WARNING"
+                $Global:DeployMode = "Public-Testing"
+                Write-Log "Deployment mode set to PUBLIC-TESTING MODE." "WARNING"
                 $RepoUrl = $OfficialPublicRepoURL
-                
+                $Global:RepoBranch = "dev"
                 $modeSelected = $true
             }
             '2' {
+                $Global:DeployMode = "Public-Production"
+                Write-Log "Deployment mode set to PUBLIC-PRODUCTION MODE." "WARNING"
+                $RepoUrl = $OfficialPublicRepoURL
+                $Global:RepoBranch = "main"
+                $modeSelected = $true
+            }
+            '3' {
+                $Global:DeployMode = "Private-Testing"
+                Write-Log "Deployment mode set to PRIVATE-TESTING MODE." "WARNING"
+
+                    if ($CustomRepoToken -ne "" -and $CustomRepoToken -ne $null) {
+                        # Insert token into URL for authentication
+                        $RepoUrl = $CustomRepoURL -replace 'https://', "https://oauth2:$CustomRepoToken@"
+                    } else {
+                        $RepoUrl = $CustomRepoURL
+                    }
+                $Global:RepoBranch = "dev"
+                $modeSelected = $true
+            }
+            '4' {
                 $Global:DeployMode = "Production"
                 Write-Log "Deployment mode set to PRODUCTION MODE." "WARNING"
 
@@ -307,14 +330,20 @@ Function Set-URL {
                     } else {
                         $RepoUrl = $CustomRepoURL
                     }
+                $Global:RepoBranch = "main"
                 $modeSelected = $true
             }
             default {
-                Write-Log "Invalid input. Please enter '1' or '2'."
+                Write-Log "Invalid input. Please enter a number between '1' and '4'."
             }
         }
     }
 
+    $Global:RepoNickName = "PowerDeploy-Repo--$Global:DeployMode"
+
+    Write-Log "Repo URL set to: $RepoUrl"
+    Write-Log "Using branch: $Global:RepoBranch"
+    Write-Log "Local Repo Nickname set to: $Global:RepoNickName"
     Write-Log ""
     Return $RepoUrl
 
@@ -497,7 +526,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -RepoURL $RepoURL -FunctionParams $FunctionParams
+        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -RepoURL $RepoURL -RepoNickName $Global:RepoNickName -RepoBranch $Global:RepoBranch -FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash2 -eq $null) -or ($ReturnHash2.Count -eq 0)){
@@ -539,7 +568,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -RepoURL $RepoURL -FunctionParams $FunctionParams
+        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -RepoURL $RepoURL -RepoNickName $Global:RepoNickName -RepoBranch $Global:RepoBranch-FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash3 -eq $null) -or ($ReturnHash3.Count -eq 0)){
@@ -633,6 +662,9 @@ function Setup--Azure-Printer{
 }
 
 Function Setup--Azure-WindowsApp{
+
+    # Determine if this is a test or production deployment
+    $RepoUrl = Set-URL
 
 
     # vars
@@ -1084,6 +1116,8 @@ Function Setup--Azure-WindowsApp{
     $installResult = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "InstallAppWithJSON" `
         -RepoURL $RepoURL `
+        -RepoNickName $Global:RepoNickName `
+        -RepoBranch $Global:RepoBranch `
         -FunctionParams $FunctionParams
 
     # Sanity check
@@ -1151,6 +1185,8 @@ Function Setup--Azure-WindowsApp{
     $ReturnHash3 = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "UninstallApp" `
         -RepoURL $RepoURL `
+        -RepoNickName $Global:RepoNickName `
+        -RepoBranch $Global:RepoBranch `
         -FunctionParams $FunctionParams
 
     # Check the returned hashtable
@@ -2685,22 +2721,52 @@ Function ParseJSON {
 
 Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
 
+    # Determine if this is a test or production deployment
+    $RepoUrl = Set-URL
 
     # Collect input data
 
     Write-Log ""
 
-    Write-Log "Currently this function only supports updating SAS keys for Azure Blob, no custom variables" "WARNING"
+    Write-Log "Currently this function only supports updating SAS keys for Azure Blob, custom Git URL, no custom variables. Will add option for other values in the future." "WARNING"
 
     Write-Log ""
 
-    Write-Log "Enter your custom PRINTER share SAS key:"
+    Write-Log "Your current custom organization Git Repo URL is: $CustomRepoURL"
+    Write-Log "If this is acceptable, press Enter to continue or enter the new URL now:" "WARNING"
+
+    $TempRepoURL = Read-Host "New URL, or leave blank to keep existing"
+    if ($TempRepoURL -eq "") {
+        $RepoURLtoUse = $CustomRepoURL
+        Write-Log "Using existing Repo URL: $RepoURLtoUse"
+    } else {
+        Write-Log "Using new Repo URL: $TempRepoURL"
+        $RepoURLtoUse = $TempRepoURL
+    }
+
+    Write-Log "Your current custom organization Git Repo Token is: $CustomRepoToken"
+    Write-Log "If this is acceptable, press Enter to continue or enter the new token now:" "WARNING"
+
+    $TempRepoToken = Read-Host "New Token, or leave blank to keep existing"
+    if ($TempRepoToken -eq "") {
+        $CustomRepoTokenToUse = $CustomRepoToken
+        Write-Log "Using existing Repo Token: $CustomRepoTokenToUse"
+    } else {
+        Write-Log "Using new Repo Token: $TempRepoToken"
+        $CustomRepoTokenToUse = $TempRepoToken
+    }
+
+
+
+    
+    Write-Log ""
+    Write-Log "Enter your custom PRINTER share SAS key:" "WARNING"
 
     $PrinterContainerSASkey = Read-Host "SAS KEY"
 
     Write-Log ""
 
-    Write-Log "Enter your custom APPLICATION share SAS key:"
+    Write-Log "Enter your custom APPLICATION share SAS key:" "WARNING"  
 
     $ApplicationContainerSASkey = Read-Host "SAS KEY"
 
@@ -2710,13 +2776,17 @@ Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
         [hashtable]$FunctionParams = @{
             PrinterContainerSASkey = $PrinterContainerSASkey
             ApplicationContainerSASkey = $ApplicationContainerSASkey
+            CustomRepoToken = $CustomRepoTokenToUse
+            CustomRepoURL = $RepoURLtoUse
         }
 
         [hashtable]$ReturnHash
 
         $ReturnHash = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "RegRemediationScript" `
-        -RepoURL $RepoURL `
+        -RepoURL $RepoURLtoUse `
+        -RepoNickName $Global:RepoNickName `
+        -RepoBranch $Global:RepoBranch `
         -FunctionParams $FunctionParams
 
         # Check the returned hashtable
