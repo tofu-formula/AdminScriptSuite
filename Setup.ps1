@@ -89,7 +89,8 @@ $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 $MyCompanyRepoURL = ""
 $MyCompanyRepoURLTOKEN = ""
 $OfficialPublicRepoURL = "https://github.com/Santa-Cruz-COE/PowerDeploy"
-$Global:RepoNickName = ""
+$Global:TargetRepoNickName = ""
+$Global:TargetWorkingDirectory = ""
 $Global:DeployMode = "" 
 
 $ExamplePrinterJSON = @"
@@ -318,19 +319,20 @@ Function Set-URL {
         
          switch ($userInput) {
             '1' {
-                $Global:DeployMode = "Public-Testing"
+                $Global:DeployMode = "PUBLIC-DEVELOPMENT"
                 $RepoUrl = $OfficialPublicRepoURL
                 $Global:RepoBranch = "dev"
+                
                 $modeSelected1 = $true
             }
             '2' {
-                $Global:DeployMode = "Public-Production"
+                $Global:DeployMode = "PUBLIC-TESTING"
                 $RepoUrl = $OfficialPublicRepoURL
                 $Global:RepoBranch = "main"
                 $modeSelected1 = $true
             }
             '3' {
-                $Global:DeployMode = "Private-Development"
+                $Global:DeployMode = "PRIVATE-DEVELOPMENT"
 
                     if ($CustomRepoToken -ne "" -and $CustomRepoToken -ne $null) {
                         # Insert token into URL for authentication
@@ -342,7 +344,7 @@ Function Set-URL {
                 $modeSelected1 = $true
             }
             '4' {
-                $Global:DeployMode = "Production"
+                $Global:DeployMode = "PRODUCTION"
 
                     if ($CustomRepoToken -ne "" -and $CustomRepoToken -ne $null) {
                         # Insert token into URL for authentication
@@ -362,14 +364,16 @@ Function Set-URL {
 
         if ($modeSelected1) {
 
-            $Global:RepoNickName = "PowerDeploy-Repo--$Global:DeployMode"
+            $Global:TargetRepoNickName = "PowerDeploy-Repo--$Global:DeployMode"
+            $Global:TargetWorkingDirectory = "C:\ProgramData\PowerDeploy\$Global:TargetRepoNickName"
 
             Write-Log "You have selected the following:"
             Write-Log ""
             Write-Log " Deployment mode: $Global:DeployMode"
             Write-Log " Repo URL set to: $RepoUrl"
             Write-Log " Using branch: $Global:RepoBranch"
-            Write-Log " Local Repo Nickname set to: $Global:RepoNickName"
+            Write-Log " Local Repo Nickname set to: $Global:TargetRepoNickName"
+            Write-Log " Local Working Directory set to: $Global:TargetWorkingDirectory"
             Write-Log ""
             Write-Log "Is this acceptable? (y/n)" "WARNING"
             $confirmation = Read-Host "(y/n)"
@@ -390,7 +394,7 @@ Function Set-URL {
 
     Write-Log "Deployment mode set to $Global:DeployMode" "WARNING"
     Write-Log ""
-    Write-Log "The end product you create will use this repository for its scripts."
+    Write-Log "The end product you create will use the above repository for its scripts."
     Write-Log ""
 
     Pause
@@ -581,7 +585,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -RepoURL $RepoURL -RepoNickName $Global:RepoNickName -RepoBranch $Global:RepoBranch -FunctionParams $FunctionParams
+        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -RepoURL $RepoURL -RepoNickName $Global:TargetRepoNickName -RepoBranch $Global:RepoBranch -FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash2 -eq $null) -or ($ReturnHash2.Count -eq 0)){
@@ -623,7 +627,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -RepoURL $RepoURL -RepoNickName $Global:RepoNickName -RepoBranch $Global:RepoBranch-FunctionParams $FunctionParams
+        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -RepoURL $RepoURL -RepoNickName $Global:TargetRepoNickName -RepoBranch $Global:RepoBranch-FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash3 -eq $null) -or ($ReturnHash3.Count -eq 0)){
@@ -1110,6 +1114,7 @@ Function Setup--Azure-WindowsApp{
         [hashtable]$FunctionParams = @{
             ApplicationName = $ApplicationName
             AppID = $WinGetID
+            WorkingDirectory11
             DetectMethod = "WinGet"
         }
 
@@ -1188,7 +1193,7 @@ Function Setup--Azure-WindowsApp{
     $installResult = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "InstallAppWithJSON" `
         -RepoURL $RepoURL `
-        -RepoNickName $Global:RepoNickName `
+        -RepoNickName $Global:TargetRepoNickName `
         -RepoBranch $Global:RepoBranch `
         -FunctionParams $FunctionParams
 
@@ -1257,7 +1262,7 @@ Function Setup--Azure-WindowsApp{
     $ReturnHash3 = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "UninstallApp" `
         -RepoURL $RepoURL `
-        -RepoNickName $Global:RepoNickName `
+        -RepoNickName $Global:TargetRepoNickName `
         -RepoBranch $Global:RepoBranch `
         -FunctionParams $FunctionParams
 
@@ -2871,7 +2876,7 @@ Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
         $ReturnHash = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "RegRemediationScript" `
         -RepoURL $RepoURLtoUse `
-        -RepoNickName $Global:RepoNickName `
+        -RepoNickName $Global:TargetRepoNickName `
         -RepoBranch $Global:RepoBranch `
         -FunctionParams $FunctionParams
 
@@ -3055,9 +3060,6 @@ if ($Answer -ne "y" -and $Answer -ne "n") {
 
 If ($Answer -eq "y"){
 
-    #$CurrentRepoNickName = Split-Path $RepoRoot -leaf
-
-    #& $GitRunnerScript -WorkingDirectory $WorkingDirectory -RepoNickName $RepoNickName -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $true
 
     Push-Location $RepoRoot
 

@@ -30,6 +30,8 @@ param(
 # $ScriptParams
 
 # Fix the params
+$OldRepoNickName = $RepoNickName
+
 $RepoNickName = "'" +    $RepoNickName + "'"
 $RepoUrl = "'" +    $RepoUrl + "'"
 $WorkingDirectory = "'" +    $WorkingDirectory + "'"
@@ -85,9 +87,9 @@ $NewCode      = @"
 
 } elseif( $TemplateScript -eq "PrinterDetectionScript"){ # If you want to add more templates, copy this block and modify accordingly
 
-    $EndScriptNameTemplate = "Detect-Printer_Custom"
-    Write-Log "this functionality is not yet implemented" "ERROR"
-    Exit 1
+    # $EndScriptNameTemplate = "Detect-Printer_Custom"
+    # Write-Log "this functionality is not yet implemented" "ERROR"
+    # Exit 1
     
 }else {
     Write-Host "ERROR: Unknown TemplateScript value: $TemplateScript"
@@ -100,10 +102,10 @@ $NewCode      = @"
 $Ext      = [System.IO.Path]::GetExtension($TargetScript)
 
 if($CustomNameModifier){
-    $EndScript ="$EndScriptNameTemplate.$CustomNameModifier.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
+    $EndScript ="$EndScriptNameTemplate.$OldRepoNickName.$CustomNameModifier.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
 }
 else {
-    $EndScript ="$EndScriptNameTemplate.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
+    $EndScript ="$EndScriptNameTemplate.$OldRepoNickName.$(Get-Date -Format 'yyyyMMdd_HHmmss')$Ext"
 }
 
 

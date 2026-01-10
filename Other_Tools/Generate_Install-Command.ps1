@@ -33,7 +33,8 @@ Param(
     [hashtable]$FunctionParams,
     [String]$RepoURL,
     [String]$RepoNickName,
-    [String]$RepoBranch="main"
+    [String]$RepoBranch="main",
+    [String]$TargetWorkingDirectory="C:\ProgramData\PowerDeploy"
 
 )
 
@@ -61,7 +62,7 @@ function New-IntuneGitRunnerCommand {
     param(
         [string]$RepoNickName,
         [string]$RepoUrl,
-        [string]$WorkingDirectory,
+        [string]$TargetWorkingDirectory,
         [string]$ScriptPath,
         [hashtable]$ScriptParams,
         [string]$CustomNameModifier
@@ -78,7 +79,7 @@ function New-IntuneGitRunnerCommand {
         
         # Build the command
         $command = @"
-%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$WorkingDirectory' -ScriptPath '$ScriptPath' -ScriptParamsBase64 '$paramsBase64'"
+%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName '$RepoNickName' -RepoUrl '$RepoUrl' -WorkingDirectory '$TargetWorkingDirectory' -ScriptPath '$ScriptPath' -ScriptParamsBase64 '$paramsBase64'"
 "@
     } else {
         # for a no param script
@@ -89,10 +90,10 @@ function New-IntuneGitRunnerCommand {
 
     # Create the custom script with the current params
     if($CustomNameModifier){
-        $global:CustomScript = & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64 -CustomNameModifier $CustomNameModifier
+        $global:CustomScript = & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $TargetWorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64 -CustomNameModifier $CustomNameModifier
     }
     else {
-        $global:CustomScript = & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $WorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64
+        $global:CustomScript = & $CustomGitRunnerMakerScript -RepoNickName $RepoNickName -RepoUrl $RepoUrl -WorkingDirectory $TargetWorkingDirectory -ScriptPath $ScriptPath -ScriptParamsBase64 $paramsBase64
     }   
 
     # done
@@ -167,7 +168,7 @@ Function RegRemediationScript {
     $PrinterContainerSASkey,
 
     $ApplicationDataJSONpath = "applications/ApplicationData.json",
-    $ApplicationContainerSASkey
+    $ApplicationContainerSASkey,
 
     $CustomRepoURL=$NULL,
     $CustomRepoToken=$NULL
@@ -281,13 +282,13 @@ Function RegRemediationScript {
         -RepoNickName "$RepoNickName" `
         -RepoUrl "$RepoUrl" `
         -RepoBranch "$RepoBranch" `
-        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+        -WorkingDirectory "$TargetWorkingDirectory" `
         -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             RegistryChanges = $RegistryChanges
             RepoNickName = "$RepoNickName"
-            WorkingDirectory = "C:\ProgramData\PowerDeploy"
+            WorkingDirectory = "$TargetWorkingDirectory"
             Function = "Detect"
         }
 
@@ -306,13 +307,13 @@ Function RegRemediationScript {
         -RepoNickName "$RepoNickName" `
         -RepoUrl "$RepoUrl" `
         -RepoBranch "$RepoBranch" `
-        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+        -WorkingDirectory "$TargetWorkingDirectory" `
         -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             RegistryChanges = $RegistryChanges
             RepoNickName = "$RepoNickName"
-            WorkingDirectory = "C:\ProgramData\PowerDeploy"
+            WorkingDirectory = "$TargetWorkingDirectory"
             Function = "Remediate"
             AlsoLockDown = $True
         }
@@ -458,12 +459,12 @@ function InstallPrinterByIP {
         -RepoNickName "$RepoNickName" `
         -RepoUrl "$RepoURL" `
         -RepoBranch "$RepoBranch" `
-        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+        -WorkingDirectory "$TargetWorkingDirectory" `
         -ScriptPath "Installers\General_IP-Printer_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             PrinterName = "$PrinterName"
-            WorkingDirectory = "C:\ProgramData\PowerDeploy"
+            WorkingDirectory = "$TargetWorkingDirectory"
         }
 
     $InstallPrinterScript = $global:CustomScript
@@ -478,12 +479,12 @@ function InstallPrinterByIP {
         -RepoNickName "$RepoNickName" `
         -RepoUrl "$RepoURL" `
         -RepoBranch "$RepoBranch" `
-        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+        -WorkingDirectory "$TargetWorkingDirectory" `
         -ScriptPath "Templates\Detection-Script-Printer_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             PrinterName = "$PrinterName"
-            WorkingDirectory = "C:\ProgramData\PowerDeploy"
+            WorkingDirectory = "$TargetWorkingDirectory"
         }
 
     $DetectPrinterScript = $global:CustomScript
@@ -603,12 +604,12 @@ function UninstallPrinterByName {
         -RepoNickName "$RepoNickName" `
         -RepoUrl "$RepoURL" `
         -RepoBranch "$RepoBranch" `
-        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+        -WorkingDirectory "$TargetWorkingDirectory" `
         -ScriptPath "Uninstallers\Uninstall-Printer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             PrinterName = "$PrinterName"
-            WorkingDirectory = "C:\ProgramData\PowerDeploy"
+            WorkingDirectory = "$TargetWorkingDirectory"
         }
 
     $UninstallPrinterScript = $global:CustomScript
@@ -730,12 +731,12 @@ function InstallAppWithJSON {
         -RepoNickName "$RepoNickName" `
         -RepoUrl "$RepoURL" `
         -RepoBranch "$RepoBranch" `
-        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+        -WorkingDirectory "$TargetWorkingDirectory" `
         -ScriptPath "Installers\General_JSON-App_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
             TargetAppName = "$ApplicationName"
-            WorkingDirectory = "C:\ProgramData\PowerDeploy"
+            WorkingDirectory = "$TargetWorkingDirectory"
         }
 
 
@@ -762,11 +763,11 @@ function InstallAppWithJSON {
             -RepoNickName "$RepoNickName" `
             -RepoUrl "$RepoURL" `
             -RepoBranch "$RepoBranch" `
-            -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+            -WorkingDirectory "$TargetWorkingDirectory" `
             -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
             -CustomNameModifier "$CustomNameModifier" `
             -ScriptParams @{
-                WorkingDirectory = "C:\ProgramData\PowerDeploy"
+                WorkingDirectory = "$TargetWorkingDirectory"
                 AppToDetect = $ApplicationName
                 AppID = $AppID
                 DetectMethod = $DetectMethod
@@ -782,11 +783,11 @@ function InstallAppWithJSON {
             -RepoNickName "$RepoNickName" `
             -RepoUrl "$RepoURL" `
             -RepoBranch "$RepoBranch" `
-            -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+            -WorkingDirectory "$TargetWorkingDirectory" `
             -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
             -CustomNameModifier "$CustomNameModifier" `
             -ScriptParams @{
-                WorkingDirectory = "C:\ProgramData\PowerDeploy"
+                WorkingDirectory = "$TargetWorkingDirectory"
                 DisplayName = $DisplayName
                 AppToDetect = $ApplicationName
                 DetectMethod = $DetectMethod
@@ -936,7 +937,7 @@ function UninstallApp {
         -RepoNickName "$RepoNickName" `
         -RepoUrl "$RepoURL" `
         -RepoBranch "$RepoBranch" `
-        -WorkingDirectory "C:\ProgramData\PowerDeploy" `
+        -WorkingDirectory "$TargetWorkingDirectory" `
         -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
         -ScriptParams @{
@@ -945,7 +946,7 @@ function UninstallApp {
             Version = "$Version"
             WinGetID = "$WinGetID"
             UninstallString_DisplayName = "$UninstallString_DisplayName"
-            WorkingDirectory = "C:\ProgramData\PowerDeploy"
+            WorkingDirectory = "$TargetWorkingDirectory"
         }
 
 
