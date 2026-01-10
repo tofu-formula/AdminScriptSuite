@@ -585,7 +585,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -RepoURL $RepoURL -RepoNickName $Global:TargetRepoNickName -RepoBranch $Global:RepoBranch -FunctionParams $FunctionParams
+        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -RepoURL $RepoURL -RepoNickName $Global:TargetRepoNickName -RepoBranch $Global:RepoBranch -TargetWorkingDirectory $Global:TargetWorkingDirectory-FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash2 -eq $null) -or ($ReturnHash2.Count -eq 0)){
@@ -627,7 +627,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -RepoURL $RepoURL -RepoNickName $Global:TargetRepoNickName -RepoBranch $Global:RepoBranch-FunctionParams $FunctionParams
+        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -RepoURL $RepoURL -RepoNickName $Global:TargetRepoNickName -RepoBranch $Global:RepoBranch -TargetWorkingDirectory $Global:TargetWorkingDirectory -FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash3 -eq $null) -or ($ReturnHash3.Count -eq 0)){
@@ -1114,7 +1114,6 @@ Function Setup--Azure-WindowsApp{
         [hashtable]$FunctionParams = @{
             ApplicationName = $ApplicationName
             AppID = $WinGetID
-            WorkingDirectory11
             DetectMethod = "WinGet"
         }
 
@@ -1195,6 +1194,7 @@ Function Setup--Azure-WindowsApp{
         -RepoURL $RepoURL `
         -RepoNickName $Global:TargetRepoNickName `
         -RepoBranch $Global:RepoBranch `
+        -TargetWorkingDirectory $Global:TargetWorkingDirectory `
         -FunctionParams $FunctionParams
 
     # Sanity check
@@ -1264,6 +1264,7 @@ Function Setup--Azure-WindowsApp{
         -RepoURL $RepoURL `
         -RepoNickName $Global:TargetRepoNickName `
         -RepoBranch $Global:RepoBranch `
+        -TargetWorkingDirectory $Global:TargetWorkingDirectory `
         -FunctionParams $FunctionParams
 
     # Check the returned hashtable
@@ -2878,6 +2879,7 @@ Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
         -RepoURL $RepoURLtoUse `
         -RepoNickName $Global:TargetRepoNickName `
         -RepoBranch $Global:RepoBranch `
+        -TargetWorkingDirectory $Global:TargetWorkingDirectory
         -FunctionParams $FunctionParams
 
         # Check the returned hashtable
