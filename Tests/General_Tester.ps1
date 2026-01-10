@@ -340,9 +340,9 @@ Function TESTER--GitRunner--InstallWinGet--7Zip{
         #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
 
 
-        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
-        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
         
         #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
 
@@ -358,7 +358,7 @@ Function TESTER--GitRunner--InstallWinGet--7Zip{
 
 
         # & $GitRunnerScript -RepoNickName 'TEST' `
-        #     -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
+        #     -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' `
         #     -UpdateLocalRepoOnly $False `
         #     -WorkingDirectory $WorkingDirectory `
         #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
@@ -366,7 +366,7 @@ Function TESTER--GitRunner--InstallWinGet--7Zip{
         
         & $GitRunnerScript `
             -RepoNickName 'TEST' `
-            -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
+            -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' `
             -UpdateLocalRepoOnly $False `
             -WorkingDirectory $WorkingDirectory `
             -ScriptPath "Installers\General_WinGet_Installer.ps1" `
@@ -405,9 +405,9 @@ Function TESTER--GitRunner--UninstallWinGet--7Zip{
         #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
 
 
-        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
-        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
         
         #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
 
@@ -423,7 +423,7 @@ Function TESTER--GitRunner--UninstallWinGet--7Zip{
 
 
         # & $GitRunnerScript -RepoNickName 'TEST' `
-        #     -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
+        #     -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' `
         #     -UpdateLocalRepoOnly $False `
         #     -WorkingDirectory $WorkingDirectory `
         #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
@@ -431,7 +431,7 @@ Function TESTER--GitRunner--UninstallWinGet--7Zip{
         
         & $GitRunnerScript `
             -RepoNickName 'TEST' `
-            -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
+            -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' `
             -UpdateLocalRepoOnly $False `
             -WorkingDirectory $WorkingDirectory `
             -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
@@ -470,9 +470,9 @@ Function TESTER--GitRunner--UninstallAll--7Zip{
         #& $GitRunnerScript -AppName "$AppName" -AppID "$AppID" -WorkingDirectory $WorkingDirectory
 
 
-        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
+        #Powershell.exe -executionpolicy bypass -Command "& '%SCRIPT_DIR%Templates\Git-Runner_TEMPLATE.ps1' -RepoNickName '%LOCAL_REPO_FOLDER_NAME%' -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $true -WorkingDirectory '%WORKINGDIR%'"
 
-        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
+        #& $GitRunnerScript  -RepoNickName 'TEST' -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $False -WorkingDirectory $WorkingDirectory -ScriptParams $ScriptParams
         
         #$ScriptParams = "-AppName '$AppName' -AppID '$AppID' -WorkingDirectory '$WorkingDirectory'"
 
@@ -488,7 +488,7 @@ Function TESTER--GitRunner--UninstallAll--7Zip{
 
 
         # & $GitRunnerScript -RepoNickName 'TEST' `
-        #     -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
+        #     -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' `
         #     -UpdateLocalRepoOnly $False `
         #     -WorkingDirectory $WorkingDirectory `
         #     -ScriptPath "Installers\General_WinGet_Installer.ps1"
@@ -496,7 +496,7 @@ Function TESTER--GitRunner--UninstallAll--7Zip{
         
         & $GitRunnerScript `
             -RepoNickName 'TEST' `
-            -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' `
+            -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' `
             -UpdateLocalRepoOnly $False `
             -WorkingDirectory $WorkingDirectory `
             -ScriptPath "Uninstallers\General_Uninstaller.ps1" `

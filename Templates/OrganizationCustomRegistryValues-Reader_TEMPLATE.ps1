@@ -76,6 +76,9 @@ if((!$RegData) -or ($RegData.Count -eq 0) -or $RegData -eq $null) {
     $PrinterDataJSONpath = $RegData["HKLM:\Software\PowerDeploy\Printers"]["PrinterDataJSONpath"]
     $PrinterContainerSASkey = $RegData["HKLM:\Software\PowerDeploy\Printers"]["PrinterContainerSASkey"]
     $StorageAccountName = $RegData["HKLM:\Software\PowerDeploy\General"]["StorageAccountName"]
+    $CustomRepoURL = $RegData["HKLM:\Software\PowerDeploy\General"]["CustomRepoURL"]
+    $CustomRepoToken = $RegData["HKLM:\Software\PowerDeploy\General"]["CustomRepoToken"]
+##
 
     # Build a hashtable of the values
     $Hash = @{
@@ -84,6 +87,8 @@ if((!$RegData) -or ($RegData.Count -eq 0) -or $RegData -eq $null) {
         "PrinterDataJSONpath"        = $PrinterDataJSONpath
         "PrinterContainerSASkey"     = $PrinterContainerSASkey
         "StorageAccountName"         = $StorageAccountName
+        "CustomRepoURL"              = $CustomRepoURL
+        "CustomRepoToken"            = $CustomRepoToken
     }
 ##
 

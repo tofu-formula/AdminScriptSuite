@@ -30,7 +30,8 @@
 Param(
 
     [string]$DesiredFunction,
-    [hashtable]$FunctionParams
+    [hashtable]$FunctionParams,
+    [String]$RepoURL
 
 )
 
@@ -141,7 +142,7 @@ function ExportTXT {
 <#
 $updateCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "Test00" `
-    -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+    -RepoUrl "$RepoURL" `
     -WorkingDirectory "C:\ProgramData\Test7"
 
 Write-Host "Update Only Command:" -ForegroundColor Green
@@ -165,6 +166,9 @@ Function RegRemediationScript {
 
     $ApplicationDataJSONpath = "applications/ApplicationData.json",
     $ApplicationContainerSASkey
+
+    $CustomRepoURL=$NULL,
+    $CustomRepoToken=$NULL
 
 
 
@@ -202,49 +206,56 @@ Function RegRemediationScript {
         #>
 
 
-        # Registry Value 1
         $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\General"
         $ValueName = "StorageAccountName"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
         $Value = "$StorageAccountName" # Modify this
-
         $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
-        # Registry Value 2
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\General"
+        $ValueName = "CustomRepoURL"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "$CustomRepoURL" # Modify this
+        $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
+
+        $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\General"
+        $ValueName = "CustomRepoToken"
+        $ValueType = "String"
+        #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $Value = "$CustomRepoToken" # Modify this
+        $RegistryChangesSTRING = "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
+
+
         $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Printers"
         $ValueName = "PrinterDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
         $Value = "$PrinterDataJSONpath" # Modify this
-
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
-        # Registry Value 3
         $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Printers"
         $ValueName = "PrinterContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
         $Value = "$PrinterContainerSASkey" # Modify this
-
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
-        # Registry Value 4
+
+
         $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Applications"
         $ValueName = "ApplicationDataJSONpath"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
         $Value = "$ApplicationDataJSONpath" # Modify this
-
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"+","
 
-        # Registry Value 5
         $KeyPath = "HKEY_LOCAL_MACHINE\SOFTWARE\PowerDeploy\Applications"
         $ValueName = "ApplicationContainerSASkey"
         $ValueType = "String"
         #$Value = "$(Get-Date -Format 'yyyyMMdd_HHmmss')"
         $Value = "$ApplicationContainerSASkey" # Modify this
-
         $RegistryChangesSTRING += "["+"-KeyPath ""$KeyPath"" -ValueName ""$ValueName"" -ValueType ""$ValueType"" -Value ""$Value"""+"]"
 
 
@@ -267,7 +278,7 @@ Function RegRemediationScript {
     $CustomNameModifier = "Detect"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "PowerDeploy-Repo" `
-        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -RepoUrl "$RepoUrl" `
         -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
@@ -291,7 +302,7 @@ Function RegRemediationScript {
     $CustomNameModifier = "Remediate"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "PowerDeploy-Repo" `
-        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -RepoUrl "$RepoUrl" `
         -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Templates\General_RemediationScript-Registry_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
@@ -313,7 +324,7 @@ Function RegRemediationScript {
     <#
 
     Output for detect:
-    %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'PowerDeploy-Repo' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy.git' -WorkingDirectory 'C:\ProgramData\PowerDeploy' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
+    %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'PowerDeploy-Repo' -RepoUrl '$RepoURL' -WorkingDirectory 'C:\ProgramData\PowerDeploy' -ScriptPath 'Templates\General_RemediationScript-Registry_TEMPLATE.ps1' -ScriptParamsBase64 'eyJSZWdpc3RyeUNoYW5nZXMiOlsiXHUwMDI3Wy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0XCIgLUtleVR5cGUgXCJTdHJpbmdcIiAtVmFsdWUgXCIyMDI1MTExOF8xNTE3MzJcIl0sWy1LZXlQYXRoIFwiSEtFWV9MT0NBTF9NQUNISU5FXFxTT0ZUV0FSRVxcQWRtaW5TY3JpcHRTdWl0ZS1UZXN0XCIgLUtleU5hbWUgXCJUZXN0IDJcIiAtS2V5VHlwZSBcIlN0cmluZ1wiIC1WYWx1ZSBcIjIwMjUxMTE4XzE1MTczMiAyXCJdXHUwMDI3Il0sIkZ1bmN0aW9uIjoiRGV0ZWN0IiwiUmVwb05pY2tOYW1lIjoiQWRtaW5TY3JpcHRTdWl0ZS1SZXBvIiwiV29ya2luZ0RpcmVjdG9yeSI6IkM6XFxQcm9ncmFtRGF0YVxcQWRtaW5TY3JpcHRTdWl0ZSJ9'"
 
     Output for remediate
     #>
@@ -356,7 +367,7 @@ Function RegRemediationScript {
 <#
 $installCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "PowerDeploy-Repo" `
-    -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+    -RepoUrl "$RepoURL" `
     -WorkingDirectory "C:\ProgramData\PowerDeploy" `
     -ScriptPath "Installers\Install-DellCommandUpdate-FullClean.ps1"
 #>
@@ -369,7 +380,7 @@ $installCommand = New-IntuneGitRunnerCommand `
 <#
 $installCommand = New-IntuneGitRunnerCommand `
     -RepoNickName "PowerDeploy-Repo" `
-    -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+    -RepoUrl "$RepoURL" `
     -WorkingDirectory "C:\ProgramData\PowerDeploy" `
     -ScriptPath "Installers\General_WinGet_Installer.ps1" `
     -ScriptParams @{
@@ -442,7 +453,7 @@ function InstallPrinterByIP {
     $CustomNameModifier = "Install-Printer-IP.$PrinterName"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "PowerDeploy-Repo" `
-        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -RepoUrl "$RepoURL" `
         -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Installers\General_IP-Printer_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
@@ -461,7 +472,7 @@ function InstallPrinterByIP {
     $CustomNameModifier = "Detect-Printer.$PrinterName"
     $detectCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "PowerDeploy-Repo" `
-        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -RepoUrl "$RepoURL" `
         -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Templates\Detection-Script-Printer_TEMPLATE.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
@@ -585,7 +596,7 @@ function UninstallPrinterByName {
     $CustomNameModifier = "Uninstall-Printer-Name.$PrinterName"
     $InstallCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "PowerDeploy-Repo" `
-        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -RepoUrl "$RepoURL" `
         -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Uninstallers\Uninstall-Printer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
@@ -711,7 +722,7 @@ function InstallAppWithJSON {
     $CustomNameModifier = "Install-JSON-App.$ApplicationName"
     $installCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "PowerDeploy-Repo" `
-        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -RepoUrl "$RepoURL" `
         -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Installers\General_JSON-App_Installer.ps1" `
         -CustomNameModifier "$CustomNameModifier" `
@@ -742,7 +753,7 @@ function InstallAppWithJSON {
         $CustomNameModifier = "Detect-App.Winget.$ApplicationName"
         $detectCommand = New-IntuneGitRunnerCommand `
             -RepoNickName "PowerDeploy-Repo" `
-            -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+            -RepoUrl "$RepoURL" `
             -WorkingDirectory "C:\ProgramData\PowerDeploy" `
             -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
             -CustomNameModifier "$CustomNameModifier" `
@@ -761,7 +772,7 @@ function InstallAppWithJSON {
         $CustomNameModifier = "Detect-App.MSIRegistry.$ApplicationName"
         $detectCommand = New-IntuneGitRunnerCommand `
             -RepoNickName "PowerDeploy-Repo" `
-            -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+            -RepoUrl "$RepoURL" `
             -WorkingDirectory "C:\ProgramData\PowerDeploy" `
             -ScriptPath "Templates\Detection-Script-Application_TEMPLATE.ps1" `
             -CustomNameModifier "$CustomNameModifier" `
@@ -914,7 +925,7 @@ function UninstallApp {
     $CustomNameModifier = "Uninstall-App.$ApplicationName"
     $InstallCommand = New-IntuneGitRunnerCommand `
         -RepoNickName "PowerDeploy-Repo" `
-        -RepoUrl "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+        -RepoUrl "$RepoURL" `
         -WorkingDirectory "C:\ProgramData\PowerDeploy" `
         -ScriptPath "Uninstallers\General_Uninstaller.ps1" `
         -CustomNameModifier "$CustomNameModifier" `

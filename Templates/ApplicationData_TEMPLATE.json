@@ -61,6 +61,11 @@
     "WinGetID": "Romanitho.Winget-AutoUpdate"
   }, 
   {
+    "ApplicationName": "HEIF Image Extension (for .HEIC, .HIF, and .HEIF files)",
+    "InstallMethod": "WinGet",
+    "WinGetID": "9PMMSR1CGPWG"
+  }, 
+  {
     "ApplicationName": "MSI-Private-AzureBlob_Example",
     "InstallMethod": "MSI-Private-AzureBlob",
     "MSIPathFromContainerRoot": "zz/zz/install.msi",

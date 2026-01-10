@@ -93,7 +93,7 @@ Native Microsoft Intune has significant limitations that create headaches for IT
 
 ```powershell
 # Clone or download the repository
-git clone https://github.com/Adrian-Mandel/PowerDeploy.git
+git clone https://github.com/Santa-Cruz-COE/PowerDeploy.git
 
 # Run the setup script (as Administrator)
 .\Setup_RUNNER.bat
@@ -108,7 +108,7 @@ The Git Runner allows you to pull the latest commit from the repository and exec
 ```powershell
 .\Git-Runner_TEMPLATE.ps1 `
     -RepoNickName "PowerDeploy-Repo" `
-    -RepoURL "https://github.com/Adrian-Mandel/PowerDeploy.git" `
+    -RepoURL "https://github.com/Santa-Cruz-COE/PowerDeploy.git" `
     -ScriptPath "Installers\General_WinGet_Installer.ps1" `
     -WorkingDirectory "C:\ProgramData\PowerDeploy" `
     -ScriptParams '-AppID "7zip.7zip" -WorkingDirectory "C:\ProgramData\PowerDeploy"'
@@ -232,7 +232,7 @@ Generate deployment commands using the built-in command generator:
     -DesiredFunction "CreateIntuneCommand" `
     -FunctionParams @{
         RepoNickName = "PowerDeploy-Repo"
-        RepoUrl = "https://github.com/Adrian-Mandel/PowerDeploy.git"
+        RepoUrl = "https://github.com/Santa-Cruz-COE/PowerDeploy.git"
         WorkingDirectory = "C:\ProgramData\PowerDeploy"
         ScriptPath = "Installers\General_WinGet_Installer.ps1"
         ScriptParams = @{
@@ -244,7 +244,7 @@ Generate deployment commands using the built-in command generator:
 
 **Intune Command Format:**
 ```cmd
-%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'PowerDeploy-Repo' -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy.git' -WorkingDirectory 'C:\ProgramData\PowerDeploy' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'BASE64_ENCODED_PARAMS'"
+%SystemRoot%\Sysnative\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\Git-Runner_TEMPLATE.ps1' -RepoNickName 'PowerDeploy-Repo' -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy.git' -WorkingDirectory 'C:\ProgramData\PowerDeploy' -ScriptPath 'Installers\General_WinGet_Installer.ps1' -ScriptParamsBase64 'BASE64_ENCODED_PARAMS'"
 ```
 
 ### Remediation Scripts
@@ -366,11 +366,11 @@ PENDING
 
 ## Support
 
-For issues and feature requests, please use the [GitHub Issues](https://github.com/Adrian-Mandel/PowerDeploy/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/Santa-Cruz-COE/PowerDeploy/issues) page.
 
 ---
 
-**Source:** [https://github.com/Adrian-Mandel/PowerDeploy](https://github.com/Adrian-Mandel/PowerDeploy)
+**Source:** [https://github.com/Santa-Cruz-COE/PowerDeploy](https://github.com/Santa-Cruz-COE/PowerDeploy)
 
 ---
 

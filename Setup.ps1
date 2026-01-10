@@ -83,6 +83,13 @@ $AppDetect_ScriptPath = "$RepoRoot\Templates\Detection-Script-Application_TEMPLA
 
 $PublicJSONpath = "$RepoRoot\Templates\ApplicationData_TEMPLATE.json"
 
+$MyCompanyRepoURL = ""
+$MyCompanyRepoURLTOKEN = ""
+$OfficialPublicRepoURL = "https://github.com/Santa-Cruz-COE/PowerDeploy"
+
+$TargetWorkingDir = ""
+
+$DeployMode = "Test" # Possible values: "Test", "Production"
 
 $ExamplePrinterJSON = @"
 {
@@ -270,83 +277,48 @@ function Write-Log {
     Add-Content -Path $LogPath -Value $logEntry
 }
 
-function Make-RemediationScript-Registry-Detect{
+Function Set-URL {
 
-    Write-Log "We will now create a detection script that looks for specific registry values. This detection script is to be used with a remediation script in InTune."
+    Write-Log "Before we begin, please confirm the deployment mode."
+    Write-Log "1 - TEST MODE: The resulting InTune application will utilize the official public repository for PowerDeploy. This is good for testing the latest code before merging it into your own code. Target URL: $OfficialPublicRepoURL"
+    Write-Log "2 - PRODUCTION MODE: The resulting InTune application will utilize your organization's custom repository for PowerDeploy. Target URL: $CustomRepoURL"
+    
+    $modeSelected = $false
 
-    Write-Log "Would you like to use another pre-existing detection script to build off of?"
 
-    $Answer = Read-Host "y/n"
-    Write-Log "User answer: $Answer"
 
-        if ($answer -eq "y"){
-
-            Write-Log "Please enter the full path of the script you wish to use as a base"
-
-            $PathForPreExistingScript = Read-Host "Enter full path:"
-            Write-Log "User answer: $PathForPreExistingScript"
-
-            Write-Log "Checking if script exists..."
-
-            if(Test-Path $PathForPreExistingScript){
+    while (-not $modeSelected) {
+        $userInput = Read-Host "Please enter '1' for TEST MODE or '2' for PRODUCTION MODE"
+        switch ($userInput) {
+            '1' {
+                $Global:DeployMode = "Test"
+                Write-Log "Deployment mode set to TEST MODE." "WARNING"
+                $RepoUrl = $OfficialPublicRepoURL
                 
-                Write-Log "Script exists!"
-
-                # Consume the script
-
-                Write-Log "Here are the values found within the script you provided:"
-
-                Write-Log "Keep? Delete? Modify?"
-
-                Write-Log "Would you like add additional entries?"
-
-            
-            } else {
-                
-                Write-Log "Script does not exist!"
-            
+                $modeSelected = $true
             }
+            '2' {
+                $Global:DeployMode = "Production"
+                Write-Log "Deployment mode set to PRODUCTION MODE." "WARNING"
 
-
-
-
+                    if ($CustomRepoToken -ne "" -and $CustomRepoToken -ne $null) {
+                        # Insert token into URL for authentication
+                        $RepoUrl = $CustomRepoURL -replace 'https://', "https://oauth2:$CustomRepoToken@"
+                    } else {
+                        $RepoUrl = $CustomRepoURL
+                    }
+                $modeSelected = $true
+            }
+            default {
+                Write-Log "Invalid input. Please enter '1' or '2'."
+            }
         }
+    }
 
+    Write-Log ""
+    Return $RepoUrl
 
-
-
-    Write-Log "Please enter the values for the first registry entry the script will look for"
-
-    Write-Log "Will you be looking for another registry entry?"
-
-
-    Write-Log "This is what the current arg line looks like, is this acceptable?"
-
-    Write-Log "Creating new drag and drop script..."
-
-    Write-Log "We will now create the remediation script..."
-
-    Write-Log "Testing..."
-
-    Write-Log "The scripts have been created and tested locally. Here are you instructions for putting them into InTune..."
-
-
-}
-
-function Make-RemediationScript-Registry-Remediate{}
-
-function Make-InTuneWin32app-WinGet{
-
-    # Confirm existance of WinGet item
-
-    # Create Install Command
-
-    # Create intunewin file
-
-    # Create detect script
-
-    # Run tests
-
+    
 }
 
 function Setup--Azure-Printer{
@@ -358,9 +330,10 @@ function Setup--Azure-Printer{
     $PrinterData_JSON_ContainerName = $parts[0]      
     $PrinterData_JSON_BlobName = $parts[1]
 
-
-
     # main 
+
+    # Determine if this is a test or production deployment
+    $RepoUrl = Set-URL
 
     Write-Log "To begin, we need to prepare the resources required to set up a printer deployment via Intune."
     Write-Log ""
@@ -524,7 +497,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -FunctionParams $FunctionParams
+        $ReturnHash2 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "InstallPrinterByIP" -RepoURL $RepoURL -FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash2 -eq $null) -or ($ReturnHash2.Count -eq 0)){
@@ -566,7 +539,7 @@ function Setup--Azure-Printer{
             PrinterName = $PrinterName
         }
 
-        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -FunctionParams $FunctionParams
+        $ReturnHash3 = & $GenerateInstallCommand_ScriptPath -DesiredFunction "UninstallPrinterByName" -RepoURL $RepoURL -FunctionParams $FunctionParams
 
         # Check the returned hashtable
         if(($ReturnHash3 -eq $null) -or ($ReturnHash3.Count -eq 0)){
@@ -1110,6 +1083,7 @@ Function Setup--Azure-WindowsApp{
     $installResult = @{}
     $installResult = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "InstallAppWithJSON" `
+        -RepoURL $RepoURL `
         -FunctionParams $FunctionParams
 
     # Sanity check
@@ -1176,6 +1150,7 @@ Function Setup--Azure-WindowsApp{
     $ReturnHash3 = @{}
     $ReturnHash3 = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "UninstallApp" `
+        -RepoURL $RepoURL `
         -FunctionParams $FunctionParams
 
     # Check the returned hashtable
@@ -2156,7 +2131,9 @@ Function Uninstall--Local-Application{
     Write-Log "Enter the # of your desired uninstall function:" "WARNING"
     # Write-Log "NOTE: If you are not sure where to begin, start with JSON--search-and-uninstall." "WARNING"
     # Write-Log "NOTE: For All Adobe CC apps, please use Adobe--search-and-uninstall." "WARNING"
-    Write-Log "NOTE: For the largest selection of apps, try AppPackage--search-and-uninstall." "WARNING"4
+    Write-Log "NOTE: Each of these may offer exclusive applications not found in the others." "WARNING"
+    Write-Log "NOTE: For most general use cases, try Registry--search-and-uninstall." "WARNING"
+    Write-Log "NOTE: For the largest selection of apps, try AppPackage--search-and-uninstall." "WARNING"
     [int]$SelectedFunctionNumber = Read-Host "Please enter a #"
 
 
@@ -2739,6 +2716,7 @@ Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
 
         $ReturnHash = & $GenerateInstallCommand_ScriptPath `
         -DesiredFunction "RegRemediationScript" `
+        -RepoURL $RepoURL `
         -FunctionParams $FunctionParams
 
         # Check the returned hashtable
@@ -2791,7 +2769,7 @@ Function Setup--Azure-PowerDeploy_Registry_Remediations_For_Organization{
         write-log "   2. Suggested name: ""PowerDeploy Registry Update"""
             Write-Log ""
 
-        Write-Log "   3. Suggested description: ""Used to update company registry values for use with PowerDeploy. For more information see the official repo: https://github.com/Adrian-Mandel/PowerDeploy"""
+        Write-Log "   3. Suggested description: ""Used to update company registry values for use with PowerDeploy. For more information see the official repo: https://github.com/Santa-Cruz-COE/PowerDeploy"""
             Write-Log ""
 
         Write-Log "   4. Click Next to go to the Script settings page."
@@ -2923,7 +2901,7 @@ If ($Answer -eq "y"){
 
     $RepoNickName = Split-Path $RepoRoot -leaf
 
-    & $GitRunnerScript -WorkingDirectory $WorkingDirectory -RepoNickName $RepoNickName -RepoUrl 'https://github.com/Adrian-Mandel/PowerDeploy' -UpdateLocalRepoOnly $true
+    & $GitRunnerScript -WorkingDirectory $WorkingDirectory -RepoNickName $RepoNickName -RepoUrl 'https://github.com/Santa-Cruz-COE/PowerDeploy' -UpdateLocalRepoOnly $true
 
     Write-Log "" "INFO2"
  

@@ -55,7 +55,7 @@
     Installs app.msi without post-install verification
 
 .NOTES
-    SOURCE: https://github.com/Adrian-Mandel/PowerDeploy
+    SOURCE: https://github.com/Santa-Cruz-COE/PowerDeploy
     
     Common MSI Exit Codes:
     0    - Success

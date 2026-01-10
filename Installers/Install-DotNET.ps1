@@ -48,7 +48,7 @@
     Installs .NET 8 SDK
 
 .NOTES
-    SOURCE: https://github.com/Adrian-Mandel/PowerDeploy
+    SOURCE: https://github.com/Santa-Cruz-COE/PowerDeploy
 #>
 
 param(
